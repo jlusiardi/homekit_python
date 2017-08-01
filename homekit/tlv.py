@@ -1,6 +1,6 @@
 class TLV:
     """
-    as described in Appendix 12
+    as described in Appendix 12 (page 251)
     """
 
     # Steps
@@ -11,14 +11,14 @@ class TLV:
     M5 = bytearray(b'\x05')
     M6 = bytearray(b'\x06')
 
-    # Methods
+    # Methods (see table 4-4 page 60)
     PairSetup = bytearray(b'\x01')
     PairVerify = bytearray(b'\x02')
     AddPairing = bytearray(b'\x03')
     RemovePairing = bytearray(b'\x04')
     ListPairings = bytearray(b'\x05')
 
-    # TLV Values
+    # TLV Values (see table 4-6 page 61)
     kTLVType_Method = 0
     kTLVType_Identifier = 1
     kTLVType_Salt = 2
@@ -35,7 +35,7 @@ class TLV:
     kTLVType_FragmentLast = 13
     kTLVType_Separator = 255
 
-    # Errors
+    # Errors (see table 4-5 page 60)
     kTLVError_Unknown = bytearray(b'\x01')
     kTLVError_Authentication = bytearray(b'\x02')
     kTLVError_Backoff = bytearray(b'\x03')

@@ -6,14 +6,29 @@ from homekit.feature_flags import FeatureFlags
 from homekit.categories import Categories
 
 
-class HomeKitListener(object):
+class CollectingListener(object):
+    def __init__(self):
+        self.data = []
+
     def remove_service(self, zeroconf, type, name):
         # this is ignored since not interested in disappearing stuff
         pass
 
     def add_service(self, zeroconf, type, name):
         info = zeroconf.get_service_info(type, name)
-        print('Name: {name}'.format(name=name))
+        self.data.append(info)
+
+    def get_data(self):
+        return self.data
+
+
+def discover_homekit_devices():
+    zeroconf = Zeroconf()
+    listener = CollectingListener()
+    ServiceBrowser(zeroconf, '_hap._tcp.local.', listener)
+    sleep(1)
+    for info in listener.get_data():
+        print('Name: {name}'.format(name=info.name))
         print('Url: http://{ip}:{port}'.format(ip=inet_ntoa(info.address), port=info.port))
         print('Configuration number (c#): {conf}'.format(conf=info.properties[b'c#'].decode()))
         flags = int(info.properties[b'ff'].decode())
@@ -27,10 +42,24 @@ class HomeKitListener(object):
         print('Category Identifier (ci): {c} (Id: {ci})'.format(c=Categories[category], ci=category))
         print()
 
-
-def discover_homekit_devices():
-    zeroconf = Zeroconf()
-    listener = HomeKitListener()
-    browser = ServiceBrowser(zeroconf, '_hap._tcp.local.', listener)
-    sleep(1)
     zeroconf.close()
+
+
+def find_device_ip_and_port(device_id: str):
+    result = None
+    zeroconf = Zeroconf()
+    listener = CollectingListener()
+    ServiceBrowser(zeroconf, '_hap._tcp.local.', listener)
+    counter = 0
+
+    while result is None and counter < 10:
+        sleep(2)
+        data = listener.get_data()
+        for info in data:
+            if info.properties[b'id'].decode() == device_id:
+                result = {'ip': inet_ntoa(info.address), 'port': info.port}
+                break
+        counter += 1
+
+    zeroconf.close()
+    return result

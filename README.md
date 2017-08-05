@@ -50,3 +50,27 @@ python3 pair.py -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE}
 ```
 
 ## perform.py
+
+This tool will perform various operation with the HomeKit Accessory, e.g.:
+ * get accessories: read the Accessory Attribute Database
+ * get characteristics: read single or multiple characteristics
+ * put characteristics: set single or multiple characteristics
+ * list pairings
+ * remove pairing
+ * add pairing
+
+### perform.py -o get_accessories
+
+Usage:
+```bash
+python3 perform.py -d ${DEVICEID} -f ${PAIRINGDATAFILE} -o get_accessories
+```
+
+Output:
+
+Prints Accessory Attribute Database as JSON.
+ 
+# Tests
+
+The code was tested with the following devices:
+ * Koogeek P1EU Plug ([Vendor](https://www.koogeek.com/smart-home-2418/p-p1eu.html))

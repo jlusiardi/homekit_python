@@ -99,3 +99,10 @@ ENV/
 
 # mypy
 .mypy_cache/
+/.idea/homekit_client.iml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/vcs.xml
+/tmp

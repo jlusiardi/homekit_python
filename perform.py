@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     connection_data = find_device_ip_and_port(args.device)
     if connection_data is None:
-        print('Device not found')
+        print('Device {id} not found'.format(id=args.device))
         sys.exit(-1)
 
     conn = http.client.HTTPConnection(connection_data['ip'], port=connection_data['port'])
@@ -49,7 +49,7 @@ if __name__ == '__main__':
             sys.exit(-1)
 
         sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
-        body = '{"characteristics": [{"value": false, "aid": 1, "iid": 8}]}' #json.dumps({'characteristics': [{'aid': 1, 'iid': 8, 'value': False}]}, indent=4)
+        body = '{"characteristics": [{"value": true, "aid": 1, "iid": 10}]}' #json.dumps({'characteristics': [{'aid': 1, 'iid': 8, 'value': False}]}, indent=4)
         print(body)
         response = sec_http.put('/characteristics', body)
         data = response.read().decode()

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import argparse
 import http.client
@@ -24,7 +26,7 @@ if __name__ == '__main__':
     if resp.code == 400:
         data = json.loads(resp.read().decode())
         code = data['status']
-        print('identify failed because: {reason} ({code})'.format(reason=StatusCodes[code], code=code))
+        print('identify failed because: {reason} ({code}). Is it paired?'.format(reason=StatusCodes[code], code=code))
     elif resp.code == 200:
         print('identify succeeded.')
     conn.close()

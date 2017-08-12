@@ -6,11 +6,11 @@ The code presented in this repository was created based on release R1 from 2017-
 
 ## discover.py
 
-This tool will list all available HomeKit IP Accessories.
+This tool will list all available HomeKit IP Accessories within the local network.
 
 Usage:
 ```bash
-python3 discover.py
+./discover.py
 ```
 
 Output:
@@ -33,7 +33,7 @@ This tool will use the Identify Routine of a HomeKit IP Accessory.
 
 Usage:
 ```bash
-python3 identify.py -d ${DEVICEID}
+./identify.py -d ${DEVICEID}
 ```
 
 Output:
@@ -46,30 +46,42 @@ This tool will perform a paring to a new accessory.
 
 Usage:
 ```bash
-python3 pair.py -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE}
+./pair.py -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE}
 ```
 
-## perform.py
+The file with the pairing data will be required to for any additional commands to the accessory.
 
-This tool will perform various operation with the HomeKit Accessory, e.g.:
- * get accessories: read the Accessory Attribute Database
- * get characteristics: read single or multiple characteristics
- * put characteristics: set single or multiple characteristics
- * list pairings
- * remove pairing
- * add pairing
+## get_accessories.py
 
-### perform.py -o get_accessories
+This tool will read the accessory attribute database.
 
 Usage:
 ```bash
-python3 perform.py -d ${DEVICEID} -f ${PAIRINGDATAFILE} -o get_accessories
+./get_accessories.py -f ${PAIRINGDATAFILE} [-o {json,compact}]
 ```
 
-Output:
+The option `-o` specifies the format of the output:
+ * `json` displays the result as pretty printed JSON
+ * `compact` reformats the output to get more on one screen
 
-Prints Accessory Attribute Database as JSON.
+## get_characteristics.py
+This tool will read values from one or more characteristics.
+
+Usage:
+```bash
+./get_characteristics.py -f ${PAIRINGDATAFILE} -c {Characteristics} [-m] [-p] [-t] [-e]
+```
+
+The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>[,<aid>.<cid>]*`.
  
+The option `-m` specifies if the meta data should be read as well.
+
+The option `-p` specifies if the permissions should be read as well.
+
+The option `-t` specifies if the type information should be read as well.
+
+The option `-e` specifies if the event data should be read as well.
+
 # Tests
 
 The code was tested with the following devices:

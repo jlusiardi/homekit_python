@@ -6,10 +6,13 @@ def load_pairing(file: str) -> dict:
     loads data for an existing pairing from the file.
 
     :param file: the file name
-    :return: a dict containing the pairing data
+    :return: a dict containing the pairing data or None if file was not found
     """
-    with open(file, 'r') as input_fp:
-        return json.load(input_fp)
+    try:
+        with open(file, 'r') as input_fp:
+            return json.load(input_fp)
+    except FileNotFoundError:
+        return None
 
 
 def save_pairing(file: str, pairing_data: dict):

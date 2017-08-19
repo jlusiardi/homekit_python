@@ -4,7 +4,7 @@ import json
 import argparse
 import http.client
 
-from homekit import find_device_ip_and_port, StatusCodes
+from homekit import find_device_ip_and_port, HapStatusCodes
 
 
 def setup_args_parser():
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     if resp.code == 400:
         data = json.loads(resp.read().decode())
         code = data['status']
-        print('identify failed because: {reason} ({code}). Is it paired?'.format(reason=StatusCodes[code], code=code))
+        print('identify failed because: {reason} ({code}). Is it paired?'.format(reason=HapStatusCodes[code], code=code))
     elif resp.code == 200:
         print('identify succeeded.')
     conn.close()

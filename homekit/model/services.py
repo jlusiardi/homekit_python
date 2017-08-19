@@ -1,3 +1,6 @@
+from homekit.model.characteristics import *
+
+
 class _ServicesTypes(object):
     """
     This data is taken from Table 12-3 Accessory Categories on page 254. Values above 19 are reserved.
@@ -65,5 +68,51 @@ class _ServicesTypes(object):
             return self._services[item].split('.')[-1]
         return 'Unknown Service: {i}'.format(i=orig_item)
 
+    def get_uuid(self, item_name):
+        if item_name not in self._services_rev:
+            raise Exception('Unknown service name')
+        short = self._services_rev[item_name]
+        medium = '0' * (8 - len(short)) + short
+        long = medium + self.baseUUID
+        return long
+
 
 ServicesTypes = _ServicesTypes()
+
+
+class _Service(ToDictMixin):
+    def __init__(self, service_type: str, iid: int):
+        self.type = service_type
+        self.iid = iid
+        self.characteristics = []
+        pass
+
+
+class AcessoryInformationService(_Service):
+    """
+    Defined on page 216
+    """
+
+    def __init__(self, name):
+        _Service.__init__(self, ServicesTypes.get_uuid('public.hap.service.accessory-information'), get_id())
+        self.characteristics.append(IdentifyCharacteristic(get_id()))
+        self.characteristics.append(ManufacturerCharacteristic(get_id(), 'lusiardi.de'))
+        self.characteristics.append(ModelCharacteristic(get_id(), 'python bridge'))
+        self.characteristics.append(NameCharacteristic(get_id(), name))
+        self.characteristics.append(SerialNumberCharacteristic(get_id(), '1'))
+        self.characteristics.append(FirmwareRevisionCharacteristic(get_id(), '0.1'))
+
+
+class LightBulbService(_Service):
+    """
+    Defined on page 217
+    """
+
+    def __init__(self):
+        _Service.__init__(self, ServicesTypes.get_uuid('public.hap.service.lightbulb'), get_id())
+        self._onCharacteristic = OnCharacteristic(get_id())
+        self.characteristics.append(self._onCharacteristic)
+
+    def set_on_callback(self, callback):
+        self._onCharacteristic.set_callback(callback)
+

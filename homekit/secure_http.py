@@ -51,7 +51,6 @@ class SecureHttp:
                   'Content-Type: application/hap+json\n' + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'PUT {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
-        print(data)
         return self._handle_request(data)
 
     def post(self, target, body):
@@ -88,31 +87,29 @@ class SecureHttp:
         # followed by 16 byte authTag
         blocks = []
         tmp = bytearray()
+        exp_len = 512
         while True:
-            data = self.sock.recv(256)
-            # print('len(read)', len(data))
-            if not data:
-                break
+            data = self.sock.recv(exp_len)
             tmp += data
-            # print(tmp[0:2])
             length = int.from_bytes(tmp[0:2], 'little')
             if length + 18 > len(tmp):
-                # print('continue because: ', length + 18, '>', len(tmp))
-
                 # if the the amount of data in tmp is not length + 2 bytes for length + 16 bytes for the tag, the block
                 # is not complete yet
                 continue
             tmp = tmp[2:]
-            # print('length', length, 'of buffer length', len(tmp))
+
             block = tmp[0:length]
-            # print('len(block)', len(block))
             tmp = tmp[length:]
+
             tag = tmp[0:16]
-            # print('len(tag)', len(tag))
             tmp = tmp[16:]
-            # print('len(tmp)', len(tmp))
+
             blocks.append((length, block, tag))
-            # print('-' * 80)
+
+            # check how long next block will be
+            if int.from_bytes(tmp[0:2], 'little') < 1024:
+                exp_len = int.from_bytes(tmp[0:2], 'little') - len(tmp) + 18
+
             if length < 1024:
                 break
 

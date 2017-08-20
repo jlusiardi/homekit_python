@@ -103,6 +103,20 @@ class AcessoryInformationService(_Service):
         self.characteristics.append(FirmwareRevisionCharacteristic(get_id(), '0.1'))
 
 
+class FanService(_Service):
+    """
+    Defined on page 216
+    """
+
+    def __init__(self):
+        _Service.__init__(self, ServicesTypes.get_uuid('public.hap.service.fan'), get_id())
+        self._onCharacteristic = OnCharacteristic(get_id())
+        self.characteristics.append(self._onCharacteristic)
+
+    def set_on_callback(self, callback):
+        self._onCharacteristic.set_callback(callback)
+
+
 class LightBulbService(_Service):
     """
     Defined on page 217
@@ -115,4 +129,51 @@ class LightBulbService(_Service):
 
     def set_on_callback(self, callback):
         self._onCharacteristic.set_callback(callback)
+
+
+class OutletService(_Service):
+    """
+    Defined on page 219
+    """
+
+    def __init__(self):
+        _Service.__init__(self, ServicesTypes.get_uuid('public.hap.service.outlet'), get_id())
+        self._onCharacteristic = OnCharacteristic(get_id())
+        self.characteristics.append(self._onCharacteristic)
+        self._outletInUse = OutletInUseCharacteristic(get_id())
+        self.characteristics.append(self._outletInUse)
+
+    def set_on_callback(self, callback):
+        self._onCharacteristic.set_callback(callback)
+
+
+class ThermostatService(_Service):
+    """
+    Defined on page 220
+    """
+
+    def __init__(self):
+        _Service.__init__(self, ServicesTypes.get_uuid('public.hap.service.thermostat'), get_id())
+
+        self._currentHeatingCoolingState = CurrentHeatingCoolingStateCharacteristic(get_id())
+        self.characteristics.append(self._currentHeatingCoolingState)
+
+        self._targetHeatingCoolingState = TargetHeatingCoolingStateCharacteristic(get_id())
+        self.characteristics.append(self._targetHeatingCoolingState)
+
+        self._currentTemperature = CurrentTemperatureCharacteristic(get_id())
+        self.characteristics.append(self._currentTemperature)
+
+        self._targetTemperature = TargetTemperatureCharacteristic(get_id())
+        self.characteristics.append(self._targetTemperature)
+
+        self._temperatureDisplayUnits = TemperatureDisplayUnits(get_id())
+        self.characteristics.append(self._temperatureDisplayUnits)
+
+    def set_target_temperature(self, callback):
+        self._targetTemperature.set_callback(callback)
+
+    def set_target_heating_cooling_state(self, callback):
+        self._targetHeatingCoolingState.set_callback(callback)
+
 

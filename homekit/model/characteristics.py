@@ -259,6 +259,17 @@ class _CharacteristicsTypes(object):
 CharacteristicsTypes = _CharacteristicsTypes()
 
 
+class CharacteristicUnits(object):
+    """
+    See table 5-6 page 68
+    """
+    celsius = 'celsius'
+    percentage = 'percentage'
+    arcdegrees = 'arcdegrees'
+    lux = 'lux'
+    seconds = 'seconds'
+
+
 class CharacteristicPermissions(object):
     """
     See table 5-4 page 67
@@ -309,10 +320,89 @@ class Characteristic(ToDictMixin):
     def set_callback(self, callback):
         self._callback = callback
 
+    def set_events(self, new_val):
+        self.ev = new_val
+        print('set events on {iid} to {val}'.format(iid=self.iid, val=new_val))
+
     def set_value(self, new_val):
         self.value = new_val
         if self._callback:
             self._callback(new_val)
+
+
+class CurrentHeatingCoolingStateCharacteristic(Characteristic):
+    """
+    Defined on page 147
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.HEATING_COOLING_CURRENT, CharacteristicFormats.uint8)
+        self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.events]
+        self.minValue = 0
+        self.maxValue = 2
+        self.step = 1
+        self.value = 0
+
+
+class CurrentTemperatureCharacteristic(Characteristic):
+    """
+    Defined on page 148
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.TEMPERATURE_CURRENT, CharacteristicFormats.float)
+        self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.events]
+        self.minValue = 0.0
+        self.maxValue = 100.0
+        self.step = 0.1
+        self.unit = CharacteristicUnits.celsius
+        self.value = 23.0
+
+
+class TargetHeatingCoolingStateCharacteristic(Characteristic):
+    """
+    Defined on page 161
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.HEATING_COOLING_TARGET, CharacteristicFormats.uint8)
+        self.perms = [CharacteristicPermissions.paired_write, CharacteristicPermissions.paired_read,
+                      CharacteristicPermissions.events]
+        self.minValue = 0
+        self.maxValue = 3
+        self.step = 1
+        self.value = 0
+
+
+class TargetTemperatureCharacteristic(Characteristic):
+    """
+    Defined on page 162
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.TEMPERATURE_TARGET, CharacteristicFormats.float)
+        self.perms = [CharacteristicPermissions.paired_write, CharacteristicPermissions.paired_read,
+                      CharacteristicPermissions.events]
+        self.minValue = 10.0
+        self.maxValue = 38.0
+        self.step = 0.1
+        self.unit = CharacteristicUnits.celsius
+        self.value = 23.0
+
+
+class TemperatureDisplayUnits(Characteristic):
+    """
+    Defined on page 163
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.TEMPERATURE_UNITS, CharacteristicFormats.uint8)
+        self.perms = [CharacteristicPermissions.paired_write, CharacteristicPermissions.paired_read,
+                      CharacteristicPermissions.events]
+        self.minValue = 0
+        self.maxValue = 1
+        self.step = 1
+        self.value = 0
 
 
 class FirmwareRevisionCharacteristic(Characteristic):
@@ -396,8 +486,9 @@ class OutletInUseCharacteristic(Characteristic):
 
     def __init__(self, iid):
         Characteristic.__init__(self, iid, CharacteristicsTypes.OUTLET_IN_USE, CharacteristicFormats.bool)
-        self.description = 'On'
+        self.description = 'Outlet in use'
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.events]
+        self.value = False
 
 
 class SerialNumberCharacteristic(Characteristic):

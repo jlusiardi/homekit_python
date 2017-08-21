@@ -102,6 +102,12 @@ class AcessoryInformationService(_Service):
         self.characteristics.append(SerialNumberCharacteristic(get_id(), '1'))
         self.characteristics.append(FirmwareRevisionCharacteristic(get_id(), '0.1'))
 
+    def get_name(self):
+        for characteristic in self.characteristics:
+            if isinstance(characteristic, NameCharacteristic):
+                return characteristic.value
+        return None
+
 
 class FanService(_Service):
     """

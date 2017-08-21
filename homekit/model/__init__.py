@@ -12,6 +12,12 @@ class Accessory(ToDictMixin):
             AcessoryInformationService(name)
         ]
 
+    def get_name(self):
+        for service in self.services:
+            if isinstance(service, AcessoryInformationService):
+                return service.get_name()
+        return None
+
 
 class Accessories(ToDictMixin):
     def __init__(self):

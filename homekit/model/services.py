@@ -120,7 +120,7 @@ class FanService(_Service):
         self.characteristics.append(self._onCharacteristic)
 
     def set_on_callback(self, callback):
-        self._onCharacteristic.set_callback(callback)
+        self._onCharacteristic.set_set_value_callback(callback)
 
 
 class LightBulbService(_Service):
@@ -134,7 +134,7 @@ class LightBulbService(_Service):
         self.characteristics.append(self._onCharacteristic)
 
     def set_on_callback(self, callback):
-        self._onCharacteristic.set_callback(callback)
+        self._onCharacteristic.set_set_value_callback(callback)
 
 
 class OutletService(_Service):
@@ -150,7 +150,7 @@ class OutletService(_Service):
         self.characteristics.append(self._outletInUse)
 
     def set_on_callback(self, callback):
-        self._onCharacteristic.set_callback(callback)
+        self._onCharacteristic.set_set_value_callback(callback)
 
 
 class ThermostatService(_Service):
@@ -177,9 +177,9 @@ class ThermostatService(_Service):
         self.characteristics.append(self._temperatureDisplayUnits)
 
     def set_target_temperature(self, callback):
-        self._targetTemperature.set_callback(callback)
+        self._targetTemperature.set_set_value_callback(callback)
 
     def set_target_heating_cooling_state(self, callback):
-        self._targetHeatingCoolingState.set_callback(callback)
+        self._targetHeatingCoolingState.set_set_value_callback(callback)
 
 

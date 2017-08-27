@@ -315,19 +315,25 @@ class Characteristic(ToDictMixin):
         self.maxDataLen = None  # number, not required
         self.valid_values = None  # array, not required
         self.valid_values_range = None  # array, not required
-        self._callback = None
+        self._set_value_callback = None
+        self._get_value_callback = None
 
-    def set_callback(self, callback):
-        self._callback = callback
+    def set_set_value_callback(self, callback):
+        self._set_value_callback = callback
+
+    def set_get_value_callback(self, callback):
+        self._get_value_callback = callback
 
     def set_events(self, new_val):
         self.ev = new_val
-        print('set events on {iid} to {val}'.format(iid=self.iid, val=new_val))
+        if self._set_value_callback:
+            self._set_value_callback('event', new_val)
 
     def set_value(self, new_val):
         self.value = new_val
-        if self._callback:
-            self._callback(new_val)
+        if self._set_value_callback:
+            self._set_value_callback('value', new_val)
+
 
 
 class CurrentHeatingCoolingStateCharacteristic(Characteristic):

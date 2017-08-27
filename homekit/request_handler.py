@@ -22,6 +22,11 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
     VALID_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE']
 
     def __init__(self, request, client_address, server):
+        self.debug_crypt = False
+        self.debug_pair_verify = False
+        self.debug_put_characteristics = True
+        self.debug_get_characteristics = False
+
         # keep pycharm from complaining about those not being define in __init__
         # self.session_id = '{ip}:{port}'.format(ip=client_address[0], port= client_address[1])
         self.session_id = '{ip}'.format(ip=client_address[0])
@@ -70,7 +75,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             # RFC7230 Section 3 tells us, that US-ASCII is fine
             peeked_data = raw_peeked_data[:10]
             peeked_data = peeked_data.decode(encoding='ASCII')
-            self.log_message('deciding over: >%s<', peeked_data)
+            # self.log_message('deciding over: >%s<', peeked_data)
             # If the request line starts with a known HTTP verb, then use handle_one_request from super class
             if ' ' in peeked_data:
                 method = peeked_data.split(' ', 1)[0]
@@ -79,7 +84,8 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                     BaseHTTPRequestHandler.handle_one_request(self)
                     return
         except UnicodeDecodeError as e:
-            self.log_error('exception %s' % e)
+            # self.log_error('exception %s' % e)
+            pass
 
         # the first 2 bytes are the length of the encrypted data to follow
         len_bytes = self.rfile.read(2)
@@ -87,7 +93,8 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
 
         # the authtag is not counted, so add its length
         data = self.rfile.read(data_len + 16)
-        self.log_message('data >%i< >%s<', len(data), binascii.hexlify(data))
+        if self.debug_crypt:
+            self.log_message('data >%i< >%s<', len(data), binascii.hexlify(data))
 
         # get the crypto key from the session
         c2a_key = self.server.sessions[self.session_id]['controller_to_accessory_key']
@@ -102,7 +109,9 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             # TODO: handle errors
             pass
 
-        self.log_message('crypted request >%s<', decrypted)
+        if self.debug_crypt:
+            self.log_message('crypted request >%s<', decrypted)
+
         self.server.sessions[self.session_id]['controller_to_accessory_count'] += 1
 
         # replace the original rfile with a fake with the decrypted stuff
@@ -121,14 +130,16 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         self.wfile.seek(0)
         in_data = self.wfile.read(65537)
 
-        self.log_message('response >%s<', in_data)
-        self.log_message('len(response) %s', len(in_data))
+        if self.debug_crypt:
+            self.log_message('response >%s<', in_data)
+            self.log_message('len(response) %s', len(in_data))
 
         block_size = 1024
         out_data = bytearray()
         while len(in_data) > 0:
             block = in_data[:block_size]
-            self.log_message('==> BLOCK: len %s', len(block))
+            if self.debug_crypt:
+                self.log_message('==> BLOCK: len %s', len(block))
             in_data = in_data[block_size:]
 
             len_bytes = len(block).to_bytes(2, byteorder='little')
@@ -152,7 +163,8 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         As described on page 84
         :return:
         """
-        self.log_message('GET /characteristics')
+        if self.debug_get_characteristics:
+            self.log_message('GET /characteristics')
 
         # analyse
         params = {}
@@ -184,7 +196,8 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         if 'ev' in params:
             ev = params['ev'] == 1
 
-        self.log_message('query parameters: ids: %s, meta: %s, perms: %s, type: %s, ev: %s', ids, meta, perms, type, ev)
+        if self.debug_get_characteristics:
+            self.log_message('query parameters: ids: %s, meta: %s, perms: %s, type: %s, ev: %s', ids, meta, perms, type, ev)
 
         result = {
             'characteristics': []
@@ -202,7 +215,8 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                         if characteristic.iid != cid:
                             continue
                         result['characteristics'].append({'aid': aid, 'iid': cid, 'value': characteristic.value})
-        self.log_message('chars: %s', json.dumps(result))
+        if self.debug_get_characteristics:
+            self.log_message('chars: %s', json.dumps(result))
 
         result_bytes = json.dumps(result).encode()
 
@@ -217,9 +231,10 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         Defined page 80 ff
         :return:
         """
-        self.log_message('PUT /characteristics')
+        if self.debug_put_characteristics:
+            self.log_message('PUT /characteristics')
+            self.log_message('body: %s', self.body)
 
-        self.log_message('body: %s', self.body)
         data = json.loads(self.body.decode())
         characteristics_to_set = data['characteristics']
         for characteristic_to_set in characteristics_to_set:
@@ -235,14 +250,17 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                             continue
 
                         if 'ev' in characteristic_to_set:
-                            self.log_message('set ev %s %s %s', aid, cid, characteristic_to_set['ev'])
-                            characteristic.ev = characteristic_to_set['ev']
+                            if self.debug_put_characteristics:
+                                self.log_message('set ev >%s< >%s< >%s<', aid, cid, characteristic_to_set['ev'])
+                            characteristic.set_events(characteristic_to_set['ev'])
 
                         if 'value' in characteristic_to_set:
-                            self.log_message('set value %s %s %s', aid, cid, characteristic_to_set['value'])
+                            if self.debug_put_characteristics:
+                                self.log_message('set value >%s< >%s< >%s<', aid, cid, characteristic_to_set['value'])
                             characteristic.set_value(characteristic_to_set['value'])
 
-        self.send_error(HttpStatusCodes.NO_CONTENT)
+        self.send_response(HttpStatusCodes.NO_CONTENT)
+        self.end_headers()
 
     def _post_identify(self):
         if self.server.data.is_paired:
@@ -274,7 +292,8 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
 
         if d_req[TLV.kTLVType_State] == TLV.M1:
             # step #2 Accessory -> iOS Device Verify Start Response
-            self.log_message('Step #2 /pair-verify')
+            if self.debug_pair_verify:
+                self.log_message('Step #2 /pair-verify')
 
             # 1) generate new curve25519 key pair
             accessory_session_key = py25519.Key25519()
@@ -324,12 +343,14 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             d_res[TLV.kTLVType_EncryptedData] = tmp
 
             self._send_response_tlv(d_res)
-            self.log_message('after step #2\n%s', TLV.to_string(d_res))
+            if self.debug_pair_verify:
+                self.log_message('after step #2\n%s', TLV.to_string(d_res))
             return
 
         if d_req[TLV.kTLVType_State] == TLV.M3:
             # step #4 Accessory -> iOS Device Verify Finish Response
-            self.log_message('Step #4 /pair-verify')
+            if self.debug_pair_verify:
+                self.log_message('Step #4 /pair-verify')
 
             session_key = self.server.sessions[self.session_id]['session_key']
 
@@ -381,7 +402,8 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             d_res[TLV.kTLVType_State] = TLV.M4
 
             self._send_response_tlv(d_res)
-            self.log_message('after step #4\n%s', TLV.to_string(d_res))
+            if self.debug_pair_verify:
+                self.log_message('after step #4\n%s', TLV.to_string(d_res))
             return
 
         self.send_error(HttpStatusCodes.METHOD_NOT_ALLOWED)
@@ -706,7 +728,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         absolute_path = self.path.split('?')[0]
         if absolute_path in self.PATHMAPPING:
             if 'GET' in self.PATHMAPPING[absolute_path]:
-                self.log_message('-' * 80 + '\ndo_GET / path: %s', self.path)
+                # self.log_message('-' * 80 + '\ndo_GET / path: %s', self.path)
                 self.PATHMAPPING[absolute_path]['GET']()
                 return
         self.log_error('send error because of unmapped path: %s', self.path)
@@ -718,7 +740,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         self.body = self.rfile.read(content_length)
         if self.path in self.PATHMAPPING:
             if 'POST' in self.PATHMAPPING[self.path]:
-                self.log_message('-' * 80 + '\ndo_POST / path: %s', self.path)
+                # self.log_message('-' * 80 + '\ndo_POST / path: %s', self.path)
                 self.PATHMAPPING[self.path]['POST']()
                 return
         self.log_error('send error because of unmapped path: %s', self.path)
@@ -730,7 +752,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         self.body = self.rfile.read(content_length)
         if self.path in self.PATHMAPPING:
             if 'PUT' in self.PATHMAPPING[self.path]:
-                self.log_message('-' * 80 + '\ndo_PUT / path: %s', self.path)
+                # self.log_message('-' * 80 + '\ndo_PUT / path: %s', self.path)
                 self.PATHMAPPING[self.path]['PUT']()
                 return
         self.log_error('send error because of unmapped path: %s', self.path)

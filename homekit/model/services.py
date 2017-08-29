@@ -119,8 +119,11 @@ class FanService(_Service):
         self._onCharacteristic = OnCharacteristic(get_id())
         self.characteristics.append(self._onCharacteristic)
 
-    def set_on_callback(self, callback):
+    def set_on_set_callback(self, callback):
         self._onCharacteristic.set_set_value_callback(callback)
+
+    def set_on_get_callback(self, callback):
+        self._onCharacteristic.set_get_value_callback(callback)
 
 
 class LightBulbService(_Service):
@@ -133,8 +136,11 @@ class LightBulbService(_Service):
         self._onCharacteristic = OnCharacteristic(get_id())
         self.characteristics.append(self._onCharacteristic)
 
-    def set_on_callback(self, callback):
+    def set_on_set_callback(self, callback):
         self._onCharacteristic.set_set_value_callback(callback)
+
+    def set_on_get_callback(self, callback):
+        self._onCharacteristic.set_get_value_callback(callback)
 
 
 class OutletService(_Service):

@@ -326,14 +326,16 @@ class Characteristic(ToDictMixin):
 
     def set_events(self, new_val):
         self.ev = new_val
-        if self._set_value_callback:
-            self._set_value_callback('event', new_val)
 
     def set_value(self, new_val):
         self.value = new_val
         if self._set_value_callback:
-            self._set_value_callback('value', new_val)
+            self._set_value_callback(new_val)
 
+    def get_value(self):
+        if self._get_value_callback:
+            return self._get_value_callback()
+        return self.value
 
 
 class CurrentHeatingCoolingStateCharacteristic(Characteristic):

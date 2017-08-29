@@ -214,7 +214,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                     for characteristic in service.characteristics:
                         if characteristic.iid != cid:
                             continue
-                        result['characteristics'].append({'aid': aid, 'iid': cid, 'value': characteristic.value})
+                        result['characteristics'].append({'aid': aid, 'iid': cid, 'value': characteristic.get_value()})
         if self.debug_get_characteristics:
             self.log_message('chars: %s', json.dumps(result))
 

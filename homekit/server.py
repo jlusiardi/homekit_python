@@ -27,7 +27,7 @@ class HomeKitServer(ThreadingMixIn, HTTPServer):
         desc = {'md': 'My Lightbulb',  # model name of accessory
                 'ci': Categories['Lightbulb'],  # category identifier (page 254, 2 means bridge)
                 'pv': '1.0',  # protocol version
-                'c#': '1',  # configuration (fortlaufende nummer)
+                'c#': '3',  # configuration (consecutive number, 1 or greater, must be changed on every configuration change)
                 'id': self.data.accessory_pairing_id_bytes,  # id MUST look like Mac Address
                 'ff': '0',  # feature flags
                 's#': '1',  # must be 1

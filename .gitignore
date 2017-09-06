@@ -106,3 +106,4 @@ ENV/
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/vcs.xml
 /tmp
+/.idea/homekit_python.iml

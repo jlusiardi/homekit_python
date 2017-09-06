@@ -1,9 +1,9 @@
-from zeroconf import ServiceBrowser, Zeroconf
-from time import sleep
 from socket import inet_ntoa
+from time import sleep
+from zeroconf import ServiceBrowser, Zeroconf
 
 from homekit.feature_flags import FeatureFlags
-from homekit.categories import Categories
+from homekit.model.categories import Categories
 
 
 class CollectingListener(object):

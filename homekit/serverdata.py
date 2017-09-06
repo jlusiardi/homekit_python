@@ -90,6 +90,14 @@ class HomeKitServerData:
         self.data['accessory_ltsk'] = binascii.hexlify(accessory_ltsk).decode()
         self._save_data()
 
+    @property
+    def configuration_number(self) -> int:
+        return self.data['c#']
+
+    def increase_configuration_number(self):
+        self.data['c#'] += 1
+        self._save_data()
+
 
 if __name__ == '__main__':
     import tempfile

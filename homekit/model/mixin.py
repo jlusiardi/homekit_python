@@ -37,5 +37,4 @@ class ToDictMixin(object):
 
     def __str__(self):
         d = self._to_dict()
-        print(d)
         return json.dumps(d)

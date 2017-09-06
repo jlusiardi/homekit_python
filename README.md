@@ -1,8 +1,19 @@
-# HomeKit client
+# HomeKit Python
 
-This code only works with HomeKit IP Accessories. no Bluetooth LE Accessories (yet)!
+With this code it is possible to implement either a HomeKit Accessory or simulate a
+HomeKit Controller.
+
+**Limitations**
+
+ * This code only works with HomeKit IP Accessories. no Bluetooth LE Accessories (yet)!
+ * No reaction to events whatsoever.
 
 The code presented in this repository was created based on release R1 from 2017-06-07.
+
+
+# HomeKit Controller
+
+The following tools help to access HomeKit Accessories.
 
 ## discover.py
 
@@ -27,7 +38,7 @@ Status Flags (sf): 0
 Category Identifier (ci): Other (Id: 1)
 ```
 
-## identfy.py
+## identify.py
 
 This tool will use the Identify Routine of a HomeKit IP Accessory.
 
@@ -81,6 +92,8 @@ The option `-p` specifies if the permissions should be read as well.
 The option `-t` specifies if the type information should be read as well.
 
 The option `-e` specifies if the event data should be read as well.
+
+# HomeKit Accessory
 
 # Tests
 

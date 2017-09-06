@@ -11,6 +11,7 @@ from homekit.model import Accessories, Categories
 class HomeKitServer(ThreadingMixIn, HTTPServer):
     def __init__(self, data_file):
         self.data = HomeKitServerData(data_file)
+        self.data.increase_configuration_number()
         self.sessions = {}
         self.zeroconf = Zeroconf()
         self.mdns_type = '_hap._tcp.local.'
@@ -27,7 +28,8 @@ class HomeKitServer(ThreadingMixIn, HTTPServer):
         desc = {'md': 'My Lightbulb',  # model name of accessory
                 'ci': Categories['Lightbulb'],  # category identifier (page 254, 2 means bridge)
                 'pv': '1.0',  # protocol version
-                'c#': '3',  # configuration (consecutive number, 1 or greater, must be changed on every configuration change)
+                'c#': str(self.data.configuration_number),
+                # configuration (consecutive number, 1 or greater, must be changed on every configuration change)
                 'id': self.data.accessory_pairing_id_bytes,  # id MUST look like Mac Address
                 'ff': '0',  # feature flags
                 's#': '1',  # must be 1

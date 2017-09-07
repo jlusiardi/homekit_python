@@ -3,7 +3,7 @@ from distutils.core import setup
 setup(
     name='homekit',
     packages=['homekit', 'homekit.model'],  # this must be the same as the name above
-    version='0.1.6',
+    version='0.1',
     description='Python code to interface HomeKit Accessories and Controllers',
     author='Joachim Lusiardi',
     author_email='pypi@lusiardi.de',

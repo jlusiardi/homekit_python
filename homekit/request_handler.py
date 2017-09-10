@@ -6,6 +6,7 @@ import gmpy2
 import py25519
 import hkdf
 import hashlib
+import sys
 
 from homekit.tlv import TLV
 from homekit.srp import SrpServer
@@ -197,7 +198,8 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             ev = params['ev'] == 1
 
         if self.debug_get_characteristics:
-            self.log_message('query parameters: ids: %s, meta: %s, perms: %s, type: %s, ev: %s', ids, meta, perms, type, ev)
+            self.log_message('query parameters: ids: %s, meta: %s, perms: %s, type: %s, ev: %s', ids, meta, perms, type,
+                             ev)
 
         result = {
             'characteristics': []
@@ -757,3 +759,19 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                 return
         self.log_error('send error because of unmapped path: %s', self.path)
         self.send_error(HttpStatusCodes.NOT_FOUND)
+
+    def log_message(self, format, *args):
+        if self.server.logger is None:
+            pass
+        elif self.server.logger == sys.stderr:
+            BaseHTTPRequestHandler.log_message(self, format, *args)
+        else:
+            self.server.logger.info("%s" % (format % args))
+
+    def log_error(self, format, *args):
+        if self.server.logger is None:
+            pass
+        elif self.server.logger == sys.stderr:
+            BaseHTTPRequestHandler.log_error(self, format, *args)
+        else:
+            self.server.logger.error("%s" % (format % args))

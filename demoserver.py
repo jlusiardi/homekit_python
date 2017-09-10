@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
         accessory = Accessory('Testlicht')
         lightBulbService = LightBulbService()
-        lightBulbService.set_on_callback(light_switched)
+        lightBulbService.set_on_set_callback(light_switched)
         accessory.services.append(lightBulbService)
         httpd.accessories.add_accessory(accessory)
 

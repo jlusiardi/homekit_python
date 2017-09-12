@@ -2,6 +2,8 @@ from http.server import HTTPServer
 from socketserver import ThreadingMixIn
 from zeroconf import Zeroconf, ServiceInfo
 import socket
+import sys
+import logging
 
 from homekit.serverdata import HomeKitServerData
 from homekit.request_handler import HomeKitRequestHandler
@@ -9,8 +11,20 @@ from homekit.model import Accessories, Categories
 
 
 class HomeKitServer(ThreadingMixIn, HTTPServer):
-    def __init__(self, data_file):
-        self.data = HomeKitServerData(data_file)
+    def __init__(self, config_file, logger=sys.stderr):
+        """
+        Create a new server that acts like a homekit accessory.
+
+        :param config_file: the file that contains the configuration data. Must be a string representing an absolute
+        path to the file
+        :param logger: this can be None to disable logging, sys.stderr to use the default behaviour of the python
+        implementation or an instance of logging.Logger to use this.
+        """
+        if logger is None or logger == sys.stderr or isinstance(logger, logging.Logger):
+            self.logger = logger
+        else:
+            raise Exception('Invalid logger given.')
+        self.data = HomeKitServerData(config_file)
         self.data.increase_configuration_number()
         self.sessions = {}
         self.zeroconf = Zeroconf()
@@ -19,9 +33,6 @@ class HomeKitServer(ThreadingMixIn, HTTPServer):
 
         self.accessories = Accessories()
 
-        # accessory = homekit.model.Accessory(1, 'me')
-        # accessory.services.append(homekit.model.LightBulbService(2, 'light'))
-        # self.accessories.add_accessory(accessory)
         HTTPServer.__init__(self, (self.data.ip, self.data.port), HomeKitRequestHandler)
 
     def publish_device(self):

@@ -109,7 +109,15 @@ class AcessoryInformationService(_Service):
         return None
 
 
-class FanService(_Service):
+class _OnCharacteristis(object):
+    def set_on_set_callback(self, callback):
+        self._onCharacteristic.set_set_value_callback(callback)
+
+    def set_on_get_callback(self, callback):
+        self._onCharacteristic.set_get_value_callback(callback)
+
+
+class FanService(_Service, _OnCharacteristis):
     """
     Defined on page 216
     """
@@ -119,14 +127,8 @@ class FanService(_Service):
         self._onCharacteristic = OnCharacteristic(get_id())
         self.characteristics.append(self._onCharacteristic)
 
-    def set_on_set_callback(self, callback):
-        self._onCharacteristic.set_set_value_callback(callback)
 
-    def set_on_get_callback(self, callback):
-        self._onCharacteristic.set_get_value_callback(callback)
-
-
-class LightBulbService(_Service):
+class LightBulbService(_Service, _OnCharacteristis):
     """
     Defined on page 217
     """
@@ -136,14 +138,8 @@ class LightBulbService(_Service):
         self._onCharacteristic = OnCharacteristic(get_id())
         self.characteristics.append(self._onCharacteristic)
 
-    def set_on_set_callback(self, callback):
-        self._onCharacteristic.set_set_value_callback(callback)
 
-    def set_on_get_callback(self, callback):
-        self._onCharacteristic.set_get_value_callback(callback)
-
-
-class OutletService(_Service):
+class OutletService(_Service, _OnCharacteristis):
     """
     Defined on page 219
     """
@@ -154,9 +150,6 @@ class OutletService(_Service):
         self.characteristics.append(self._onCharacteristic)
         self._outletInUse = OutletInUseCharacteristic(get_id())
         self.characteristics.append(self._outletInUse)
-
-    def set_on_callback(self, callback):
-        self._onCharacteristic.set_set_value_callback(callback)
 
 
 class ThermostatService(_Service):
@@ -182,10 +175,27 @@ class ThermostatService(_Service):
         self._temperatureDisplayUnits = TemperatureDisplayUnits(get_id())
         self.characteristics.append(self._temperatureDisplayUnits)
 
-    def set_target_temperature(self, callback):
-        self._targetTemperature.set_set_value_callback(callback)
+    def set_current_heating_cooling_state_get_callback(self, callback):
+        self._currentHeatingCoolingState.set_get_value_callback(callback)
 
-    def set_target_heating_cooling_state(self, callback):
+    def set_target_heating_cooling_state_set_callback(self, callback):
         self._targetHeatingCoolingState.set_set_value_callback(callback)
 
+    def set_target_heating_cooling_state_get_callback(self, callback):
+        self._targetHeatingCoolingState.set_get_value_callback(callback)
+
+    def set_current_temperature_get_callback(self, callback):
+        self._currentTemperature.set_get_value_callback(callback)
+
+    def set_target_temperature_set_callback(self, callback):
+        self._targetTemperature.set_set_value_callback(callback)
+
+    def set_target_temperature_get_callback(self, callback):
+        self._targetTemperature.set_get_value_callback(callback)
+
+    def set_temperature_display_units_set_callback(self, callback):
+        self._temperatureDisplayUnits.set_set_value_callback(callback)
+
+    def set_temperature_display_units_get_callback(self, callback):
+        self._temperatureDisplayUnits.set_get_value_callback(callback)
 

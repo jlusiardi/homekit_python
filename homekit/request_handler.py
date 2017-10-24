@@ -21,13 +21,12 @@ def bytes_to_mpz(input_bytes):
 
 class HomeKitRequestHandler(BaseHTTPRequestHandler):
     VALID_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE']
+    DEBUG_PUT_CHARACTERISTICS = False
+    DEBUG_CRYPT = False
+    DEBUG_PAIR_VERIFY = False
+    DEBUG_GET_CHARACTERISTICS = False
 
     def __init__(self, request, client_address, server):
-        self.debug_crypt = False
-        self.debug_pair_verify = False
-        self.debug_put_characteristics = True
-        self.debug_get_characteristics = False
-
         # keep pycharm from complaining about those not being define in __init__
         # self.session_id = '{ip}:{port}'.format(ip=client_address[0], port= client_address[1])
         self.session_id = '{ip}'.format(ip=client_address[0])
@@ -94,7 +93,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
 
         # the authtag is not counted, so add its length
         data = self.rfile.read(data_len + 16)
-        if self.debug_crypt:
+        if HomeKitRequestHandler.DEBUG_CRYPT:
             self.log_message('data >%i< >%s<', len(data), binascii.hexlify(data))
 
         # get the crypto key from the session
@@ -110,7 +109,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             # TODO: handle errors
             pass
 
-        if self.debug_crypt:
+        if HomeKitRequestHandler.DEBUG_CRYPT:
             self.log_message('crypted request >%s<', decrypted)
 
         self.server.sessions[self.session_id]['controller_to_accessory_count'] += 1
@@ -131,7 +130,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         self.wfile.seek(0)
         in_data = self.wfile.read(65537)
 
-        if self.debug_crypt:
+        if HomeKitRequestHandler.DEBUG_CRYPT:
             self.log_message('response >%s<', in_data)
             self.log_message('len(response) %s', len(in_data))
 
@@ -139,7 +138,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         out_data = bytearray()
         while len(in_data) > 0:
             block = in_data[:block_size]
-            if self.debug_crypt:
+            if HomeKitRequestHandler.DEBUG_CRYPT:
                 self.log_message('==> BLOCK: len %s', len(block))
             in_data = in_data[block_size:]
 
@@ -164,7 +163,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         As described on page 84
         :return:
         """
-        if self.debug_get_characteristics:
+        if HomeKitRequestHandler.DEBUG_GET_CHARACTERISTICS:
             self.log_message('GET /characteristics')
 
         # analyse
@@ -197,7 +196,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         if 'ev' in params:
             ev = params['ev'] == 1
 
-        if self.debug_get_characteristics:
+        if HomeKitRequestHandler.DEBUG_GET_CHARACTERISTICS:
             self.log_message('query parameters: ids: %s, meta: %s, perms: %s, type: %s, ev: %s', ids, meta, perms, type,
                              ev)
 
@@ -217,7 +216,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                         if characteristic.iid != cid:
                             continue
                         result['characteristics'].append({'aid': aid, 'iid': cid, 'value': characteristic.get_value()})
-        if self.debug_get_characteristics:
+        if HomeKitRequestHandler.DEBUG_GET_CHARACTERISTICS:
             self.log_message('chars: %s', json.dumps(result))
 
         result_bytes = json.dumps(result).encode()
@@ -233,7 +232,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         Defined page 80 ff
         :return:
         """
-        if self.debug_put_characteristics:
+        if HomeKitRequestHandler.DEBUG_PUT_CHARACTERISTICS:
             self.log_message('PUT /characteristics')
             self.log_message('body: %s', self.body)
 
@@ -252,12 +251,12 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                             continue
 
                         if 'ev' in characteristic_to_set:
-                            if self.debug_put_characteristics:
+                            if HomeKitRequestHandler.DEBUG_PUT_CHARACTERISTICS:
                                 self.log_message('set ev >%s< >%s< >%s<', aid, cid, characteristic_to_set['ev'])
                             characteristic.set_events(characteristic_to_set['ev'])
 
                         if 'value' in characteristic_to_set:
-                            if self.debug_put_characteristics:
+                            if HomeKitRequestHandler.DEBUG_PUT_CHARACTERISTICS:
                                 self.log_message('set value >%s< >%s< >%s<', aid, cid, characteristic_to_set['value'])
                             characteristic.set_value(characteristic_to_set['value'])
 
@@ -294,7 +293,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
 
         if d_req[TLV.kTLVType_State] == TLV.M1:
             # step #2 Accessory -> iOS Device Verify Start Response
-            if self.debug_pair_verify:
+            if HomeKitRequestHandler.DEBUG_PAIR_VERIFY:
                 self.log_message('Step #2 /pair-verify')
 
             # 1) generate new curve25519 key pair
@@ -345,13 +344,13 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             d_res[TLV.kTLVType_EncryptedData] = tmp
 
             self._send_response_tlv(d_res)
-            if self.debug_pair_verify:
+            if HomeKitRequestHandler.DEBUG_PAIR_VERIFY:
                 self.log_message('after step #2\n%s', TLV.to_string(d_res))
             return
 
         if d_req[TLV.kTLVType_State] == TLV.M3:
             # step #4 Accessory -> iOS Device Verify Finish Response
-            if self.debug_pair_verify:
+            if HomeKitRequestHandler.DEBUG_PAIR_VERIFY:
                 self.log_message('Step #4 /pair-verify')
 
             session_key = self.server.sessions[self.session_id]['session_key']
@@ -404,7 +403,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             d_res[TLV.kTLVType_State] = TLV.M4
 
             self._send_response_tlv(d_res)
-            if self.debug_pair_verify:
+            if HomeKitRequestHandler.DEBUG_PAIR_VERIFY:
                 self.log_message('after step #4\n%s', TLV.to_string(d_res))
             return
 

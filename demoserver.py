@@ -10,7 +10,6 @@ from homekit.model import Accessory, LightBulbService
 def light_switched(newval):
     print('=======>  light switched: {x}'.format(x=newval))
 
-
 if __name__ == '__main__':
     try:
         httpd = HomeKitServer(os.path.expanduser('~/.homekit/demoserver.json'))
@@ -27,5 +26,8 @@ if __name__ == '__main__':
         print('published device and start serving')
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print('unpublish device')
-        httpd.unpublish_device()
+        pass
+    print('unpublish device')
+    httpd.unpublish_device()
+    httpd.shutdown()
+

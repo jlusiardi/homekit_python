@@ -56,3 +56,7 @@ class HomeKitServer(ThreadingMixIn, HTTPServer):
 
     def unpublish_device(self):
         self.zeroconf.unregister_all_services()
+
+    def shutdown(self):
+        self.socket.close()
+        HTTPServer.shutdown(self)

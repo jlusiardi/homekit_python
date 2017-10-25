@@ -7,6 +7,7 @@ import py25519
 import hkdf
 import hashlib
 import sys
+import socket
 
 from homekit.tlv import TLV
 from homekit.srp import SrpServer
@@ -25,6 +26,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
     DEBUG_CRYPT = False
     DEBUG_PAIR_VERIFY = False
     DEBUG_GET_CHARACTERISTICS = False
+    timeout = 5
 
     def __init__(self, request, client_address, server):
         # keep pycharm from complaining about those not being define in __init__
@@ -57,6 +59,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             }
         }
         self.protocol_version = 'HTTP/1.1'
+        self.close_connection = False
 
         # init super class
         BaseHTTPRequestHandler.__init__(self, request, client_address, server)
@@ -83,6 +86,11 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                     self.server.sessions[self.session_id]['enrypted_connection'] = False
                     BaseHTTPRequestHandler.handle_one_request(self)
                     return
+        except (socket.timeout, OSError) as e:
+            # a read or a write timed out.  Discard this connection
+            self.log_error(' %r', e)
+            self.close_connection = True
+            return
         except UnicodeDecodeError as e:
             # self.log_error('exception %s' % e)
             pass

@@ -8,6 +8,7 @@ import hkdf
 import hashlib
 import sys
 import socket
+import select
 
 from homekit.tlv import TLV
 from homekit.srp import SrpServer
@@ -26,14 +27,14 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
     DEBUG_CRYPT = False
     DEBUG_PAIR_VERIFY = False
     DEBUG_GET_CHARACTERISTICS = False
-    timeout = 5
+    timeout = 300
 
     def __init__(self, request, client_address, server):
         # keep pycharm from complaining about those not being define in __init__
         # self.session_id = '{ip}:{port}'.format(ip=client_address[0], port= client_address[1])
         self.session_id = '{ip}'.format(ip=client_address[0])
         if self.session_id not in server.sessions:
-            server.sessions[self.session_id] = {}
+            server.sessions[self.session_id] = {'handler': self}
         self.rfile = None
         self.wfile = None
         self.body = None
@@ -61,6 +62,8 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         self.protocol_version = 'HTTP/1.1'
         self.close_connection = False
 
+        self.timeout_counter = 0
+
         # init super class
         BaseHTTPRequestHandler.__init__(self, request, client_address, server)
 
@@ -72,6 +75,22 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         :return:
         """
         try:
+            # make connection non blocking so the select can work
+            self.connection.setblocking(0)
+            ready = select.select([self.connection], [], [], 1)
+
+            # no data was to be received, so we count up to track how many seconds in total this happened
+            if not ready[0]:
+                self.timeout_counter += 1
+
+                # if this is above our configured timeout the connection gets closed
+                if self.timeout_counter >= self.timeout:
+                    self.close_connection = True
+                return
+
+            # data was received so reset the timeout handler
+            self.timeout_counter = 0
+
             raw_peeked_data = self.rfile.peek(10)
             if len(raw_peeked_data) == 0:
                 return

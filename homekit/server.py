@@ -58,5 +58,8 @@ class HomeKitServer(ThreadingMixIn, HTTPServer):
         self.zeroconf.unregister_all_services()
 
     def shutdown(self):
+        # tell all handlers to close the connection
+        for session in self.sessions:
+            self.sessions[session]['handler'].close_connection = True
         self.socket.close()
         HTTPServer.shutdown(self)

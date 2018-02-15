@@ -17,6 +17,5 @@ setup(
         'py25519',
         'hkdf',
         'ed25519',
-        'netifaces',
     ],
 )

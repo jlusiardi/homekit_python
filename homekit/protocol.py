@@ -184,6 +184,10 @@ def get_session_keys(conn, pairing_data):
     :param pairing_data: the paring data as returned by perform_pair_setup
     :return: tuple of the session keys (controller_to_accessory_key and  accessory_to_controller_key)
     """
+    headers = {
+        'Content-Type': 'application/pairing+tlv8'
+    }
+
     #
     # Step #1 ios --> accessory (send verify start Request) (page 47)
     #
@@ -194,7 +198,7 @@ def get_session_keys(conn, pairing_data):
         TLV.kTLVType_PublicKey: ios_key.pubkey
     })
 
-    conn.request('POST', '/pair-verify', request_tlv)
+    conn.request('POST', '/pair-verify', request_tlv, headers)
     resp = conn.getresponse()
     response_tlv = TLV.decode_bytes(resp.read())
 
@@ -270,7 +274,7 @@ def get_session_keys(conn, pairing_data):
     })
 
     # 12) send to accessory
-    conn.request('POST', '/pair-verify', request_tlv)
+    conn.request('POST', '/pair-verify', request_tlv, headers)
     resp = conn.getresponse()
     response_tlv = TLV.decode_bytes(resp.read())
 

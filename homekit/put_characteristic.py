@@ -34,7 +34,6 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     conn = http.client.HTTPConnection(connection_data['ip'], port=connection_data['port'])
-    pairing_data = load_pairing(args.file)
 
     controllerToAccessoryKey, accessoryToControllerKey = get_session_keys(conn, pairing_data)
 

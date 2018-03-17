@@ -77,6 +77,7 @@ class SecureHttp:
         return self._handle_request(data)
 
     def _handle_request(self, data):
+        data = data.replace("\n", "\r\n")
         assert len(data) < 1024
         len_bytes = len(data).to_bytes(2, byteorder='little')
         cnt_bytes = self.c2a_counter.to_bytes(8, byteorder='little')

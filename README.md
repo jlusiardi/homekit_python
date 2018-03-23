@@ -81,7 +81,7 @@ This tool will list all available HomeKit IP Accessories within the local networ
 
 Usage:
 ```bash
-./discover.py
+python3 -m homekit.discover
 ```
 
 Output:
@@ -97,6 +97,7 @@ State Number (s#): 1
 Status Flags (sf): 0
 Category Identifier (ci): Other (Id: 1)
 ```
+Hint: Some devices like the Koogeek P1EU Plug need bluetooth to set up wireless before. Use your phone to perform this.
 
 ## identify.py
 
@@ -104,7 +105,7 @@ This tool will use the Identify Routine of a HomeKit IP Accessory.
 
 Usage:
 ```bash
-./identify.py -d ${DEVICEID}
+python3 -m homekit.identify -d ${DEVICEID}
 ```
 
 Output:
@@ -117,7 +118,7 @@ This tool will perform a paring to a new accessory.
 
 Usage:
 ```bash
-./pair.py -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE}
+python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE}
 ```
 
 The file with the pairing data will be required to for any additional commands to the accessory.
@@ -128,19 +129,19 @@ This tool will read the accessory attribute database.
 
 Usage:
 ```bash
-./get_accessories.py -f ${PAIRINGDATAFILE} [-o {json,compact}]
+python3 -m homekit.get_accessories.py -f ${PAIRINGDATAFILE} [-o {json,compact}]
 ```
 
 The option `-o` specifies the format of the output:
  * `json` displays the result as pretty printed JSON
  * `compact` reformats the output to get more on one screen
 
-## get_characteristics.py
+## get_characteristic.py
 This tool will read values from one or more characteristics.
 
 Usage:
 ```bash
-./get_characteristics.py -f ${PAIRINGDATAFILE} -c {Characteristics} [-m] [-p] [-t] [-e]
+python3 -m homekit.get_characteristic.py -f ${PAIRINGDATAFILE} -c {Characteristics} [-m] [-p] [-t] [-e]
 ```
 
 The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>[,<aid>.<cid>]*`.

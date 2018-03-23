@@ -67,13 +67,28 @@ if __name__ == '__main__':
 
     sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
 
+    # perform a get_characteristic with meta to get the format
+    url = '/characteristics?id=' + args.characteristics + '&meta=1'
+    response = sec_http.get(url)
+    data = json.loads(response.read().decode())
+    format = data['characteristics'][0]['format']
+
+    # reformat the value to fit the required format
+    if format == 'bool':
+        if value in (True, 'true', 1):
+            value = 1
+        else:
+            value = 0
+    # TODO more conversion according to Table 5-5 page 67 required
+    else:
+        pass
+
     body = json.dumps({'characteristics': [{'aid': aid, 'iid': iid, 'value': value}]})
-    print(body)
     response = sec_http.put('/characteristics', body)
     data = response.read().decode()
     if response.code != 204:
         data = json.loads(data)
-        code = data['status']
+        code = data['characteristics'][0]['status']
         print('put_characteristics failed because: {reason} ({code})'.format(reason=HapStatusCodes[code], code=code))
     else:
         print('put_characteristics succeeded')

@@ -19,11 +19,29 @@ import hkdf
 import hashlib
 import ed25519
 import py25519
+import homekit.exception
 from binascii import hexlify
 from homekit.tlv import TLV
 from homekit.srp import SrpClient
 from homekit.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 
+def error_handler(error, stage):
+    if error == TLV.kTLVError_Unavailable:
+        raise homekit.exception.UnavailableError(stage)
+    elif error == TLV.kTLVError_Authentication:
+        raise homekit.exception.AuthenticationError(stage)
+    elif error == TLV.kTLVError_Backoff:
+        raise homekit.exception.BackoffError(stage)
+    elif error == TLV.kTLVError_MaxPeers:
+        raise homekit.exception.MaxPeersError(stage)
+    elif error == TLV.kTLVError_MaxTries:
+        raise homekit.exception.MaxTriesError(stage)
+    elif error == kTLVError_Unavailable:
+        raise homekit.exception.UnavailableError(stage)
+    elif error == kTLVError_Busy:
+        raise homekit.exception.BusyError(stage)
+    else:
+        raise homekit.exception.InvalidError(stage)
 
 def perform_pair_setup(connection, pin, ios_pairing_id):
     """
@@ -56,13 +74,7 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     assert TLV.kTLVType_State in response_tlv, response_tlv
     assert response_tlv[TLV.kTLVType_State] == TLV.M2
     if TLV.kTLVType_Error in response_tlv:
-        if response_tlv[TLV.kTLVType_Error] == TLV.kTLVError_Unavailable:
-            print('Step #3: kTLVError_Unavailable!')
-        elif response_tlv[TLV.kTLVType_Error] == TLV.kTLVError_MaxTries:
-            print('Step #3: kTLVError_MaxTries!')
-        else:
-            print('Step #3: unkown error!')
-        sys.exit(-1)
+        error_handler(response_tlv[TLV.kTLVType_Error], "step 3")
 
     srp_client = SrpClient('Pair-Setup', pin)
     srp_client.set_salt(response_tlv[TLV.kTLVType_Salt])
@@ -88,11 +100,7 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     assert TLV.kTLVType_State in response_tlv, response_tlv
     assert response_tlv[TLV.kTLVType_State] == TLV.M4
     if TLV.kTLVType_Error in response_tlv:
-        if response_tlv[TLV.kTLVType_Error] == TLV.kTLVError_Authentication:
-            print('Step #5: kTLVError_Authentication!')
-        else:
-            print('Step #5: unkown error!')
-        sys.exit(-1)
+        error_handler(response_tlv[TLV.kTLVType_Error], "step 5")
 
     assert TLV.kTLVType_Proof in response_tlv
     if not srp_client.verify_servers_proof(response_tlv[TLV.kTLVType_Proof]):
@@ -149,20 +157,13 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     #
     assert response_tlv[TLV.kTLVType_State] == TLV.M6
     if TLV.kTLVType_Error in response_tlv:
-        if response_tlv[TLV.kTLVType_Error] == TLV.kTLVError_Authentication:
-            print('Step #7: kTLVError_Authentication!')
-        elif response_tlv[TLV.kTLVType_Error] == TLV.kTLVError_MaxPeers:
-            print('Step #7: kTLVError_MaxPeers!')
-        else:
-            print('Step #7: unkown error!')
-        sys.exit(-1)
+        error_handler(response_tlv[TLV.kTLVType_Error], "step 7")
 
     assert TLV.kTLVType_EncryptedData in response_tlv
     decrypted_data = chacha20_aead_decrypt(bytes(), session_key, 'PS-Msg06'.encode(), bytes([0, 0, 0, 0]),
                                            response_tlv[TLV.kTLVType_EncryptedData])
     if decrypted_data == False:
-        print('Step #7: Abort because of illegal data')
-        sys.exit(-1)
+        raise homekit.exception.IllegalData("step 7")
 
     response_tlv = TLV.decode_bytearray(decrypted_data)
     assert TLV.kTLVType_Signature in response_tlv
@@ -240,8 +241,7 @@ def get_session_keys(conn, pairing_data):
     decrypted = chacha20_aead_decrypt(bytes(), session_key, 'PV-Msg02'.encode(), bytes([0, 0, 0, 0]),
                                       encrypted)
     if decrypted == False:
-        print('Step #3: authtag was wrong')
-        sys.exit(-1)
+        raise homekit.exception.InvalidAuth("step 3")
     d1 = TLV.decode_bytes(decrypted)
     assert TLV.kTLVType_Identifier in d1
     assert TLV.kTLVType_Signature in d1
@@ -250,9 +250,8 @@ def get_session_keys(conn, pairing_data):
     accessory_name = d1[TLV.kTLVType_Identifier].decode()
 
     if pairing_data['AccessoryPairingID'] != accessory_name:
-        print('Step #3: No pair_setup was performed (or wrong pairing file)')
-        sys.exit(-1)
-
+        raise homekit.exception.IncorrectPairingID("step 3")
+        
     accessory_ltpk = py25519.Key25519(pubkey=bytes(), verifyingkey=bytes.fromhex(pairing_data['AccessoryLTPK']))
 
     # 6) verify accessory's signature
@@ -260,8 +259,7 @@ def get_session_keys(conn, pairing_data):
     accessory_session_pub_key_bytes = response_tlv[TLV.kTLVType_PublicKey]
     accessory_info = accessory_session_pub_key_bytes + accessory_name.encode() + ios_key.pubkey
     if not accessory_ltpk.verify(bytes(accessory_sig), bytes(accessory_info)):
-        print('Step #3: Signature was invalid')
-        sys.exit(-1)
+        raise homekit.exception.InvalidSignature("step 3")
 
     # 7) create iOSDeviceInfo
     ios_device_info = ios_key.pubkey + pairing_data['iOSPairingId'].encode() + accessorys_session_pub_key_bytes
@@ -297,9 +295,10 @@ def get_session_keys(conn, pairing_data):
     #
     #   Post Step #4 verification (page 51)
     #
+    if TLV.kTLVType_Error in response_tlv:
+        error_handler(response_tlv[TLV.kTLVType_Error], "verification")
     assert TLV.kTLVType_State in response_tlv
     assert response_tlv[TLV.kTLVType_State] == TLV.M4
-    assert TLV.kTLVType_Error not in response_tlv, response_tlv[TLV.kTLVType_Error]
 
     # calculate session keys
     hkdf_inst = hkdf.Hkdf('Control-Salt'.encode(), shared_secret, hash=hashlib.sha512)

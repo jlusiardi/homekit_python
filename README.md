@@ -141,7 +141,7 @@ This tool will read values from one or more characteristics.
 
 Usage:
 ```bash
-python3 -m homekit.get_characteristic.py -f ${PAIRINGDATAFILE} -c {Characteristics} [-m] [-p] [-t] [-e]
+python3 -m homekit.get_characteristic.py -f ${PAIRINGDATAFILE} -c ${Characteristics} [-m] [-p] [-t] [-e]
 ```
 
 The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>[,<aid>.<cid>]*`.
@@ -153,6 +153,23 @@ The option `-p` specifies if the permissions should be read as well.
 The option `-t` specifies if the type information should be read as well.
 
 The option `-e` specifies if the event data should be read as well.
+
+## put_characteristic.py
+This tool will write values to one characteristic.
+
+Usage:
+```bash
+python3 -m homekit.put_characteristic.py -f ${PAIRINGDATAFILE} -c ${Characteristics} -v ${value}
+```
+
+The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>[,<aid>.<cid>]*`.
+ 
+The option `-v` specifies the value that should be written to the characteristic.
+
+For example, this command turns of a Koogeek P1EU Plug:
+```
+python3 -m homekit.put_characteristic -f koogeek.json -c 1.8 -v false
+```
 
 # HomeKit Accessory
 

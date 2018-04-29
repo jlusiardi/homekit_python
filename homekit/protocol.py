@@ -36,9 +36,9 @@ def error_handler(error, stage):
         raise homekit.exception.MaxPeersError(stage)
     elif error == TLV.kTLVError_MaxTries:
         raise homekit.exception.MaxTriesError(stage)
-    elif error == kTLVError_Unavailable:
+    elif error == TLV.kTLVError_Unavailable:
         raise homekit.exception.UnavailableError(stage)
-    elif error == kTLVError_Busy:
+    elif error == TLV.kTLVError_Busy:
         raise homekit.exception.BusyError(stage)
     else:
         raise homekit.exception.InvalidError(stage)

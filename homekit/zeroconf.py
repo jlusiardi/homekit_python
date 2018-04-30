@@ -51,7 +51,10 @@ def discover_homekit_devices():
         print('Feature Flags (ff): {f} (Flag: {flags})'.format(f=FeatureFlags[flags], flags=flags))
         print('Device ID (id): {id}'.format(id=info.properties[b'id'].decode()))
         print('Model Name (md): {md}'.format(md=info.properties[b'md'].decode()))
-        print('Protocol Version (pv): {pv}'.format(pv=info.properties[b'pv'].decode()))
+        if b'pv' in info.properties:
+            print('Protocol Version (pv): {pv}'.format(pv=info.properties[b'pv'].decode()))
+        else:
+            print('Protocol Version (pv): 1.0 (default, not set in TXT record)')
         print('State Number (s#): {sn}'.format(sn=info.properties[b's#'].decode()))
         print('Status Flags (sf): {sf}'.format(sf=info.properties[b'sf'].decode()))
         category = int(info.properties[b'ci'].decode())

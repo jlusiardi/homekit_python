@@ -18,10 +18,10 @@
 
 import json
 import argparse
-import http.client
 import sys
 
-from homekit import find_device_ip_and_port, SecureHttp, load_pairing, get_session_keys, HapStatusCodes
+from homekit import find_device_ip_and_port, SecureHttp, load_pairing, get_session_keys, HapStatusCodes, \
+    HomeKitHTTPConnection
 
 
 def setup_args_parser():
@@ -49,7 +49,7 @@ if __name__ == '__main__':
         print('Device {id} not found'.format(id=deviceId))
         sys.exit(-1)
 
-    conn = http.client.HTTPConnection(connection_data['ip'], port=connection_data['port'])
+    conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
 
     controllerToAccessoryKey, accessoryToControllerKey = get_session_keys(conn, pairing_data)
 

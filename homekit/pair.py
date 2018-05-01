@@ -17,11 +17,10 @@
 #
 
 import argparse
-import http.client
 import uuid
 import sys
 
-from homekit import find_device_ip_and_port, save_pairing, perform_pair_setup
+from homekit import find_device_ip_and_port, save_pairing, perform_pair_setup, HomeKitHTTPConnection
 
 
 def setup_args_parser():
@@ -42,7 +41,7 @@ if __name__ == '__main__':
         print('Device {id} not found'.format(id=args.device))
         sys.exit(-1)
 
-    conn = http.client.HTTPConnection(connection_data['ip'], port=connection_data['port'])
+    conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
 
     pairing = perform_pair_setup(conn, args.pin, iOSPairingId)
 

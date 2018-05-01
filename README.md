@@ -129,7 +129,7 @@ This tool will read the accessory attribute database.
 
 Usage:
 ```bash
-python3 -m homekit.get_accessories.py -f ${PAIRINGDATAFILE} [-o {json,compact}]
+python3 -m homekit.get_accessories -f ${PAIRINGDATAFILE} [-o {json,compact}]
 ```
 
 The option `-o` specifies the format of the output:
@@ -141,7 +141,7 @@ This tool will read values from one or more characteristics.
 
 Usage:
 ```bash
-python3 -m homekit.get_characteristic.py -f ${PAIRINGDATAFILE} -c ${Characteristics} [-m] [-p] [-t] [-e]
+python3 -m homekit.get_characteristic -f ${PAIRINGDATAFILE} -c ${Characteristics} [-m] [-p] [-t] [-e]
 ```
 
 The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>[,<aid>.<cid>]*`.
@@ -159,7 +159,7 @@ This tool will write values to one characteristic.
 
 Usage:
 ```bash
-python3 -m homekit.put_characteristic.py -f ${PAIRINGDATAFILE} -c ${Characteristics} -v ${value}
+python3 -m homekit.put_characteristic -f ${PAIRINGDATAFILE} -c ${Characteristics} -v ${value}
 ```
 
 The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>[,<aid>.<cid>]*`.

@@ -18,7 +18,7 @@ from http.client import HTTPConnection
 
 class HomeKitHTTPConnection(HTTPConnection):
 
-    def _send_output(self, message_body=None):
+    def _send_output(self, message_body=None, encode_chunked=False):
         """
         Acts like the original HTTPConnection._send_output but makes sure the 
         headers and the body are sent in one packet. This fixes issues with 

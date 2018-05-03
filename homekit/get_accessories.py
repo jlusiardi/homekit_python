@@ -22,7 +22,7 @@ import http.client
 import sys
 
 from homekit import find_device_ip_and_port, SecureHttp, load_pairing, get_session_keys, CharacteristicsTypes, \
-    ServicesTypes
+    ServicesTypes, save_pairing
 
 
 def setup_args_parser():
@@ -55,6 +55,10 @@ if __name__ == '__main__':
     sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
     response = sec_http.get('/accessories')
     data = json.loads(response.read().decode())
+
+    # save accessories data to pairing file
+    pairing_data['accessories'] = data['accessories']
+    save_pairing(args.file, pairing_data)
 
     if args.output == 'json':
         print(json.dumps(data, indent=4))

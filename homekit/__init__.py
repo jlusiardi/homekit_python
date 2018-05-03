@@ -18,7 +18,7 @@ import homekit.feature_flags
 import homekit.model.categories
 import homekit.model.services
 import homekit.statuscodes
-import homekit.zeroconf
+import homekit.zeroconf_
 from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 from homekit.protocol import perform_pair_setup, get_session_keys
 from homekit.secure_http import SecureHttp
@@ -35,5 +35,5 @@ HttpStatusCodes = homekit.statuscodes.HttpStatusCodes
 CharacteristicsTypes = homekit.model.CharacteristicsTypes
 ServicesTypes = homekit.model.services.ServicesTypes
 
-discover_homekit_devices = homekit.zeroconf.discover_homekit_devices
-find_device_ip_and_port = homekit.zeroconf.find_device_ip_and_port
+discover_homekit_devices = homekit.zeroconf_.discover_homekit_devices
+find_device_ip_and_port = homekit.zeroconf_.find_device_ip_and_port

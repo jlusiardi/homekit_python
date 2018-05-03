@@ -20,6 +20,7 @@ import json
 import argparse
 import http.client
 import sys
+from distutils.util import strtobool
 
 from homekit import find_device_ip_and_port, SecureHttp, load_pairing, get_session_keys, HapStatusCodes, save_pairing
 
@@ -94,10 +95,12 @@ if __name__ == '__main__':
 
     # reformat the value to fit the required format
     if format == 'bool':
-        if value in (True, 'true', 1):
-            value = 1
-        else:
-            value = 0
+        try:
+            value = strtobool(value)
+        except ValueError:
+            print('{v} is no valid boolean!'.format(v=value))
+            sys.exit(-1)
+
     # TODO more conversion according to Table 5-5 page 67 required
     else:
         pass

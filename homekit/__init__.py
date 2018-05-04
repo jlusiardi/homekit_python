@@ -26,6 +26,7 @@ from homekit.server import HomeKitServer
 from homekit.srp import SrpClient
 from homekit.tlv import TLV
 from homekit.tools import load_pairing, save_pairing
+from homekit.http_client import HomeKitHTTPConnection
 
 # Init lookup objects
 FeatureFlags = homekit.feature_flags.FeatureFlags

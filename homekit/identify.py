@@ -18,9 +18,8 @@
 
 import json
 import argparse
-import http.client
 
-from homekit import find_device_ip_and_port, HapStatusCodes
+from homekit import find_device_ip_and_port, HapStatusCodes, HomeKitHTTPConnection
 
 
 def setup_args_parser():
@@ -34,7 +33,7 @@ if __name__ == '__main__':
 
     connection_data = find_device_ip_and_port(args.device)
 
-    conn = http.client.HTTPConnection(connection_data['ip'], port=connection_data['port'])
+    conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
 
     conn.request('POST', '/identify')
 

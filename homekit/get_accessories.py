@@ -21,9 +21,9 @@ import argparse
 import sys
 
 from homekit import find_device_ip_and_port, SecureHttp, load_pairing, get_session_keys, CharacteristicsTypes, \
-    ServicesTypes, HomeKitHTTPConnection
+    ServicesTypes, HomeKitHTTPConnection, save_pairing
 
-
+  
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit perform app - performs operations on paired devices')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
@@ -54,6 +54,10 @@ if __name__ == '__main__':
     sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
     response = sec_http.get('/accessories')
     data = json.loads(response.read().decode())
+
+    # save accessories data to pairing file
+    pairing_data['accessories'] = data['accessories']
+    save_pairing(args.file, pairing_data)
 
     if args.output == 'json':
         print(json.dumps(data, indent=4))

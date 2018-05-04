@@ -19,9 +19,10 @@
 import json
 import argparse
 import sys
+from distutils.util import strtobool
 
 from homekit import find_device_ip_and_port, SecureHttp, load_pairing, get_session_keys, HapStatusCodes, \
-    HomeKitHTTPConnection
+    HomeKitHTTPConnection, save_pairing
 
 
 def setup_args_parser():
@@ -31,6 +32,17 @@ def setup_args_parser():
     parser.add_argument('-v', action='store', required=False, dest='value')
 
     return parser
+
+
+def get_format(pairing_data, aid, iid):
+    format = None
+    for d in pairing_data['accessories']:
+        if 'aid' in d and d['aid'] == aid:
+            for s in d['services']:
+                for c in s['characteristics']:
+                    if 'iid' in c and c['iid'] == iid:
+                        format = c['format']
+    return format
 
 
 if __name__ == '__main__':
@@ -67,18 +79,28 @@ if __name__ == '__main__':
 
     sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
 
-    # perform a get_characteristic with meta to get the format
-    url = '/characteristics?id=' + args.characteristics + '&meta=1'
-    response = sec_http.get(url)
-    data = json.loads(response.read().decode())
-    format = data['characteristics'][0]['format']
+    # first check if the accessories data is in the paring data
+    format = None
+    if 'accessories' not in pairing_data or not get_format(pairing_data, aid, iid):
+        # nope, so get it via /accessories and save it
+        response = sec_http.get('/accessories')
+        data = json.loads(response.read().decode())
+        pairing_data['accessories'] = data['accessories']
+        save_pairing(args.file, pairing_data)
+    # after loading the accessories data the aid.iid should be there...
+    format = get_format(pairing_data, aid, iid)
+    if not format:
+        print('Characteristic {aid}.{iid} not found'.format(aid=aid, iid=iid))
+        sys.exit(-1)
 
     # reformat the value to fit the required format
     if format == 'bool':
-        if value in (True, 'true', 1):
-            value = 1
-        else:
-            value = 0
+        try:
+            value = strtobool(value)
+        except ValueError:
+            print('{v} is no valid boolean!'.format(v=value))
+            sys.exit(-1)
+
     # TODO more conversion according to Table 5-5 page 67 required
     else:
         pass

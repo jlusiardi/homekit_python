@@ -21,8 +21,7 @@ import argparse
 import sys
 from distutils.util import strtobool
 
-from homekit import find_device_ip_and_port, SecureHttp, load_pairing, get_session_keys, HapStatusCodes, \
-    HomeKitHTTPConnection, save_pairing
+from homekit import SecureHttp, load_pairing, HapStatusCodes, save_pairing, create_session
 
 
 def setup_args_parser():
@@ -49,22 +48,6 @@ if __name__ == '__main__':
     parser = setup_args_parser()
     args = parser.parse_args()
 
-    pairing_data = load_pairing(args.file)
-    if pairing_data is None:
-        print('File {file} not found!'.format(file=args.file))
-        sys.exit(-1)
-
-    deviceId = pairing_data['AccessoryPairingID']
-
-    connection_data = find_device_ip_and_port(deviceId)
-    if connection_data is None:
-        print('Device {id} not found'.format(id=deviceId))
-        sys.exit(-1)
-
-    conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
-
-    controllerToAccessoryKey, accessoryToControllerKey = get_session_keys(conn, pairing_data)
-
     if not args.characteristics:
         parser.print_help()
         sys.exit(-1)
@@ -77,10 +60,12 @@ if __name__ == '__main__':
     iid = int(tmp[1])
     value = args.value
 
+    conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
     sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
 
+    pairing_data = load_pairing(args.file)
     # first check if the accessories data is in the paring data
-    format = None
+    characteristic_type = None
     if 'accessories' not in pairing_data or not get_format(pairing_data, aid, iid):
         # nope, so get it via /accessories and save it
         response = sec_http.get('/accessories')
@@ -88,13 +73,13 @@ if __name__ == '__main__':
         pairing_data['accessories'] = data['accessories']
         save_pairing(args.file, pairing_data)
     # after loading the accessories data the aid.iid should be there...
-    format = get_format(pairing_data, aid, iid)
-    if not format:
+    characteristic_type = get_format(pairing_data, aid, iid)
+    if not characteristic_type:
         print('Characteristic {aid}.{iid} not found'.format(aid=aid, iid=iid))
         sys.exit(-1)
 
     # reformat the value to fit the required format
-    if format == 'bool':
+    if characteristic_type == 'bool':
         try:
             value = strtobool(value)
         except ValueError:

@@ -18,10 +18,8 @@
 
 import json
 import argparse
-import sys
 
-from homekit import find_device_ip_and_port, SecureHttp, load_pairing, get_session_keys, CharacteristicsTypes, \
-    ServicesTypes, HomeKitHTTPConnection, save_pairing
+from homekit import SecureHttp, load_pairing, CharacteristicsTypes, ServicesTypes, save_pairing, create_session
 
   
 def setup_args_parser():
@@ -35,27 +33,14 @@ if __name__ == '__main__':
     parser = setup_args_parser()
     args = parser.parse_args()
 
-    pairing_data = load_pairing(args.file)
-    if pairing_data is None:
-        print('File {file} not found!'.format(file=args.file))
-        sys.exit(-1)
-
-    deviceId = pairing_data['AccessoryPairingID']
-
-    connection_data = find_device_ip_and_port(deviceId)
-    if connection_data is None:
-        print('Device {id} not found!'.format(id=deviceId))
-        sys.exit(-1)
-
-    conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
-
-    controllerToAccessoryKey, accessoryToControllerKey = get_session_keys(conn, pairing_data)
+    conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
 
     sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
     response = sec_http.get('/accessories')
     data = json.loads(response.read().decode())
 
     # save accessories data to pairing file
+    pairing_data = load_pairing(args.file)
     pairing_data['accessories'] = data['accessories']
     save_pairing(args.file, pairing_data)
 

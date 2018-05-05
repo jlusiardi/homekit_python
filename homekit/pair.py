@@ -45,4 +45,8 @@ if __name__ == '__main__':
 
     pairing = perform_pair_setup(conn, args.pin, iOSPairingId)
 
+    # add ip and port to pairing data
+    pairing['AccessoryIP'] = connection_data['ip']
+    pairing['AccessoryPort'] = connection_data['port']
+
     save_pairing(args.file, pairing)

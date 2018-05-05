@@ -97,7 +97,10 @@ State Number (s#): 1
 Status Flags (sf): 0
 Category Identifier (ci): Other (Id: 1)
 ```
-Hint: Some devices like the Koogeek P1EU Plug need bluetooth to set up wireless before. Use your phone to perform this.
+Hints: 
+ * Some devices like the Koogeek P1EU Plug need bluetooth to set up wireless before. Use your phone 
+   or the proper app to perform this
+ * paired devices should not show up
 
 ## identify.py
 
@@ -111,6 +114,7 @@ python3 -m homekit.identify -d ${DEVICEID}
 Output:
 
 Either *identify succeeded.* or *identify failed* followed by a reason (see table 5-12 page 80). 
+One of the most common reasons is a already paired device.
 
 ## pair.py
 
@@ -175,5 +179,12 @@ python3 -m homekit.put_characteristic -f koogeek.json -c 1.8 -v false
 
 # Tests
 
-The code was tested with the following devices:
+The code was tested with the following devices by the author:
  * Koogeek P1EU Plug ([Vendor](https://www.koogeek.com/smart-home-2418/p-p1eu.html))
+
+Users have tried (and succeeded, not checked by the author) to use the following devices:
+ * Ikea TRÅDFRI ([Issue #13](https://github.com/jlusiardi/homekit_python/issues/13))
+ * Philips Hue ([Issue #13](https://github.com/jlusiardi/homekit_python/issues/13))
+ * Leviton DH6HD-1BZ ([Issue #16](https://github.com/jlusiardi/homekit_python/issues/16))
+ * Lutron Caseta (Smart Bridge 2 / [Issue #17](https://github.com/jlusiardi/homekit_python/issues/17))
+ * iHome iSP5 ([Issue #18](https://github.com/jlusiardi/homekit_python/issues/18))

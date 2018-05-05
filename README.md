@@ -183,8 +183,8 @@ The code was tested with the following devices by the author:
  * Koogeek P1EU Plug ([Vendor](https://www.koogeek.com/smart-home-2418/p-p1eu.html))
 
 Users have tried (and succeeded) to use the following devices:
- * Ikea TRÅDFRI (Issue #13)
- * Philips Hue (Issue #13)
- * Leviton DH6HD-1BZ (Issue #16)
- * Lutron Caseta (Issue #17 / Smart Bridge 2)
- * iHome iSP5 (Issue #18)
+ * Ikea TRÅDFRI ([Issue #13](https://github.com/jlusiardi/homekit_python/issues/13))
+ * Philips Hue ([Issue #13](https://github.com/jlusiardi/homekit_python/issues/13))
+ * Leviton DH6HD-1BZ ([Issue #16](https://github.com/jlusiardi/homekit_python/issues/16))
+ * Lutron Caseta (Smart Bridge 2 / [Issue #17](https://github.com/jlusiardi/homekit_python/issues/17))
+ * iHome iSP5 ([Issue #18](https://github.com/jlusiardi/homekit_python/issues/18))

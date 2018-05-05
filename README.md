@@ -182,7 +182,7 @@ python3 -m homekit.put_characteristic -f koogeek.json -c 1.8 -v false
 The code was tested with the following devices by the author:
  * Koogeek P1EU Plug ([Vendor](https://www.koogeek.com/smart-home-2418/p-p1eu.html))
 
-Users have tried (and succeeded) to use the following devices:
+Users have tried (and succeeded, not checked by the author) to use the following devices:
  * Ikea TRÅDFRI ([Issue #13](https://github.com/jlusiardi/homekit_python/issues/13))
  * Philips Hue ([Issue #13](https://github.com/jlusiardi/homekit_python/issues/13))
  * Leviton DH6HD-1BZ ([Issue #16](https://github.com/jlusiardi/homekit_python/issues/16))

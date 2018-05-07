@@ -48,6 +48,8 @@ class TLV:
     kTLVType_Certificate = 9
     kTLVType_Signature = 10
     kTLVType_Permissions = 11  # 0x00 => reg. user, 0x01 => admin
+    kTLVType_Permission_RegularUser = 0
+    kTLVType_Permission_RegularAdmin = 1
     kTLVType_FragmentData = 12
     kTLVType_FragmentLast = 13
     kTLVType_Separator = 255
@@ -84,6 +86,24 @@ class TLV:
             else:
                 for b in value:
                     result[key].append(b)
+        return result
+
+    @staticmethod
+    def decode_bytes_to_list(bs) -> dict:
+        return TLV.decode_bytearray_to_list(bytearray(bs))
+
+    @staticmethod
+    def decode_bytearray_to_list(ba: bytearray) -> list:
+        result = []
+        # do not influence caller!
+        tail = ba.copy()
+        while len(tail) > 0:
+            key = tail.pop(0)
+            length = tail.pop(0)
+            value = tail[:length]
+            tail = tail[length:]
+
+            result.append((key, value))
         return result
 
     @staticmethod

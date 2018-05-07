@@ -46,6 +46,11 @@ class _HapStatusCodes(object):
         raise KeyError('Item {item} not found'.format_map(item=item))
 
 
+class _HttpContentTypes:
+    JSON = 'application/hap+json'
+    TLV = 'application/pairing+tlv8'
+
+
 class _HttpStatusCodes:
     """
     See Table 4-2 Chapter 4.15 Page 59
@@ -72,12 +77,13 @@ class _HttpStatusCodes:
         }
         self._categories_rev = {self._codes[k]: k for k in self._codes.keys()}
 
-        def __getitem__(self, item):
-            if item in self._codes:
-                return self._codes[item]
+    def __getitem__(self, item):
+        if item in self._codes:
+            return self._codes[item]
 
-            raise KeyError('Item {item} not found'.format_map(item=item))
+        raise KeyError('Item {item} not found'.format_map(item=item))
 
 
 HapStatusCodes = _HapStatusCodes()
 HttpStatusCodes = _HttpStatusCodes()
+HttpHttpContentTypes = _HttpContentTypes

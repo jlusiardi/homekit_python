@@ -16,6 +16,7 @@
 
 from http.client import HTTPConnection
 
+
 class HomeKitHTTPConnection(HTTPConnection):
 
     def _send_output(self, message_body=None, encode_chunked=False):

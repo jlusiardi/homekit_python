@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+
 class _FeatureFlags(object):
     """
     Data taken form table 5-8 Bonjour TXT Record Feature Flags on page 69.

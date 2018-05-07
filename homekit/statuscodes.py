@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+
 class _HapStatusCodes(object):
     """
     This data is taken from Table 5-12 HAP Satus Codes on page 80.
@@ -45,7 +46,7 @@ class _HapStatusCodes(object):
         raise KeyError('Item {item} not found'.format_map(item=item))
 
 
-class _HttpStatuCodes:
+class _HttpStatusCodes:
     """
     See Table 4-2 Chapter 4.15 Page 59
     """
@@ -79,4 +80,4 @@ class _HttpStatuCodes:
 
 
 HapStatusCodes = _HapStatusCodes()
-HttpStatusCodes = _HttpStatuCodes()
+HttpStatusCodes = _HttpStatusCodes()

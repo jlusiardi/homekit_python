@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+
 class TLV:
     """
     as described in Appendix 12 (page 251)
@@ -137,6 +138,7 @@ class TLV:
             res += '  {k}: {v}\n'.format(k=k, v=d[k])
         res += '}\n'
         return res
+
 
 if __name__ == '__main__':
     # TLV Example 1 from Chap 12.1.2 Page 252

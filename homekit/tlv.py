@@ -48,8 +48,8 @@ class TLV:
     kTLVType_Certificate = 9
     kTLVType_Signature = 10
     kTLVType_Permissions = 11  # 0x00 => reg. user, 0x01 => admin
-    kTLVType_Permission_RegularUser = 0
-    kTLVType_Permission_RegularAdmin = 1
+    kTLVType_Permission_RegularUser = bytearray(b'\x00')
+    kTLVType_Permission_AdminUser = bytearray(b'\x01')
     kTLVType_FragmentData = 12
     kTLVType_FragmentLast = 13
     kTLVType_Separator = 255
@@ -126,6 +126,40 @@ class TLV:
                 raise ValueError('Invalid key')
 
             value = d[key]
+
+            # handle separators properly
+            if key == TLV.kTLVType_Separator:
+                if len(value) == 0:
+                    result.append(key)
+                    result.append(0)
+                else:
+                    raise ValueError('Separator must not have data')
+
+            while len(value) > 0:
+                result.append(key)
+                if len(value) > 255:
+                    length = 255
+                    result.append(length)
+                    for b in value[:length]:
+                        result.append(b)
+                    value = value[length:]
+                else:
+                    length = len(value)
+                    result.append(length)
+                    for b in value[:length]:
+                        result.append(b)
+                    value = value[length:]
+        return result
+
+    @staticmethod
+    def encode_list(d: list) -> bytearray:
+        result = bytearray()
+        for p in d:
+            (key, value) = p
+            if not TLV.validate_key(key):
+                raise ValueError('Invalid key')
+
+            #value = d[key]
 
             # handle separators properly
             if key == TLV.kTLVType_Separator:

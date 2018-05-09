@@ -503,21 +503,17 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                 return
 
             # 3) construct response TLV
-            tmp = []
-            for pairing_id in server_data.peers:
-                tmp.append({
-                    TLV.kTLVType_Identifier: pairing_id.encode(),
-                    TLV.kTLVType_PublicKey: server_data.get_peer_key(pairing_id.encode()),
-                    TLV.kTLVType_Permissions: bytes(1) if server_data.is_peer_admin(pairing_id.encode()) else bytes(0)
-                })
-            tmp[0][TLV.kTLVType_State] = TLV.M2
-
-            tmp2 = bytearray()
-            for tlv in tmp:
-                tmp2 += (TLV.encode_dict(tlv))
-                tmp2 += (TLV.encode_dict({TLV.kTLVType_Separator: bytes()}))
-
-            result_bytes = bytes(tmp2)
+            tmp = [(TLV.kTLVType_State, TLV.M2)]
+            for index, pairing_id in enumerate(server_data.peers):
+                tmp.append((TLV.kTLVType_Identifier, pairing_id.encode()))
+                tmp.append((TLV.kTLVType_PublicKey, server_data.get_peer_key(pairing_id.encode())))
+                user = TLV.kTLVType_Permission_RegularUser
+                if server_data.is_peer_admin(pairing_id.encode()):
+                    user = TLV.kTLVType_Permission_AdminUser
+                tmp.append((TLV.kTLVType_Permissions, user))
+                if index + 1 < len(server_data.peers):
+                    tmp.append((TLV.kTLVType_Separator, bytes(0)))
+            result_bytes = TLV.encode_list(tmp)
 
             # 4) send response
             self.send_response(HttpStatusCodes.OK)

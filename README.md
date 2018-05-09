@@ -118,7 +118,7 @@ One of the most common reasons is a already paired device.
 
 ## pair.py
 
-This tool will perform a paring to a new accessory.
+This tool will perform a pairing to a new accessory.
 
 Usage:
 ```bash
@@ -126,6 +126,34 @@ python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE}
 ```
 
 The file with the pairing data will be required to for any additional commands to the accessory.
+
+## list_pairings.py
+
+This tool will perform a query to list all pairings of an accessory.
+
+Usage:
+```bash
+python3 -m homekit.list_pairings -f ${PAIRINGDATAFILE}
+```
+
+This will print information for each controller that is paired with the accessory:
+
+```
+Pairing Id: 3d65d692-90bb-41c2-9bd0-2cb7a3a5dd18
+        Public Key: 0xed93c78f80e7bc8bce4fb548f1a6681284f952d37ffcb439d21f7a96c87defaf
+        Permissions: 1 (admin user)
+```
+
+The information contains the pairing id, the public key of the device and permissions of the controller.
+
+## unpair.py
+
+This tool will remove a pairing from an accessory.
+
+Usage:
+```bash
+python -m homekit.unpair -f ${PAIRINGDATAFILE}
+```
 
 ## get_accessories.py
 

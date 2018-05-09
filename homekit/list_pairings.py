@@ -17,7 +17,6 @@
 #
 
 import argparse
-import uuid
 
 from homekit import create_session, SecureHttp, load_pairing
 from homekit.tlv import TLV
@@ -29,19 +28,11 @@ def setup_args_parser():
     return parser.parse_args()
 
 
-iOSPairingId = str(uuid.uuid4())
-
 if __name__ == '__main__':
     args = setup_args_parser()
 
     conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
     sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
-    pairing_data = load_pairing(args.file)
-    pairingId = pairing_data['iOSPairingId']
-
-    headers = {
-        'Content-Type': 'application/pairing+tlv8'
-    }
 
     request_tlv = TLV.encode_dict({
         TLV.kTLVType_State: TLV.M1,
@@ -51,7 +42,6 @@ if __name__ == '__main__':
     response = sec_http.post('/pairings', request_tlv.decode())
     data = response.read()
     data = TLV.decode_bytes_to_list(data)
-    print(data[0][0] == TLV.kTLVType_State, data[0][0] == TLV.M2)
 
     if not (data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2):
         print('Illegal reply.')

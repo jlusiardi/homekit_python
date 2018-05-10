@@ -125,7 +125,7 @@ class AcessoryInformationService(_Service):
         return None
 
 
-class _OnCharacteristis(object):
+class _OnCharacteristic(object):
     def set_on_set_callback(self, callback):
         self._onCharacteristic.set_set_value_callback(callback)
 
@@ -133,7 +133,31 @@ class _OnCharacteristis(object):
         self._onCharacteristic.set_get_value_callback(callback)
 
 
-class FanService(_Service, _OnCharacteristis):
+class _BrightnessCharacteristic(object):
+    def set_brightness_set_callback(self, callback):
+        self._brightnessCharacteristic.set_set_value_callback(callback)
+
+    def set_brightness_get_callback(self, callback):
+        self._brightnessCharacteristic.set_get_value_callback(callback)
+
+
+class _HueCharacteristic(object):
+    def set_hue_set_callback(self, callback):
+        self._hueCharacteristic.set_set_value_callback(callback)
+
+    def set_brightness_get_callback(self, callback):
+        self._hueCharacteristic.set_get_value_callback(callback)
+
+
+class _SaturationCharacteristic(object):
+    def set_saturation_set_callback(self, callback):
+        self._saturationCharacteristic.set_set_value_callback(callback)
+
+    def set_saturation_get_callback(self, callback):
+        self._saturationCharacteristic.set_get_value_callback(callback)
+
+
+class FanService(_Service, _OnCharacteristic):
     """
     Defined on page 216
     """
@@ -144,7 +168,7 @@ class FanService(_Service, _OnCharacteristis):
         self.characteristics.append(self._onCharacteristic)
 
 
-class LightBulbService(_Service, _OnCharacteristis):
+class LightBulbService(_Service, _OnCharacteristic):
     """
     Defined on page 217
     """
@@ -155,7 +179,27 @@ class LightBulbService(_Service, _OnCharacteristis):
         self.characteristics.append(self._onCharacteristic)
 
 
-class OutletService(_Service, _OnCharacteristis):
+class BHSLightBulbService(_Service, _OnCharacteristic, _BrightnessCharacteristic, _HueCharacteristic, _SaturationCharacteristic):
+    """
+    Defined on page 217; Lightbulb that supports color selection via Brightness, Hue and Saturation
+    """
+
+    def __init__(self):
+        _Service.__init__(self, ServicesTypes.get_uuid('public.hap.service.lightbulb'), get_id())
+        self._onCharacteristic = OnCharacteristic(get_id())
+        self.characteristics.append(self._onCharacteristic)
+        # brightness
+        self._brightnessCharacteristic = BrightnessCharacteristic(get_id())
+        self.characteristics.append(self._brightnessCharacteristic)
+        # hue
+        self._hueCharacteristic = HueCharacteristic(get_id())
+        self.characteristics.append(self._hueCharacteristic)
+        # saturation
+        self._saturationCharacteristic = SaturationCharacteristic(get_id())
+        self.characteristics.append(self._saturationCharacteristic)
+
+
+class OutletService(_Service, _OnCharacteristic):
     """
     Defined on page 219
     """

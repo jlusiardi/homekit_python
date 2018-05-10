@@ -354,6 +354,22 @@ class Characteristic(ToDictMixin):
         return self.value
 
 
+class BrightnessCharacteristic(Characteristic):
+    """
+    Defined on page 145
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.BRIGHTNESS, CharacteristicFormats.int)
+        self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write,
+                      CharacteristicPermissions.events]
+        self.minValue = 0
+        self.maxValue = 100
+        self.step = 1
+        self.value = 0
+        self.unit = CharacteristicUnits.percentage
+
+
 class CurrentHeatingCoolingStateCharacteristic(Characteristic):
     """
     Defined on page 147
@@ -381,6 +397,38 @@ class CurrentTemperatureCharacteristic(Characteristic):
         self.step = 0.1
         self.unit = CharacteristicUnits.celsius
         self.value = 23.0
+
+
+class HueCharacteristic(Characteristic):
+    """
+    Defined on page 151
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.HUE, CharacteristicFormats.float)
+        self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write,
+                      CharacteristicPermissions.events]
+        self.minValue = 0
+        self.maxValue = 360
+        self.step = 1
+        self.value = 0
+        self.unit = CharacteristicUnits.arcdegrees
+
+
+class SaturationCharacteristic(Characteristic):
+    """
+    Defined on page 159
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.SATURATION, CharacteristicFormats.float)
+        self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write,
+                      CharacteristicPermissions.events]
+        self.minValue = 0
+        self.maxValue = 100
+        self.step = 1
+        self.value = 0
+        self.unit = CharacteristicUnits.percentage
 
 
 class TargetHeatingCoolingStateCharacteristic(Characteristic):

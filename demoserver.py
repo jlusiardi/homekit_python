@@ -24,8 +24,9 @@ from homekit import HomeKitServer
 from homekit.model import Accessory, LightBulbService
 
 
-def light_switched(newval):
-    print('=======>  light switched: {x}'.format(x=newval))
+def light_switched(new_value):
+    print('=======>  light switched: {x}'.format(x=new_value))
+
 
 if __name__ == '__main__':
     logger = logging.getLogger('accessory')

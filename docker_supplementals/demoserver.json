@@ -1,0 +1,11 @@
+{
+  "accessory_pairing_id": "12:34:00:00:00:04",
+  "accessory_pin": "031-45-154",
+  "c#": 1,
+  "host_ip": "192.168.178.21",
+  "host_port": 12345,
+  "name": "test_accessory",
+  "peers": {},
+  "unsuccessful_tries": 0
+}
+

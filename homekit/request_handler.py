@@ -40,7 +40,7 @@ def bytes_to_mpz(input_bytes):
 class HomeKitRequestHandler(BaseHTTPRequestHandler):
     VALID_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE']
     DEBUG_PUT_CHARACTERISTICS = False
-    DEBUG_CRYPT = True
+    DEBUG_CRYPT = False
     DEBUG_PAIR_VERIFY = False
     DEBUG_GET_CHARACTERISTICS = False
     timeout = 300

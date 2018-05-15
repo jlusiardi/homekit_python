@@ -17,7 +17,7 @@
 #
 
 import argparse
-import uuid
+import os
 
 from homekit import create_session, SecureHttp, load_pairing
 from homekit.tlv import TLV
@@ -26,6 +26,7 @@ from homekit.tlv import TLV
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit list pairings app')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
+    parser.add_argument('-d', action='store_true', dest='delete', help='Delete file with the pairing data')
     return parser.parse_args()
 
 
@@ -48,5 +49,7 @@ if __name__ == '__main__':
     data = TLV.decode_bytes_to_list(data)
     if data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2:
         print('Pairing removed')
+        if args.delete:
+            os.remove(args.file)
     else:
         print('Remove pairing failed')

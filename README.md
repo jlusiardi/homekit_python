@@ -125,6 +125,9 @@ Usage:
 python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE}
 ```
 
+Since the pairing data file is important, the command will exit if the file already exists.
+The option `-o` will therefore overwrite the pairing data file if set.
+
 The file with the pairing data will be required to for any additional commands to the accessory.
 
 ## list_pairings.py
@@ -152,8 +155,10 @@ This tool will remove a pairing from an accessory.
 
 Usage:
 ```bash
-python -m homekit.unpair -f ${PAIRINGDATAFILE}
+python -m homekit.unpair -f ${PAIRINGDATAFILE} -d
 ```
+
+The option `-d` is optional and will remove the pairing data file if set.
 
 ## get_accessories.py
 

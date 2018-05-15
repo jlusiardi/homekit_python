@@ -26,9 +26,10 @@ from homekit import find_device_ip_and_port, save_pairing, perform_pair_setup, H
 
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit pairing app')
-    parser.add_argument('-d', action='store', required=True, dest='HomeKit Device ID (use discover to get it)')
-    parser.add_argument('-p', action='store', required=True, dest='HomeKit configuration code')
-    parser.add_argument('-f', action='store', required=True, dest='HomeKit pairing data file')
+    parser.add_argument('-d', action='store', required=True, dest='device',
+                        help='HomeKit Device ID (use discover to get it)')
+    parser.add_argument('-p', action='store', required=True, dest='pin', help='HomeKit configuration code')
+    parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     parser.add_argument('-o', action='store_true', dest='overwrite', help='overwrite file with the pairing data')
     return parser.parse_args()
 

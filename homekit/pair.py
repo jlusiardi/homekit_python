@@ -19,15 +19,17 @@
 import argparse
 import uuid
 import sys
+import os.path
 
 from homekit import find_device_ip_and_port, save_pairing, perform_pair_setup, HomeKitHTTPConnection
 
 
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit pairing app')
-    parser.add_argument('-d', action='store', required=True, dest='device')
-    parser.add_argument('-p', action='store', required=True, dest='pin')
-    parser.add_argument('-f', action='store', required=True, dest='file')
+    parser.add_argument('-d', action='store', required=True, dest='HomeKit Device ID (use discover to get it)')
+    parser.add_argument('-p', action='store', required=True, dest='HomeKit configuration code')
+    parser.add_argument('-f', action='store', required=True, dest='HomeKit pairing data file')
+    parser.add_argument('-o', action='store_true', dest='overwrite', help='overwrite file with the pairing data')
     return parser.parse_args()
 
 
@@ -35,6 +37,10 @@ iOSPairingId = str(uuid.uuid4())
 
 if __name__ == '__main__':
     args = setup_args_parser()
+
+    if os.path.isfile(args.file) and not args.overwrite:
+        print('The pairing data file already exists!')
+        exit(-1)
 
     connection_data = find_device_ip_and_port(args.device)
     if connection_data is None:

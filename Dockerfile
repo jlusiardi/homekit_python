@@ -14,4 +14,3 @@ RUN mkdir /root/.homekit/
 
 ADD docker_supplementals/demoserver.json /root/.homekit/
 
-ADD demoserver.py /homekit_python/

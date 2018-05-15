@@ -82,4 +82,4 @@ cd ${RESULTDIR}
 rm /tmp/homekit_test.zip
 zip /tmp/homekit_test.zip * > /dev/null
 mpack -s "Homekit Test" -d ${RESULTDIR}/status /tmp/homekit_test.zip ${RECIPIENT}
-rm -f ${RESULTDIR}
+rm -rf ${RESULTDIR}

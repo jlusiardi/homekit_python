@@ -29,6 +29,12 @@ docker network create ${NETWORK} --subnet 192.168.178.0/24 > /dev/null
 docker run --name ${CONTAINER} -d --ip 192.168.178.21 --network ${NETWORK} homekit_python:latest bash -c "cd /homekit_python; git checkout ${BRANCH}; git pull; PYTHONPATH=. python3 demoserver.py" > /dev/null
 sleep 5s
 
+docker exec -ti ${CONTAINER} bash -c "cd /homekit_python; git rev-parse HEAD" > ${RESULTDIR}/COMMIT
+COMMIT=`cat ${RESULTDIR}/COMMIT`
+rm ${RESULTDIR}/COMMIT
+
+echo "https://github.com/jlusiardi/homekit_python/commit/${COMMIT}" > ${RESULTDIR}/status
+
 ################################ run tests ################################
 
 # 	run discover test
@@ -90,5 +96,5 @@ docker network rm ${NETWORK} > /dev/null
 cd ${RESULTDIR}
 rm /tmp/homekit_test.zip
 zip /tmp/homekit_test.zip * > /dev/null
-mpack -s "Homekit Test for ${BRANCH}" -d ${RESULTDIR}/status /tmp/homekit_test.zip ${RECIPIENT}
+mpack -s "Homekit Test for ${BRANCH} @ ${COMMIT}" -d ${RESULTDIR}/status /tmp/homekit_test.zip ${RECIPIENT}
 rm -rf ${RESULTDIR}

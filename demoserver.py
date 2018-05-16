@@ -17,18 +17,27 @@
 #
 
 import os.path
+import logging
 
 from homekit import HomeKitServer
 
 from homekit.model import Accessory, LightBulbService
 
 
-def light_switched(newval):
-    print('=======>  light switched: {x}'.format(x=newval))
+def light_switched(new_value):
+    print('=======>  light switched: {x}'.format(x=new_value))
+
 
 if __name__ == '__main__':
+    logger = logging.getLogger('accessory')
+    logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.info('starting')
     try:
-        httpd = HomeKitServer(os.path.expanduser('~/.homekit/demoserver.json'))
+        httpd = HomeKitServer(os.path.expanduser('~/.homekit/demoserver.json'),logger)
 
         accessory = Accessory('Testlicht')
         lightBulbService = LightBulbService()

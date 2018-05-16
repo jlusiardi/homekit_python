@@ -14,12 +14,11 @@
 # limitations under the License.
 #
 
-import fcntl
-import os
 import io
 import http.client
 
 from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
+from homekit.statuscodes import HttpHttpContentTypes
 
 
 class SecureHttp:
@@ -62,15 +61,16 @@ class SecureHttp:
 
         return self._handle_request(data)
 
-    def put(self, target, body):
+    def put(self, target, body, content_type=HttpHttpContentTypes.JSON):
         headers = 'Host: hap-770D90.local\n' + \
                   'Content-Type: application/hap+json\n' + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'PUT {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
         return self._handle_request(data)
 
-    def post(self, target, body):
-        headers = 'Content-Type: application/hap+json\n' + \
+    def post(self, target, body, content_type=HttpHttpContentTypes.TLV):
+        headers = 'Host: hap-770D90.local\n' + \
+                  'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'POST {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
 

@@ -25,6 +25,7 @@ from homekit.tlv import TLV
 from homekit.srp import SrpClient
 from homekit.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 
+
 def error_handler(error, stage):
     if error == TLV.kTLVError_Unavailable:
         raise homekit.exception.UnavailableError(stage)
@@ -42,6 +43,7 @@ def error_handler(error, stage):
         raise homekit.exception.BusyError(stage)
     else:
         raise homekit.exception.InvalidError(stage)
+
 
 def perform_pair_setup(connection, pin, ios_pairing_id):
     """

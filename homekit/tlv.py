@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+
 class TLV:
     """
     as described in Appendix 12 (page 251)
@@ -47,6 +48,8 @@ class TLV:
     kTLVType_Certificate = 9
     kTLVType_Signature = 10
     kTLVType_Permissions = 11  # 0x00 => reg. user, 0x01 => admin
+    kTLVType_Permission_RegularUser = bytearray(b'\x00')
+    kTLVType_Permission_AdminUser = bytearray(b'\x01')
     kTLVType_FragmentData = 12
     kTLVType_FragmentLast = 13
     kTLVType_Separator = 255
@@ -83,6 +86,24 @@ class TLV:
             else:
                 for b in value:
                     result[key].append(b)
+        return result
+
+    @staticmethod
+    def decode_bytes_to_list(bs) -> dict:
+        return TLV.decode_bytearray_to_list(bytearray(bs))
+
+    @staticmethod
+    def decode_bytearray_to_list(ba: bytearray) -> list:
+        result = []
+        # do not influence caller!
+        tail = ba.copy()
+        while len(tail) > 0:
+            key = tail.pop(0)
+            length = tail.pop(0)
+            value = tail[:length]
+            tail = tail[length:]
+
+            result.append((key, value))
         return result
 
     @staticmethod
@@ -131,12 +152,47 @@ class TLV:
         return result
 
     @staticmethod
+    def encode_list(d: list) -> bytearray:
+        result = bytearray()
+        for p in d:
+            (key, value) = p
+            if not TLV.validate_key(key):
+                raise ValueError('Invalid key')
+
+            #value = d[key]
+
+            # handle separators properly
+            if key == TLV.kTLVType_Separator:
+                if len(value) == 0:
+                    result.append(key)
+                    result.append(0)
+                else:
+                    raise ValueError('Separator must not have data')
+
+            while len(value) > 0:
+                result.append(key)
+                if len(value) > 255:
+                    length = 255
+                    result.append(length)
+                    for b in value[:length]:
+                        result.append(b)
+                    value = value[length:]
+                else:
+                    length = len(value)
+                    result.append(length)
+                    for b in value[:length]:
+                        result.append(b)
+                    value = value[length:]
+        return result
+
+    @staticmethod
     def to_string(d: dict) -> str:
         res = '{\n'
         for k in sorted(d.keys()):
             res += '  {k}: {v}\n'.format(k=k, v=d[k])
         res += '}\n'
         return res
+
 
 if __name__ == '__main__':
     # TLV Example 1 from Chap 12.1.2 Page 252

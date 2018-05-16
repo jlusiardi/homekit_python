@@ -33,6 +33,7 @@ FeatureFlags = homekit.feature_flags.FeatureFlags
 Categories = homekit.model.categories.Categories
 HapStatusCodes = homekit.statuscodes.HapStatusCodes
 HttpStatusCodes = homekit.statuscodes.HttpStatusCodes
+HttpContentTypes = homekit.statuscodes._HttpContentTypes
 CharacteristicsTypes = homekit.model.CharacteristicsTypes
 ServicesTypes = homekit.model.services.ServicesTypes
 

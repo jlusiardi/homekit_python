@@ -1,6 +1,7 @@
 #!/bin/bash
 
 RECIPIENT=$1
+BRANCH=${2:-master}
 RESULTDIR=`mktemp -d`
 ID=`date | md5sum | sed 's/ -//'`
 NETWORK=homekit_net_${ID}
@@ -13,17 +14,19 @@ function perform_test {
 	docker exec -ti ${CONTAINER} bash -c "PYTHONPATH=. python3 homekit/${COMMAND}" > ${RESULTDIR}/${TESTNAME}.result
 	RESULT=$?
 	if (( ${RESULT} != 0 )); then
-        	echo "${TESTNAME} failed (${RESULT})" >> ${RESULTDIR}/status
+        	echo "--> ${TESTNAME} failed (${RESULT})" >> ${RESULTDIR}/status
 	else
-        	echo "${TESTNAME} worked (${RESULT})" >> ${RESULTDIR}/status
+        	echo "--> ${TESTNAME} worked (${RESULT})" >> ${RESULTDIR}/status
 	fi
+	cat ${RESULTDIR}/${TESTNAME}.result >> ${RESULTDIR}/status
+	echo "==================================================" >> ${RESULTDIR}/status
 }
 
 #	setup network
 docker network create ${NETWORK} --subnet 192.168.178.0/24 > /dev/null
 
 #	start homekit accessory and wait sometime to complete git pull
-docker run --name ${CONTAINER} -d --ip 192.168.178.21 --network ${NETWORK} homekit_python:latest bash -c "cd /homekit_python; git pull; PYTHONPATH=. python3 demoserver.py" > /dev/null
+docker run --name ${CONTAINER} -d --ip 192.168.178.21 --network ${NETWORK} homekit_python:latest bash -c "cd /homekit_python; git checkout ${BRANCH}; git pull; PYTHONPATH=. python3 demoserver.py" > /dev/null
 sleep 5s
 
 ################################ run tests ################################
@@ -68,6 +71,12 @@ COMMAND="get_characteristic.py -f demoserver.json -c 1.10"
 TESTNAME="get_characteristic_3"
 perform_test "${COMMAND}" "${TESTNAME}"
 
+#   unpair
+COMMAND="unpair.py -f demoserver.json -d"
+TESTNAME="unpair_3"
+perform_test "${COMMAND}" "${TESTNAME}"
+
+
 
 ################################ cleanup and mail result ################################
 
@@ -81,5 +90,5 @@ docker network rm ${NETWORK} > /dev/null
 cd ${RESULTDIR}
 rm /tmp/homekit_test.zip
 zip /tmp/homekit_test.zip * > /dev/null
-mpack -s "Homekit Test" -d ${RESULTDIR}/status /tmp/homekit_test.zip ${RECIPIENT}
+mpack -s "Homekit Test for ${BRANCH}" -d ${RESULTDIR}/status /tmp/homekit_test.zip ${RECIPIENT}
 rm -rf ${RESULTDIR}

@@ -15,6 +15,7 @@
 #
 
 from homekit.model.characteristics import *
+from homekit.model.mixin import get_id
 
 
 class _ServicesTypes(object):

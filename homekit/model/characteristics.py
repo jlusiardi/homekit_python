@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-from homekit.model.mixin import ToDictMixin, get_id
+from homekit.model.mixin import ToDictMixin
+from distutils.util import strtobool
 
 
 class _CharacteristicsTypes(object):
@@ -346,6 +347,16 @@ class Characteristic(ToDictMixin):
     def set_value(self, new_val):
         self.value = new_val
         if self._set_value_callback:
+            # convert input to python int if it is any kind of int
+            if self.format in [CharacteristicFormats.uint64, CharacteristicFormats.uint32, CharacteristicFormats.uint16,
+                               CharacteristicFormats.uint8, CharacteristicFormats.int]:
+                new_val = int(new_val)
+            # convert input to python float
+            if self.format == CharacteristicFormats.float:
+                new_val = float(new_val)
+            # convert to python bool
+            if self.format == CharacteristicFormats.bool:
+                new_val = strtobool(str(new_val))
             self._set_value_callback(new_val)
 
     def get_value(self):

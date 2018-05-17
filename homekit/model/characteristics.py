@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-from homekit.model.mixin import ToDictMixin, get_id
+from homekit.model.mixin import ToDictMixin
+from distutils.util import strtobool
 
 
 class _CharacteristicsTypes(object):
@@ -346,12 +347,38 @@ class Characteristic(ToDictMixin):
     def set_value(self, new_val):
         self.value = new_val
         if self._set_value_callback:
+            # convert input to python int if it is any kind of int
+            if self.format in [CharacteristicFormats.uint64, CharacteristicFormats.uint32, CharacteristicFormats.uint16,
+                               CharacteristicFormats.uint8, CharacteristicFormats.int]:
+                new_val = int(new_val)
+            # convert input to python float
+            if self.format == CharacteristicFormats.float:
+                new_val = float(new_val)
+            # convert to python bool
+            if self.format == CharacteristicFormats.bool:
+                new_val = strtobool(str(new_val))
             self._set_value_callback(new_val)
 
     def get_value(self):
         if self._get_value_callback:
             return self._get_value_callback()
         return self.value
+
+
+class BrightnessCharacteristic(Characteristic):
+    """
+    Defined on page 145
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.BRIGHTNESS, CharacteristicFormats.int)
+        self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write,
+                      CharacteristicPermissions.events]
+        self.minValue = 0
+        self.maxValue = 100
+        self.step = 1
+        self.value = 0
+        self.unit = CharacteristicUnits.percentage
 
 
 class CurrentHeatingCoolingStateCharacteristic(Characteristic):
@@ -381,6 +408,38 @@ class CurrentTemperatureCharacteristic(Characteristic):
         self.step = 0.1
         self.unit = CharacteristicUnits.celsius
         self.value = 23.0
+
+
+class HueCharacteristic(Characteristic):
+    """
+    Defined on page 151
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.HUE, CharacteristicFormats.float)
+        self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write,
+                      CharacteristicPermissions.events]
+        self.minValue = 0
+        self.maxValue = 360
+        self.step = 1
+        self.value = 0
+        self.unit = CharacteristicUnits.arcdegrees
+
+
+class SaturationCharacteristic(Characteristic):
+    """
+    Defined on page 159
+    """
+
+    def __init__(self, iid):
+        Characteristic.__init__(self, iid, CharacteristicsTypes.SATURATION, CharacteristicFormats.float)
+        self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write,
+                      CharacteristicPermissions.events]
+        self.minValue = 0
+        self.maxValue = 100
+        self.step = 1
+        self.value = 0
+        self.unit = CharacteristicUnits.percentage
 
 
 class TargetHeatingCoolingStateCharacteristic(Characteristic):

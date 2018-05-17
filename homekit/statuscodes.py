@@ -86,4 +86,4 @@ class _HttpStatusCodes:
 
 HapStatusCodes = _HapStatusCodes()
 HttpStatusCodes = _HttpStatusCodes()
-HttpHttpContentTypes = _HttpContentTypes
+HttpContentTypes = _HttpContentTypes

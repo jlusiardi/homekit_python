@@ -22,6 +22,7 @@ import sys
 import os.path
 
 from homekit import find_device_ip_and_port, save_pairing, perform_pair_setup, HomeKitHTTPConnection
+from homekit.exception import UnavailableError
 
 
 def setup_args_parser():
@@ -50,10 +51,14 @@ if __name__ == '__main__':
 
     conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
 
-    pairing = perform_pair_setup(conn, args.pin, iOSPairingId)
+    try:
+        pairing = perform_pair_setup(conn, args.pin, iOSPairingId)
 
-    # add ip and port to pairing data
-    pairing['AccessoryIP'] = connection_data['ip']
-    pairing['AccessoryPort'] = connection_data['port']
+        # add ip and port to pairing data
+        pairing['AccessoryIP'] = connection_data['ip']
+        pairing['AccessoryPort'] = connection_data['port']
 
-    save_pairing(args.file, pairing)
+        save_pairing(args.file, pairing)
+    except UnavailableError:
+        print('The accessory is already paired!')
+        exit(1)

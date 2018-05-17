@@ -58,7 +58,7 @@ class HomeKitServer(ThreadingMixIn, HTTPServer):
                 'c#': str(self.data.configuration_number),
                 # configuration (consecutive number, 1 or greater, must be changed on every configuration change)
                 'id': self.data.accessory_pairing_id_bytes,  # id MUST look like Mac Address
-                'ff': '0',  # feature flags
+                'ff': '0',  # feature flags (Table 5-8, page 69)
                 's#': '1',  # must be 1
                 'sf': '1'  # status flag, lowest bit encodes pairing status, 1 means unpaired
                 }
@@ -68,7 +68,7 @@ class HomeKitServer(ThreadingMixIn, HTTPServer):
         info = ServiceInfo(self.mdns_type, self.mdns_name, socket.inet_aton(self.data.ip), self.data.port, 0, 0, desc,
                            'ash-2.local.')
         self.zeroconf.unregister_all_services()
-        self.zeroconf.register_service(info)
+        self.zeroconf.register_service(info, allow_name_change=True)
 
     def unpublish_device(self):
         self.zeroconf.unregister_all_services()

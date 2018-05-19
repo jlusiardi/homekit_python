@@ -106,9 +106,9 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
 
             raw_peeked_data = self.rfile.peek(10)
             if len(raw_peeked_data) == 0:
-                self.timeout_counter += 1
-                if self.timeout_counter >= self.timeout:
-                    self.close_connection = True
+                # since select says ready but no data is there, close the connection to prevent hidden busy waiting to
+                # rise load
+                self.close_connection = True
                 return
 
             # data was received so reset the timeout handler

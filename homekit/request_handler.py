@@ -104,12 +104,16 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                     self.close_connection = True
                 return
 
+            raw_peeked_data = self.rfile.peek(10)
+            if len(raw_peeked_data) == 0:
+                self.timeout_counter += 1
+                if self.timeout_counter >= self.timeout:
+                    self.close_connection = True
+                return
+
             # data was received so reset the timeout handler
             self.timeout_counter = 0
 
-            raw_peeked_data = self.rfile.peek(10)
-            if len(raw_peeked_data) == 0:
-                return
             # RFC7230 Section 3 tells us, that US-ASCII is fine
             peeked_data = raw_peeked_data[:10]
             peeked_data = peeked_data.decode(encoding='ASCII')

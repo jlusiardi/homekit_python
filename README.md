@@ -37,7 +37,8 @@ The demonstration uses this JSON in `~/.homekit/demoserver.json`:
   "accessory_pairing_id": "12:00:00:00:00:00",
   "accessory_pin": "031-45-154",
   "peers": {},
-  "unsuccessful_tries": 0
+  "unsuccessful_tries": 0,
+  "c#": 0
 }
 ```
 

@@ -22,7 +22,11 @@ from homekit.model.characteristics.abstract_characteristic import AbstractCharac
 
 class TargetHeatingCoolingStateCharacteristic(AbstractCharacteristic):
     """
-    Defined on page 161
+    Defined on page 161, valid values:
+        0: Off
+        1: Heat if current temperature is below target temperature
+        2: Cool if current temperature is above target temperature
+        3: Auto, combination of 1 and 2
     """
 
     def __init__(self, iid):
@@ -33,3 +37,15 @@ class TargetHeatingCoolingStateCharacteristic(AbstractCharacteristic):
         self.maxValue = 3
         self.step = 1
         self.value = 0
+
+
+class TargetHeatingCoolingStateCharacteristicMixin(object):
+    def __init__(self, iid):
+        self._targetHeatingCoolingState = TargetHeatingCoolingStateCharacteristic(iid)
+        self.characteristics.append(self._targetHeatingCoolingState)
+
+    def set_on_set_callback(self, callback):
+        self._targetHeatingCoolingState.set_set_value_callback(callback)
+
+    def set_on_get_callback(self, callback):
+        self._targetHeatingCoolingState.set_get_value_callback(callback)

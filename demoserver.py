@@ -21,7 +21,7 @@ import logging
 
 from homekit import HomeKitServer
 
-from homekit.model import Accessory, LightBulbService
+from homekit.model import Accessory, LightBulbAbstractService
 
 
 def light_switched(new_value):
@@ -39,8 +39,8 @@ if __name__ == '__main__':
     try:
         httpd = HomeKitServer(os.path.expanduser('~/.homekit/demoserver.json'),logger)
 
-        accessory = Accessory('Testlicht')
-        lightBulbService = LightBulbService()
+        accessory = Accessory('Testlicht', 'lusiardi.de', 'Demoserver', '0001', '0.1')
+        lightBulbService = LightBulbAbstractService()
         lightBulbService.set_on_set_callback(light_switched)
         accessory.services.append(lightBulbService)
         httpd.accessories.add_accessory(accessory)

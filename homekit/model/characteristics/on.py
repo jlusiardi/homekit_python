@@ -31,3 +31,15 @@ class OnCharacteristic(AbstractCharacteristic):
         self.perms = [CharacteristicPermissions.paired_write, CharacteristicPermissions.paired_read,
                       CharacteristicPermissions.events]
         self.value = False
+
+
+class OnCharacteristicMixin(object):
+    def __init__(self, iid):
+        self._onCharacteristic = OnCharacteristic(iid)
+        self.characteristics.append(self._onCharacteristic)
+
+    def set_on_set_callback(self, callback):
+        self._onCharacteristic.set_set_value_callback(callback)
+
+    def set_on_get_callback(self, callback):
+        self._onCharacteristic.set_get_value_callback(callback)

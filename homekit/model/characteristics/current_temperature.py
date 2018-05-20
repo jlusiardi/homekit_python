@@ -34,3 +34,12 @@ class CurrentTemperatureCharacteristic(AbstractCharacteristic):
         self.step = 0.1
         self.unit = CharacteristicUnits.celsius
         self.value = 23.0
+
+
+class CurrentTemperatureCharacteristicMixin(object):
+    def __init__(self, iid):
+        self._currentTemperature = CurrentTemperatureCharacteristic(iid)
+        self.characteristics.append(self._currentTemperature)
+
+    def set_on_get_callback(self, callback):
+        self._currentTemperature.set_get_value_callback(callback)

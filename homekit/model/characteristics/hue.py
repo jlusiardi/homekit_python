@@ -35,3 +35,15 @@ class HueCharacteristic(AbstractCharacteristic):
         self.step = 1
         self.value = 0
         self.unit = CharacteristicUnits.arcdegrees
+
+
+class HueCharacteristicMixin(object):
+    def __init__(self, iid):
+        self._hueCharacteristic = HueCharacteristic(iid)
+        self.characteristics.append(self._hueCharacteristic)
+
+    def set_hue_set_callback(self, callback):
+        self._hueCharacteristic.set_set_value_callback(callback)
+
+    def set_brightness_get_callback(self, callback):
+        self._hueCharacteristic.set_get_value_callback(callback)

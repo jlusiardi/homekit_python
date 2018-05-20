@@ -35,3 +35,15 @@ class TargetTemperatureCharacteristic(AbstractCharacteristic):
         self.step = 0.1
         self.unit = CharacteristicUnits.celsius
         self.value = 23.0
+
+
+class TargetTemperatureCharacteristicMixin(object):
+    def __init__(self, iid):
+        self._targetTemperature = TargetTemperatureCharacteristic(iid)
+        self.characteristics.append(self._targetTemperature)
+
+    def set_on_set_callback(self, callback):
+        self._targetTemperature.set_set_value_callback(callback)
+
+    def set_on_get_callback(self, callback):
+        self._targetTemperature.set_get_value_callback(callback)

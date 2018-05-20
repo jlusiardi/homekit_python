@@ -20,7 +20,7 @@ from homekit.model.characteristics.characteristic_permissions import Characteris
 from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic
 
 
-class TemperatureDisplayUnits(AbstractCharacteristic):
+class TemperatureDisplayUnitCharacteristic(AbstractCharacteristic):
     """
     Defined on page 163, valid values:
         0: Celsius
@@ -35,3 +35,15 @@ class TemperatureDisplayUnits(AbstractCharacteristic):
         self.maxValue = 1
         self.step = 1
         self.value = 0
+
+
+class TemperatureDisplayUnitsMixin(object):
+    def __init__(self, iid):
+        self._temperatureDisplayUnits = TemperatureDisplayUnitCharacteristic(iid)
+        self.characteristics.append(self._temperatureDisplayUnits)
+
+    def set_on_set_callback(self, callback):
+        self._temperatureDisplayUnits.set_set_value_callback(callback)
+
+    def set_on_get_callback(self, callback):
+        self._temperatureDisplayUnits.set_get_value_callback(callback)

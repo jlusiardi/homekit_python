@@ -17,6 +17,7 @@
 import homekit.feature_flags
 import homekit.model.categories
 import homekit.model.services
+import homekit.model.characteristics
 import homekit.statuscodes
 import homekit.zeroconf_
 from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
@@ -34,7 +35,7 @@ Categories = homekit.model.categories.Categories
 HapStatusCodes = homekit.statuscodes.HapStatusCodes
 HttpStatusCodes = homekit.statuscodes.HttpStatusCodes
 HttpContentTypes = homekit.statuscodes._HttpContentTypes
-CharacteristicsTypes = homekit.model.CharacteristicsTypes
+CharacteristicsTypes = homekit.model.characteristics.CharacteristicsTypes
 ServicesTypes = homekit.model.services.ServicesTypes
 
 discover_homekit_devices = homekit.zeroconf_.discover_homekit_devices

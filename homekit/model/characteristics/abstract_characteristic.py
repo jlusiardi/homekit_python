@@ -25,7 +25,7 @@ from homekit.model.characteristics.characteristic_permissions import Characteris
 class AbstractCharacteristic(ToDictMixin):
     def __init__(self, iid: int, characteristic_type: str, characteristic_format: str):
         if type(self) is AbstractCharacteristic:
-            raise Exception('Base is an abstract class and cannot be instantiated directly')
+            raise Exception('AbstractCharacteristic is an abstract class and cannot be instantiated directly')
         self.type = CharacteristicsTypes.get_uuid(characteristic_type)
         self.iid = iid
         self.perms = [CharacteristicPermissions.paired_read]

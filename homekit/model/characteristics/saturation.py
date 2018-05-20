@@ -35,3 +35,15 @@ class SaturationCharacteristic(AbstractCharacteristic):
         self.step = 1
         self.value = 0
         self.unit = CharacteristicUnits.percentage
+
+
+class SaturationCharacteristicMixin(object):
+    def __init__(self, iid):
+        self._saturationCharacteristic = SaturationCharacteristic(iid)
+        self.characteristics.append(self._saturationCharacteristic)
+
+    def set_saturation_set_callback(self, callback):
+        self._saturationCharacteristic.set_set_value_callback(callback)
+
+    def set_saturation_get_callback(self, callback):
+        self._saturationCharacteristic.set_get_value_callback(callback)

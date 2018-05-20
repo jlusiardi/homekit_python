@@ -35,3 +35,12 @@ class CurrentHeatingCoolingStateCharacteristic(AbstractCharacteristic):
         self.maxValue = 2
         self.step = 1
         self.value = 0
+
+
+class CurrentHeatingCoolingStateCharacteristicMixin(object):
+    def __init__(self, iid):
+        self._currentHeatingCoolingState = CurrentHeatingCoolingStateCharacteristic(iid)
+        self.characteristics.append(self._currentHeatingCoolingState)
+
+    def set_on_get_callback(self, callback):
+        self._currentHeatingCoolingState.set_get_value_callback(callback)

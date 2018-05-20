@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+
 class _Categories(object):
     """
     This data is taken from Table 12-3 Accessory Categories on page 254. Values above 19 are reserved.

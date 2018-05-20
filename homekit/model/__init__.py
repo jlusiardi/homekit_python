@@ -14,23 +14,22 @@
 # limitations under the License.
 #
 
-from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.mixin import ToDictMixin, get_id
-from homekit.model.services import AcessoryInformationService, LightBulbService, OutletService, FanService, \
-    ThermostatService, BHSLightBulbService
+from homekit.model.services import AccessoryInformationAbstractService, LightBulbAbstractService, FanAbstractService, \
+    BHSLightBulbAbstractService
 from homekit.model.categories import Categories
 
 
 class Accessory(ToDictMixin):
-    def __init__(self, name):
+    def __init__(self, name, manufacturer, model, serial_number, firmware_revision):
         self.aid = get_id()
         self.services = [
-            AcessoryInformationService(name)
+            AccessoryInformationAbstractService(name, manufacturer, model, serial_number, firmware_revision)
         ]
 
     def get_name(self):
         for service in self.services:
-            if isinstance(service, AcessoryInformationService):
+            if isinstance(service, AccessoryInformationAbstractService):
                 return service.get_name()
         return None
 

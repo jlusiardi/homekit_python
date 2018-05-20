@@ -23,14 +23,19 @@ from homekit import create_session, SecureHttp
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit perform app - performs operations on paired devices')
+    parser = argparse.ArgumentParser(description='HomeKit get_characteristic - retrieve values of characteristics ' +
+                                                 'and other information from paired HomeKit accessories.')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
-    parser.add_argument('-c', action='store', required=True, dest='characteristics',
-                        help='Read characteristics, multiple characteristcs can be given as comma separated list')
-    parser.add_argument('-m', action='store_true', required=False, dest='meta', help='')
-    parser.add_argument('-p', action='store_true', required=False, dest='perms', help='')
-    parser.add_argument('-t', action='store_true', required=False, dest='type', help='')
-    parser.add_argument('-e', action='store_true', required=False, dest='events', help='')
+    parser.add_argument('-c', action='append', required=True, dest='characteristics',
+                        help='Read characteristics, multiple characteristics can be given by repeating the option')
+    parser.add_argument('-m', action='store_true', required=False, dest='meta',
+                        help='read out the meta data for the characteristics as well')
+    parser.add_argument('-p', action='store_true', required=False, dest='perms',
+                        help='read out the permissions for the characteristics as well')
+    parser.add_argument('-t', action='store_true', required=False, dest='type',
+                        help='read out the types for the characteristics as well')
+    parser.add_argument('-e', action='store_true', required=False, dest='events',
+                        help='read out the events for the characteristics as well')
     return parser
 
 
@@ -42,8 +47,8 @@ if __name__ == '__main__':
 
     sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
 
-    # create URL
-    url = '/characteristics?id=' + args.characteristics
+    # create URL from multiple characteristics
+    url = '/characteristics?id=' + ','.join(args.characteristics)
     if args.meta:
         url += '&meta=1'
     if args.perms:

@@ -98,6 +98,17 @@ class SecureHttp:
         tmp[1] = tmp[1][length + 2:]
         return chunk + SecureHttp._parse(tmp[1])
 
+    @staticmethod
+    def _parseEvents(response):
+        """
+
+        :param response: bytearray
+        :return:
+        """
+        tmp = response.decode()
+        tmp = tmp.split('\r\n\r\n')[1]
+        return tmp
+
     def _handle_response(self):
         # following the information from page 71 about HTTP Message splitting:
         # The blocks start with 2 byte little endian defining the length of the encrypted data (max 1024 bytes)
@@ -149,6 +160,9 @@ class SecureHttp:
             r = http.client.HTTPResponse(SecureHttp.Wrapper(result))
             r.begin()
             return r
+        elif result.startswith(b'EVENT/1.0'):
+            result = SecureHttp._parseEvents(result)
+            return result
         else:
             data = SecureHttp._parse(result)
             return self.HTTPResponseWrapper(data)

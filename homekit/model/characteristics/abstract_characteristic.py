@@ -20,6 +20,8 @@ from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
 from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
+from homekit.statuscodes import HapStatusCodes
+from homekit.exception import HomeKitStatusException
 
 
 class AbstractCharacteristic(ToDictMixin):
@@ -54,8 +56,9 @@ class AbstractCharacteristic(ToDictMixin):
         self.ev = new_val
 
     def set_value(self, new_val):
-        self.value = new_val
-        if self._set_value_callback:
+        if CharacteristicPermissions.paired_write not in self.perms:
+            raise HomeKitStatusException(HapStatusCodes.CANT_READ_WRITE_ONLY)
+        try:
             # convert input to python int if it is any kind of int
             if self.format in [CharacteristicFormats.uint64, CharacteristicFormats.uint32, CharacteristicFormats.uint16,
                                CharacteristicFormats.uint8, CharacteristicFormats.int]:
@@ -66,9 +69,15 @@ class AbstractCharacteristic(ToDictMixin):
             # convert to python bool
             if self.format == CharacteristicFormats.bool:
                 new_val = strtobool(str(new_val))
+        except ValueError:
+            raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+        self.value = new_val
+        if self._set_value_callback:
             self._set_value_callback(new_val)
 
     def get_value(self):
+        if CharacteristicPermissions.paired_read not in self.perms:
+            raise HomeKitStatusException(HapStatusCodes.CANT_READ_WRITE_ONLY)
         if self._get_value_callback:
             return self._get_value_callback()
         return self.value

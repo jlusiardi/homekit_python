@@ -96,12 +96,26 @@ if __name__ == '__main__':
 
     body = json.dumps({'characteristics': characteristics})
     response = sec_http.put('/characteristics', body)
-    data = response.read().decode()
     if response.code != 204:
+        # load and print the status message from the response
+        data = response.read().decode()
         data = json.loads(data)
-        code = data['characteristics'][0]['status']
-        print('put_characteristics failed because: {reason} ({code})'.format(reason=HapStatusCodes[code], code=code))
+        for characteristic in data['characteristics']:
+            code = characteristic['status']
+            if code != 0:
+                print('put_characteristics {aid}.{iid} failed because: {reason} ({code})'.
+                      format(reason=HapStatusCodes[code], code=code, aid=characteristic['aid'],
+                             iid=characteristic['iid']))
+            else:
+                print('put_characteristics {aid}.{iid} was successful.'.
+                      format(aid=characteristic['aid'], iid=characteristic['iid']))
     else:
-        print('put_characteristics succeeded')
+        # if the HTTP response code was 204 not body is given, so we print a
+        # success message for every requested aid.idd pair
+        for characteristic in args.characteristics:
+            tmp = characteristic[0].split('.')
+            aid = int(tmp[0])
+            iid = int(tmp[1])
+            print('put_characteristics {aid}.{iid} was successful.'.format(aid=aid, iid=iid))
 
     conn.close()

@@ -20,6 +20,10 @@ class _HapStatusCodes(object):
     This data is taken from Table 5-12 HAP Satus Codes on page 80.
     """
     INSUFFICIENT_PRIVILEGES = -70401
+    CANT_READ_WRITE_ONLY = -70405
+    OUT_OF_RESOURCES = -70407
+    RESOURCE_NOT_EXIST = -70409
+    INVALID_VALUE = -70410
 
     def __init__(self):
         self._codes = {
@@ -57,6 +61,7 @@ class _HttpStatusCodes:
     """
     OK = 200
     NO_CONTENT = 204
+    MULTI_STATUS = 207
     BAD_REQUEST = 400
     FORBIDDEN = 403
     NOT_FOUND = 404
@@ -69,6 +74,7 @@ class _HttpStatusCodes:
         self._codes = {
             200: 'OK',
             204: 'No Content',
+            207: 'Multi-Status',
             400: 'Bad Request',
             405: 'Method Not Allowed',
             429: 'Too Many Requests',

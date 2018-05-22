@@ -225,6 +225,38 @@ For example, this command turns of a Koogeek P1EU Plug:
 python3 -m homekit.put_characteristic -f koogeek.json -c 1.8 false
 ```
 
+## get_events.py
+This tool will register with an accessory and listen to the events send back from it.
+
+Usage
+```bash
+python3 -m homekit.get_events -f ${PAIRINGDATAFILE} -c ${Characteristics} 
+```
+
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-c` specifies the characteristics to change. The format is `<aid>.<cid>`. This 
+option can be repeated to listen to multiple characteristics with one call.
+
+For example, you can listen to characteristics 1.8 (on characteristic), 1.22 (1 REALTIME_ENERGY) and 
+1.23 (2 CURRENT_HOUR_DATA) of the Koogeek P1EU Plug with:
+```bash
+python3 -m homekit.get_events -f koogeek.json -c 1.8 -c 1.22 -c 1.23
+```
+This results in
+```
+event for 1.8: True
+event for 1.22: 6.0
+event for 1.23: 0.01666
+event for 1.22: 17.0
+event for 1.23: 0.06388
+event for 1.23: 0.11111
+event for 1.22: 18.0
+event for 1.23: 0.16111
+event for 1.8: False
+```
+
+
 # HomeKit Accessory
 
 # Tests

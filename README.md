@@ -122,8 +122,14 @@ This tool will perform a pairing to a new accessory.
 
 Usage:
 ```bash
-python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE}
+python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -o
 ```
+
+The option `-d` specifies the device id of the accessory to pair. Can be obtained via discovery.
+
+The option `-p` specifies the HomeKit Setup Code. Can be obtained from the accessory.
+
+The option `-f` specifies the file that contains the pairing data.
 
 Since the pairing data file is important, the command will exit if the file already exists.
 The option `-o` will therefore overwrite the pairing data file if set.
@@ -138,6 +144,8 @@ Usage:
 ```bash
 python3 -m homekit.list_pairings -f ${PAIRINGDATAFILE}
 ```
+
+The option `-f` specifies the file that contains the pairing data.
 
 This will print information for each controller that is paired with the accessory:
 
@@ -158,6 +166,8 @@ Usage:
 python -m homekit.unpair -f ${PAIRINGDATAFILE} -d
 ```
 
+The option `-f` specifies the file that contains the pairing data.
+
 The option `-d` is optional and will remove the pairing data file if set.
 
 ## get_accessories.py
@@ -168,6 +178,8 @@ Usage:
 ```bash
 python3 -m homekit.get_accessories -f ${PAIRINGDATAFILE} [-o {json,compact}]
 ```
+
+The option `-f` specifies the file that contains the pairing data.
 
 The option `-o` specifies the format of the output:
  * `json` displays the result as pretty printed JSON
@@ -181,7 +193,10 @@ Usage:
 python3 -m homekit.get_characteristic -f ${PAIRINGDATAFILE} -c ${Characteristics} [-m] [-p] [-t] [-e]
 ```
 
-The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>[,<aid>.<cid>]*`.
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>`. This 
+option can be repeated to retrieve multiple characteristics with one call. 
  
 The option `-m` specifies if the meta data should be read as well.
 
@@ -196,16 +211,17 @@ This tool will write values to one characteristic.
 
 Usage:
 ```bash
-python3 -m homekit.put_characteristic -f ${PAIRINGDATAFILE} -c ${Characteristics} -v ${value}
+python3 -m homekit.put_characteristic -f ${PAIRINGDATAFILE} -c ${Characteristics} ${value}
 ```
 
-The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>[,<aid>.<cid>]*`.
- 
-The option `-v` specifies the value that should be written to the characteristic.
+The option `-f` specifies the file that contains the pairing data.
 
+The option `-c` specifies the characteristics to change. The format is `<aid>.<cid> <value>`. This 
+option can be repeated to change multiple characteristics with one call. 
+ 
 For example, this command turns of a Koogeek P1EU Plug:
 ```
-python3 -m homekit.put_characteristic -f koogeek.json -c 1.8 -v false
+python3 -m homekit.put_characteristic -f koogeek.json -c 1.8 false
 ```
 
 # HomeKit Accessory

@@ -71,6 +71,21 @@ class AbstractCharacteristic(ToDictMixin):
                 new_val = strtobool(str(new_val))
         except ValueError:
             raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+
+        if self.format in [CharacteristicFormats.uint64, CharacteristicFormats.uint32, CharacteristicFormats.uint16,
+                           CharacteristicFormats.uint8, CharacteristicFormats.int, CharacteristicFormats.float]:
+            if self.minValue is not None and new_val < self.minValue:
+                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+            if self.maxValue is not None and self.maxValue < new_val:
+                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+            if self.minStep is not None:
+                print(self.minValue, self.minStep, new_val)
+                tmp = new_val
+                if self.minValue is not None:
+                    tmp -= self.minValue
+                if abs(tmp - (int(tmp/self.minStep)*self.minStep)) > 0.00001:
+                    raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+
         self.value = new_val
         if self._set_value_callback:
             self._set_value_callback(new_val)

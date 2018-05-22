@@ -59,6 +59,7 @@ if __name__ == '__main__':
     pairing_data = load_pairing(args.file)
 
     # args.characteristics contains a list of lists like [['1.10', 'on'], ['1.11', '50']]
+    characteristics_set = set()
     characteristics = []
     for characteristic in args.characteristics:
         # extract aid, iid and value from cli params
@@ -93,15 +94,22 @@ if __name__ == '__main__':
             pass
 
         characteristics.append({'aid': aid, 'iid': iid, 'value': value})
+        characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
 
     body = json.dumps({'characteristics': characteristics})
     response = sec_http.put('/characteristics', body)
     data = response.read().decode()
     if response.code != 204:
         data = json.loads(data)
-        code = data['characteristics'][0]['status']
-        print('put_characteristics failed because: {reason} ({code})'.format(reason=HapStatusCodes[code], code=code))
-    else:
-        print('put_characteristics succeeded')
+        for characteristic in data['characteristics']:
+            status = characteristic['status']
+            if status == 0:
+                continue
+            aid = characteristic['aid']
+            iid = characteristic['iid']
+            characteristics_set.remove('{a}.{i}'.format(a=aid, i=iid))
+            print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.
+                  format(aid=aid, iid=iid, reason=HapStatusCodes[status], code=status))
+    print('put_characteristics succeeded for {chars}'.format(chars=', '.join(characteristics_set)))
 
     conn.close()

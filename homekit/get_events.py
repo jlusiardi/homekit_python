@@ -27,9 +27,10 @@ from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decryp
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit perform app - performs operations on paired devices')
+    parser = argparse.ArgumentParser(description='HomeKit get_events app - listens to events from accessories')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
-    parser.add_argument('-c', action='store', required=False, dest='characteristics')
+    parser.add_argument('-c', action='append', required=False, dest='characteristics',
+                        help='Use aid.iid value to change the value. Repeat to change multiple characteristics.')
 
     return parser
 
@@ -42,25 +43,36 @@ if __name__ == '__main__':
         parser.print_help()
         sys.exit(-1)
 
-    tmp = args.characteristics.split('.')
-    aid = int(tmp[0])
-    iid = int(tmp[1])
-
     conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
     sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
 
-    body = json.dumps({'characteristics': [{'aid': aid, 'iid': iid, 'ev': True},{'aid': aid, 'iid': 23, 'ev': True}]})
+    characteristics_set = set()
+    characteristics = []
+    for characteristic in args.characteristics:
+        tmp = characteristic.split('.')
+        aid = int(tmp[0])
+        iid = int(tmp[1])
+        characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
+        characteristics.append({'aid': aid, 'iid': iid, 'ev': True})
+
+    body = json.dumps({'characteristics': characteristics})
     response = sec_http.put('/characteristics', body)
     data = response.read().decode()
     if response.code != 204:
         data = json.loads(data)
-        code = data['characteristics'][0]['status']
-        print('put_characteristics failed because: {reason} ({code})'.format(reason=HapStatusCodes[code], code=code))
-    else:
-        print('put_characteristics succeeded')
-    print(conn.sock)
+        for characteristic in data['characteristics']:
+            status = characteristic['status']
+            if status == 0:
+                continue
+            aid = characteristic['aid']
+            iid = characteristic['iid']
+            characteristics_set.remove('{a}.{i}'.format(a=aid, i=iid))
+            print('register failed on {aid}.{iid} because: {reason} ({code})'.
+                  format(aid=aid, iid=iid, reason=HapStatusCodes[status], code=status))
+
+    print('waiting on events for {chars}'.format(chars=', '.join(characteristics_set)))
     while True:
-        r = sec_http._handle_response()
+        r = sec_http.handle_event_response()
         r = json.loads(r)
         for c in r['characteristics']:
             print('event for {aid}.{iid}: {event}'.format(aid=c['aid'], iid=c['iid'], event=c['value']))

@@ -98,18 +98,25 @@ class SecureHttp:
         tmp[1] = tmp[1][length + 2:]
         return chunk + SecureHttp._parse(tmp[1])
 
-    @staticmethod
-    def _parseEvents(response):
-        """
-
-        :param response: bytearray
-        :return:
-        """
-        tmp = response.decode()
-        tmp = tmp.split('\r\n\r\n')[1]
-        return tmp
-
     def _handle_response(self):
+        result = self._read_response()
+
+        #
+        #   I expected a full http response but the first real homekit accessory (Koogeek-P1) just replies with body
+        #   in chunked mode...
+        #
+        if result.startswith(b'HTTP/1.1'):
+            r = http.client.HTTPResponse(SecureHttp.Wrapper(result))
+            r.begin()
+            return r
+        elif result.startswith(b'EVENT/1.0'):
+            result = SecureHttp._parseEvents(result)
+            return result
+        else:
+            data = SecureHttp._parse(result)
+            return self.HTTPResponseWrapper(data)
+
+    def _read_response(self):
         # following the information from page 71 about HTTP Message splitting:
         # The blocks start with 2 byte little endian defining the length of the encrypted data (max 1024 bytes)
         # followed by 16 byte authTag
@@ -140,7 +147,6 @@ class SecureHttp:
 
             if length < 1024:
                 break
-
         # now decrypt the blocks and assemble the answer to our request
         result = bytearray()
         for b in blocks:
@@ -151,18 +157,17 @@ class SecureHttp:
             if tmp is not False:
                 result += tmp
             self.a2c_counter += 1
+        return result
 
-        #
-        #   I expected a full http response but the first real homekit accessory (Koogeek-P1) just replies with body
-        #   in chunked mode...
-        #
-        if result.startswith(b'HTTP/1.1'):
-            r = http.client.HTTPResponse(SecureHttp.Wrapper(result))
-            r.begin()
-            return r
-        elif result.startswith(b'EVENT/1.0'):
-            result = SecureHttp._parseEvents(result)
-            return result
+    def handle_event_response(self):
+        """
+        This reads the enciphered response from an accessory after registering for events.
+        :return: the event data as string (not as json object)
+        """
+        result = self._read_response()
+        if result.startswith(b'EVENT/1.0'):
+            tmp = result.decode()
+            tmp = tmp.split('\r\n\r\n')[1]
+            return tmp
         else:
-            data = SecureHttp._parse(result)
-            return self.HTTPResponseWrapper(data)
+            raise IOError('The response was no EVENT/1.0 data')

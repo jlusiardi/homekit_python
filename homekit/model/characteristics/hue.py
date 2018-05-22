@@ -30,9 +30,10 @@ class HueCharacteristic(AbstractCharacteristic):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.HUE, CharacteristicFormats.float)
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write,
                       CharacteristicPermissions.events]
+        self.description = 'Hue in arc degrees'
         self.minValue = 0
         self.maxValue = 360
-        self.step = 1
+        self.minStep = 1
         self.value = 0
         self.unit = CharacteristicUnits.arcdegrees
 

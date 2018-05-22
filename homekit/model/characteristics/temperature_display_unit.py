@@ -31,9 +31,10 @@ class TemperatureDisplayUnitCharacteristic(AbstractCharacteristic):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.TEMPERATURE_UNITS, CharacteristicFormats.uint8)
         self.perms = [CharacteristicPermissions.paired_write, CharacteristicPermissions.paired_read,
                       CharacteristicPermissions.events]
+        self.description = 'unit of temperature (C/F)'
         self.minValue = 0
         self.maxValue = 1
-        self.step = 1
+        self.minStep = 1
         self.value = 0
 
 

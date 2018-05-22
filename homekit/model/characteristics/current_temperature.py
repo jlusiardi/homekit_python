@@ -29,9 +29,10 @@ class CurrentTemperatureCharacteristic(AbstractCharacteristic):
     def __init__(self, iid):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.TEMPERATURE_CURRENT, CharacteristicFormats.float)
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.events]
+        self.description = 'the current temperature'
         self.minValue = 0.0
         self.maxValue = 100.0
-        self.step = 0.1
+        self.minStep = 0.1
         self.unit = CharacteristicUnits.celsius
         self.value = 23.0
 

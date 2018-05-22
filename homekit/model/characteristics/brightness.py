@@ -30,9 +30,10 @@ class BrightnessCharacteristic(AbstractCharacteristic):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.BRIGHTNESS, CharacteristicFormats.int)
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write,
                       CharacteristicPermissions.events]
+        self.description = 'Brightness in percent'
         self.minValue = 0
         self.maxValue = 100
-        self.step = 1
+        self.minStep = 1
         self.value = 0
         self.unit = CharacteristicUnits.percentage
 

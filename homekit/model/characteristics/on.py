@@ -27,7 +27,7 @@ class OnCharacteristic(AbstractCharacteristic):
 
     def __init__(self, iid):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.ON, CharacteristicFormats.bool)
-        self.description = 'On'
+        self.description = 'Switch state (on/off)'
         self.perms = [CharacteristicPermissions.paired_write, CharacteristicPermissions.paired_read,
                       CharacteristicPermissions.events]
         self.value = False

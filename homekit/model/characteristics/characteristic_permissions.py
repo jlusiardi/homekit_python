@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+
 class CharacteristicPermissions(object):
     """
     See table 5-4 page 67

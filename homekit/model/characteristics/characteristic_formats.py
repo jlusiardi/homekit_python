@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+
 class CharacteristicFormats(object):
     """
     Values for characteristic's format taken from table 5-5 page 67

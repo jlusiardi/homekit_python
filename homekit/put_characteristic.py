@@ -129,6 +129,7 @@ if __name__ == '__main__':
     body = json.dumps({'characteristics': characteristics})
     response = sec_http.put('/characteristics', body)
     if response.code != 204:
+        data = response.read().decode()
         data = json.loads(data)
         for characteristic in data['characteristics']:
             status = characteristic['status']
@@ -139,6 +140,7 @@ if __name__ == '__main__':
             characteristics_set.remove('{a}.{i}'.format(a=aid, i=iid))
             print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.
                   format(aid=aid, iid=iid, reason=HapStatusCodes[status], code=status))
-    print('put_characteristics succeeded for {chars}'.format(chars=', '.join(characteristics_set)))
+    if len(characteristics_set):
+        print('put_characteristics succeeded for {chars}'.format(chars=', '.join(characteristics_set)))
 
     conn.close()

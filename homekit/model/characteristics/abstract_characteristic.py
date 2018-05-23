@@ -17,6 +17,7 @@
 from distutils.util import strtobool
 import base64
 import binascii
+from decimal import Decimal
 
 from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
@@ -83,12 +84,14 @@ class AbstractCharacteristic(ToDictMixin):
             if self.maxValue is not None and self.maxValue < new_val:
                 raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
             if self.minStep is not None:
-                print(self.minValue, self.minStep, new_val)
                 tmp = new_val
+
+                # if minValue is set, the steps count from this on
                 if self.minValue is not None:
                     tmp -= self.minValue
-                # TODO make this less hacky
-                if abs(tmp - (int(tmp / self.minStep) * self.minStep)) > 0.00001:
+
+                # use Decimal to calculate the module because it has not the precision problem as float...
+                if Decimal(str(tmp)) % Decimal(str(self.minStep)) != 0:
                     raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
             if self.valid_values is not None and new_val not in self.valid_values:
                 raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
@@ -98,13 +101,12 @@ class AbstractCharacteristic(ToDictMixin):
 
         if self.format == CharacteristicFormats.data:
             try:
-                bytes = base64.decodebytes(new_val.encode())
-                print(bytes)
+                byte_data = base64.decodebytes(new_val.encode())
             except binascii.Error:
                 raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
             except Exception:
                 raise HomeKitStatusException(HapStatusCodes.OUT_OF_RESOURCES)
-            if self.maxDataLen < len(bytes):
+            if self.maxDataLen < len(byte_data):
                 raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
 
         if self.format == CharacteristicFormats.string:

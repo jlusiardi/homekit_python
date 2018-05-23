@@ -15,6 +15,8 @@
 #
 
 from distutils.util import strtobool
+import base64
+import binascii
 
 from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
@@ -28,21 +30,23 @@ class AbstractCharacteristic(ToDictMixin):
     def __init__(self, iid: int, characteristic_type: str, characteristic_format: str):
         if type(self) is AbstractCharacteristic:
             raise Exception('AbstractCharacteristic is an abstract class and cannot be instantiated directly')
-        self.type = CharacteristicsTypes.get_uuid(characteristic_type)
-        self.iid = iid
-        self.perms = [CharacteristicPermissions.paired_read]
-        self.format = characteristic_format
-        self.value = None
-        self.ev = None  # not required
-        self.description = None  # string, not required
-        self.unit = None  # string, not required
-        self.minValue = None  # number, not required
-        self.maxValue = None  # number, not required
-        self.minStep = None  # number, not required
-        self.maxLen = None  # number, not required
-        self.maxDataLen = None  # number, not required
-        self.valid_values = None  # array, not required
-        self.valid_values_range = None  # array, not required
+        self.type = CharacteristicsTypes.get_uuid(characteristic_type)  # page 65, see ServicesTypes
+        self.iid = iid  # page 65, unique instance id
+        self.perms = [CharacteristicPermissions.paired_read]  # page 65, array of values from CharacteristicPermissions
+        self.format = characteristic_format  # page 66, one of CharacteristicsTypes
+        self.value = None  # page 65, required but depends on format
+
+        self.ev = None  # boolean, not required, page 65
+        self.description = None  # string, not required, page 65
+        self.unit = None  # string, not required,page 66, valid values are in CharacteristicUnits
+        self.minValue = None  # number, not required, page 66, used if format is int* or float
+        self.maxValue = None  # number, not required, page 66, used if format is int* or float
+        self.minStep = None  # number, not required, page 66, used if format is int* or float
+        self.maxLen = 64  # number, not required, page 66, used if format is string
+        self.maxDataLen = 2097152  # number, not required, page 66, used if format is data
+        self.valid_values = None  # array, not required, see page 67, all numeric entries are allowed values
+        self.valid_values_range = None  # 2 element array, not required, see page 67
+
         self._set_value_callback = None
         self._get_value_callback = None
 
@@ -83,8 +87,29 @@ class AbstractCharacteristic(ToDictMixin):
                 tmp = new_val
                 if self.minValue is not None:
                     tmp -= self.minValue
-                if abs(tmp - (int(tmp/self.minStep)*self.minStep)) > 0.00001:
+                # TODO make this less hacky
+                if abs(tmp - (int(tmp / self.minStep) * self.minStep)) > 0.00001:
                     raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+            if self.valid_values is not None and new_val not in self.valid_values:
+                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+            if self.valid_values_range is not None and not (
+                    self.valid_values_range[0] <= new_val <= self.valid_values_range[1]):
+                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+
+        if self.format == CharacteristicFormats.data:
+            try:
+                bytes = base64.decodebytes(new_val.encode())
+                print(bytes)
+            except binascii.Error:
+                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+            except Exception:
+                raise HomeKitStatusException(HapStatusCodes.OUT_OF_RESOURCES)
+            if self.maxDataLen < len(bytes):
+                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+
+        if self.format == CharacteristicFormats.string:
+            if len(new_val) > self.maxLen:
+                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
 
         self.value = new_val
         if self._set_value_callback:

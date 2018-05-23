@@ -63,6 +63,7 @@ if __name__ == '__main__':
     pairing_data = load_pairing(args.file)
 
     # args.characteristics contains a list of lists like [['1.10', 'on'], ['1.11', '50']]
+    characteristics_set = set()
     characteristics = []
     for characteristic in args.characteristics:
         # extract aid, iid and value from cli params
@@ -123,29 +124,21 @@ if __name__ == '__main__':
         # Nothing to do for CharacteristicFormats.string!
 
         characteristics.append({'aid': aid, 'iid': iid, 'value': value})
+        characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
 
     body = json.dumps({'characteristics': characteristics})
     response = sec_http.put('/characteristics', body)
     if response.code != 204:
-        # load and print the status message from the response
-        data = response.read().decode()
         data = json.loads(data)
         for characteristic in data['characteristics']:
-            code = characteristic['status']
-            if code != 0:
-                print('put_characteristics {aid}.{iid} failed because: {reason} ({code})'.
-                      format(reason=HapStatusCodes[code], code=code, aid=characteristic['aid'],
-                             iid=characteristic['iid']))
-            else:
-                print('put_characteristics {aid}.{iid} was successful.'.
-                      format(aid=characteristic['aid'], iid=characteristic['iid']))
-    else:
-        # if the HTTP response code was 204 not body is given, so we print a
-        # success message for every requested aid.idd pair
-        for characteristic in args.characteristics:
-            tmp = characteristic[0].split('.')
-            aid = int(tmp[0])
-            iid = int(tmp[1])
-            print('put_characteristics {aid}.{iid} was successful.'.format(aid=aid, iid=iid))
+            status = characteristic['status']
+            if status == 0:
+                continue
+            aid = characteristic['aid']
+            iid = characteristic['iid']
+            characteristics_set.remove('{a}.{i}'.format(a=aid, i=iid))
+            print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.
+                  format(aid=aid, iid=iid, reason=HapStatusCodes[status], code=status))
+    print('put_characteristics succeeded for {chars}'.format(chars=', '.join(characteristics_set)))
 
     conn.close()

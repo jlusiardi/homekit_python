@@ -79,6 +79,8 @@ class TLV:
             key = tail.pop(0)
             length = tail.pop(0)
             value = tail[:length]
+            if length != len(value):
+                raise TlvParseException('Not enough data for length {}'.format(length))
             tail = tail[length:]
 
             if key not in result:
@@ -101,6 +103,8 @@ class TLV:
             key = tail.pop(0)
             length = tail.pop(0)
             value = tail[:length]
+            if length != len(value):
+                raise TlvParseException('Not enough data for length {}'.format(length))
             tail = tail[length:]
 
             result.append((key, value))
@@ -192,6 +196,12 @@ class TLV:
             res += '  {k}: {v}\n'.format(k=k, v=d[k])
         res += '}\n'
         return res
+
+
+class TlvParseException(Exception):
+    """Raised upon parse error with some TLV"""
+    pass
+
 
 
 if __name__ == '__main__':

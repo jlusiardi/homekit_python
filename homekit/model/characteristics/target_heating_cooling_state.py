@@ -33,9 +33,10 @@ class TargetHeatingCoolingStateCharacteristic(AbstractCharacteristic):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.HEATING_COOLING_TARGET, CharacteristicFormats.uint8)
         self.perms = [CharacteristicPermissions.paired_write, CharacteristicPermissions.paired_read,
                       CharacteristicPermissions.events]
+        self.description = 'Desired mode of operation'
         self.minValue = 0
         self.maxValue = 3
-        self.step = 1
+        self.minStep = 1
         self.value = 0
 
 

@@ -31,9 +31,10 @@ class CurrentHeatingCoolingStateCharacteristic(AbstractCharacteristic):
     def __init__(self, iid):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.HEATING_COOLING_CURRENT, CharacteristicFormats.uint8)
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.events]
+        self.description = 'Current mode of operation'
         self.minValue = 0
         self.maxValue = 2
-        self.step = 1
+        self.minStep = 1
         self.value = 0
 
 

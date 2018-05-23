@@ -21,8 +21,8 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.model.services.abstract_service import AbstractService
 
 
-class BHSLightBulbAbstractService(AbstractService, OnCharacteristicMixin, BrightnessCharacteristicMixin,
-                                  HueCharacteristicMixin, SaturationCharacteristicMixin):
+class BHSLightBulbService(AbstractService, OnCharacteristicMixin, BrightnessCharacteristicMixin,
+                          HueCharacteristicMixin, SaturationCharacteristicMixin):
     """
     Defined on page 217; Light bulb that supports color selection via Brightness, Hue and Saturation
     """

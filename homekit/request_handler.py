@@ -29,8 +29,8 @@ import select
 from homekit.tlv import TLV
 from homekit.srp import SrpServer
 from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
-from homekit.statuscodes import HttpStatusCodes
-from homekit.statuscodes import HapStatusCodes
+from homekit.statuscodes import HttpStatusCodes, HapStatusCodes
+from homekit.exception import HomeKitStatusException
 
 
 def bytes_to_mpz(input_bytes):
@@ -251,10 +251,12 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             'characteristics': []
         }
 
+        errors = 0
         for id_pair in ids:
             id_pair = id_pair.split('.')
             aid = int(id_pair[0])
             cid = int(id_pair[1])
+            found = False
             for accessory in self.server.accessories.accessories:
                 if accessory.aid != aid:
                     continue
@@ -262,13 +264,37 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                     for characteristic in service.characteristics:
                         if characteristic.iid != cid:
                             continue
-                        result['characteristics'].append({'aid': aid, 'iid': cid, 'value': characteristic.get_value()})
+                        found = True
+                        # try to read the characteristic and report possible exceptions as error
+                        try:
+                            value = characteristic.get_value()
+                            result['characteristics'].append({'aid': aid, 'iid': cid, 'value': value})
+                        except HomeKitStatusException as e:
+                            result['characteristics'].append({'aid': aid, 'iid': cid, 'status': e.status_code})
+                            errors += 1
+                        except Exception as e:
+                            self.log_error('Exception while getting value for %s.%s: %s', aid, cid, str(e))
+                            result['characteristics'].append(
+                                {'aid': aid, 'iid': cid, 'status': HapStatusCodes.OUT_OF_RESOURCES})
+                            errors += 1
+                # report missing resources
+                if not found:
+                    result['characteristics'].append(
+                        {'aid': aid, 'iid': cid, 'status': HapStatusCodes.RESOURCE_NOT_EXIST})
+                    errors += 1
+
         if HomeKitRequestHandler.DEBUG_GET_CHARACTERISTICS:
             self.log_message('chars: %s', json.dumps(result))
 
-        result_bytes = json.dumps(result).encode()
+        # set the proper status code depending on the count of characteristics and error
+        if len(result['characteristics']) == errors:
+            self.send_response(HttpStatusCodes.BAD_REQUEST)
+        elif len(result['characteristics']) > errors > 0:
+            self.send_response(HttpStatusCodes.MULTI_STATUS)
+        else:
+            self.send_response(HttpStatusCodes.OK)
 
-        self.send_response(HttpStatusCodes.OK)
+        result_bytes = json.dumps(result).encode()
         self.send_header('Content-Type', 'application/hap+json')
         self.send_header('Content-Length', len(result_bytes))
         self.end_headers()
@@ -285,10 +311,14 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
 
         data = json.loads(self.body.decode())
         characteristics_to_set = data['characteristics']
+        result = {
+            'characteristics': []
+        }
+        errors = 0
         for characteristic_to_set in characteristics_to_set:
             aid = characteristic_to_set['aid']
             cid = characteristic_to_set['iid']
-
+            found = False
             for accessory in self.server.accessories.accessories:
                 if accessory.aid != aid:
                     continue
@@ -296,7 +326,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                     for characteristic in service.characteristics:
                         if characteristic.iid != cid:
                             continue
-
+                        found = True
                         if 'ev' in characteristic_to_set:
                             if HomeKitRequestHandler.DEBUG_PUT_CHARACTERISTICS:
                                 self.log_message('set ev >%s< >%s< >%s<', aid, cid, characteristic_to_set['ev'])
@@ -305,10 +335,36 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                         if 'value' in characteristic_to_set:
                             if HomeKitRequestHandler.DEBUG_PUT_CHARACTERISTICS:
                                 self.log_message('set value >%s< >%s< >%s<', aid, cid, characteristic_to_set['value'])
-                            characteristic.set_value(characteristic_to_set['value'])
+                            try:
+                                characteristic.set_value(characteristic_to_set['value'])
+                                result['characteristics'].append({'aid': aid, 'iid': cid, 'status': 0})
+                            except HomeKitStatusException as e:
+                                result['characteristics'].append({'aid': aid, 'iid': cid, 'status': int(str(e))})
+                                errors += 1
+                            except Exception as e:
+                                self.log_error('Exception while setting value for %s.%s: %s', aid, cid, str(e))
+                                result['characteristics'].append(
+                                    {'aid': aid, 'iid': cid, 'status': HapStatusCodes.OUT_OF_RESOURCES})
+                                errors += 1
+            # report missing resources
+            if not found:
+                result['characteristics'].append(
+                    {'aid': aid, 'iid': cid, 'status': HapStatusCodes.RESOURCE_NOT_EXIST})
+                errors += 1
 
-        self.send_response(HttpStatusCodes.NO_CONTENT)
-        self.end_headers()
+        if len(result['characteristics']) == errors:
+            self.send_response(HttpStatusCodes.BAD_REQUEST)
+        elif len(result['characteristics']) > errors > 0:
+            self.send_response(HttpStatusCodes.MULTI_STATUS)
+        else:
+            self.send_response(HttpStatusCodes.NO_CONTENT)
+            self.end_headers()
+        if errors > 0:
+            result_bytes = json.dumps(result).encode()
+            self.send_header('Content-Type', 'application/hap+json')
+            self.send_header('Content-Length', len(result_bytes))
+            self.end_headers()
+            self.wfile.write(result_bytes)
 
     def _post_identify(self):
         if self.server.data.is_paired:

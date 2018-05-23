@@ -30,9 +30,10 @@ class TargetTemperatureCharacteristic(AbstractCharacteristic):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.TEMPERATURE_TARGET, CharacteristicFormats.float)
         self.perms = [CharacteristicPermissions.paired_write, CharacteristicPermissions.paired_read,
                       CharacteristicPermissions.events]
+        self.description = 'the desired temperature'
         self.minValue = 10.0
         self.maxValue = 38.0
-        self.step = 0.1
+        self.minStep = 0.1
         self.unit = CharacteristicUnits.celsius
         self.value = 23.0
 

@@ -21,7 +21,7 @@ from homekit.model.services.abstract_service import AbstractService
 from homekit.model.services.service_types import ServicesTypes
 
 
-class OutletAbstractService(AbstractService, OnCharacteristicMixin):
+class OutletService(AbstractService, OnCharacteristicMixin):
     """
     Defined on page 219
     """

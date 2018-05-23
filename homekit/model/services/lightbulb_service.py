@@ -20,7 +20,7 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.model.services.abstract_service import AbstractService
 
 
-class LightBulbAbstractService(AbstractService, OnCharacteristicMixin):
+class LightBulbService(AbstractService, OnCharacteristicMixin):
     """
     Defined on page 217
     """

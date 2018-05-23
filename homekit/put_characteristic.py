@@ -20,8 +20,12 @@ import json
 import argparse
 import sys
 from distutils.util import strtobool
+import base64
+import binascii
 
 from homekit import SecureHttp, load_pairing, HapStatusCodes, save_pairing, create_session
+from homekit.model.characteristics import CharacteristicFormats
+from homekit.tlv import TLV, TlvParseException
 
 
 def setup_args_parser():
@@ -83,23 +87,49 @@ if __name__ == '__main__':
             sys.exit(-1)
 
         # reformat the value to fit the required format
-        if characteristic_type == 'bool':
+        if characteristic_type == CharacteristicFormats.bool:
             try:
                 value = strtobool(value)
             except ValueError:
                 print('{v} is no valid boolean!'.format(v=value))
                 sys.exit(-1)
-        # TODO more conversion according to Table 5-5 page 67 required
-        else:
-            pass
+        if characteristic_type in [CharacteristicFormats.uint64, CharacteristicFormats.uint32,
+                                   CharacteristicFormats.uint16, CharacteristicFormats.uint8,
+                                   CharacteristicFormats.int]:
+            try:
+                value = int(value)
+            except ValueError:
+                print('{v} is no valid int!'.format(v=value))
+                sys.exit(-1)
+        if characteristic_type == CharacteristicFormats.float:
+            try:
+                value = float(value)
+            except ValueError:
+                print('{v} is no valid float!'.format(v=value))
+                sys.exit(-1)
+        if characteristic_type == CharacteristicFormats.data:
+            try:
+                base64.decodebytes(value.encode())
+            except binascii.Error:
+                print('{v} is no valid base64 encoded data!'.format(v=value))
+                sys.exit(-1)
+        if characteristic_type == CharacteristicFormats.tlv8:
+            try:
+                b = base64.decodebytes(value.encode())
+                tlv = TLV.decode_bytes(b)
+            except (binascii.Error, TlvParseException):
+                print('{v} is no valid base64 encoded tlv!'.format(v=value))
+                sys.exit(-1)
+
+        # Nothing to do for CharacteristicFormats.string!
 
         characteristics.append({'aid': aid, 'iid': iid, 'value': value})
         characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
 
     body = json.dumps({'characteristics': characteristics})
     response = sec_http.put('/characteristics', body)
-    data = response.read().decode()
     if response.code != 204:
+        data = response.read().decode()
         data = json.loads(data)
         for characteristic in data['characteristics']:
             status = characteristic['status']
@@ -110,6 +140,7 @@ if __name__ == '__main__':
             characteristics_set.remove('{a}.{i}'.format(a=aid, i=iid))
             print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.
                   format(aid=aid, iid=iid, reason=HapStatusCodes[status], code=status))
-    print('put_characteristics succeeded for {chars}'.format(chars=', '.join(characteristics_set)))
+    if len(characteristics_set):
+        print('put_characteristics succeeded for {chars}'.format(chars=', '.join(characteristics_set)))
 
     conn.close()

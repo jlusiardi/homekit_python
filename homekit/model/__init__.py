@@ -15,8 +15,8 @@
 #
 
 from homekit.model.mixin import ToDictMixin, get_id
-from homekit.model.services import AccessoryInformationAbstractService, LightBulbAbstractService, FanAbstractService, \
-    BHSLightBulbAbstractService
+from homekit.model.services import AccessoryInformationAbstractService, LightBulbService, FanService, \
+    BHSLightBulbService
 from homekit.model.categories import Categories
 
 
@@ -38,5 +38,5 @@ class Accessories(ToDictMixin):
     def __init__(self):
         self.accessories = []
 
-    def add_accessory(self, acessory: Accessory):
-        self.accessories.append(acessory)
+    def add_accessory(self, accessory: Accessory):
+        self.accessories.append(accessory)

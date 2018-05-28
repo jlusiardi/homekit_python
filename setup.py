@@ -18,13 +18,13 @@ from distutils.core import setup
 
 setup(
     name='homekit',
-    packages=['homekit', 'homekit.model'],  # this must be the same as the name above
-    version='0.8',
+    packages=['homekit', 'homekit.model', 'homekit.model.services', 'homekit.model.characteristics'],
+    version='0.9',
     description='Python code to interface HomeKit Accessories and Controllers',
     author='Joachim Lusiardi',
     author_email='pypi@lusiardi.de',
     url='https://github.com/jlusiardi/homekit_python',  
-    download_url='https://github.com/jlusiardi/homekit_python/archive/0.8.tar.gz',
+    download_url='https://github.com/jlusiardi/homekit_python/archive/0.9.tar.gz',
     keywords=['HomeKit'],  
     classifiers=[],
     install_requires=[

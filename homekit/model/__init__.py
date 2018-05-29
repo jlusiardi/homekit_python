@@ -15,7 +15,7 @@
 #
 
 from homekit.model.mixin import ToDictMixin, get_id
-from homekit.model.services import AccessoryInformationAbstractService, LightBulbService, FanService, \
+from homekit.model.services import AccessoryInformationService, LightBulbService, FanService, \
     BHSLightBulbService
 from homekit.model.categories import Categories
 
@@ -24,12 +24,12 @@ class Accessory(ToDictMixin):
     def __init__(self, name, manufacturer, model, serial_number, firmware_revision):
         self.aid = get_id()
         self.services = [
-            AccessoryInformationAbstractService(name, manufacturer, model, serial_number, firmware_revision)
+            AccessoryInformationService(name, manufacturer, model, serial_number, firmware_revision)
         ]
 
     def get_name(self):
         for service in self.services:
-            if isinstance(service, AccessoryInformationAbstractService):
+            if isinstance(service, AccessoryInformationService):
                 return service.get_name()
         return None
 

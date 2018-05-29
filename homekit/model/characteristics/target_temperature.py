@@ -14,11 +14,8 @@
 # limitations under the License.
 #
 
-from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
-from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
-from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
-from homekit.model.characteristics.characteristic_units import CharacteristicUnits
-from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic
+from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
+    AbstractCharacteristic, CharacteristicUnits
 
 
 class TargetTemperatureCharacteristic(AbstractCharacteristic):
@@ -43,8 +40,8 @@ class TargetTemperatureCharacteristicMixin(object):
         self._targetTemperature = TargetTemperatureCharacteristic(iid)
         self.characteristics.append(self._targetTemperature)
 
-    def set_on_set_callback(self, callback):
+    def set_target_temperature_set_callback(self, callback):
         self._targetTemperature.set_set_value_callback(callback)
 
-    def set_on_get_callback(self, callback):
+    def set_target_temperature_get_callback(self, callback):
         self._targetTemperature.set_get_value_callback(callback)

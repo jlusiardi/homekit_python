@@ -18,7 +18,7 @@
 
 import argparse
 
-from homekit import create_session, SecureHttp, load_pairing
+from homekit import create_session, SecureHttp
 from homekit.tlv import TLV
 
 

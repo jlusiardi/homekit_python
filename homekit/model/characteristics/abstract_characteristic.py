@@ -20,9 +20,7 @@ import binascii
 from decimal import Decimal
 
 from homekit.model.mixin import ToDictMixin
-from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
-from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
-from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
+from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions
 from homekit.statuscodes import HapStatusCodes
 from homekit.exception import HomeKitStatusException
 

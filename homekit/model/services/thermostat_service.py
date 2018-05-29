@@ -15,11 +15,10 @@
 #
 
 from homekit.model import get_id
-from homekit.model.characteristics import TemperatureDisplayUnitsMixin, TargetHeatingCoolingStateCharacteristicMixin, \
-    TargetTemperatureCharacteristicMixin, CurrentTemperatureCharacteristicMixin, \
+from homekit.model.characteristics import TemperatureDisplayUnitsMixin, TargetTemperatureCharacteristicMixin, \
+    TargetHeatingCoolingStateCharacteristicMixin, CurrentTemperatureCharacteristicMixin, \
     CurrentHeatingCoolingStateCharacteristicMixin
-from homekit.model.services.abstract_service import AbstractService
-from homekit.model.services.service_types import ServicesTypes
+from homekit.model.services import ServicesTypes, AbstractService
 
 
 class ThermostatService(AbstractService, TemperatureDisplayUnitsMixin, TargetTemperatureCharacteristicMixin,

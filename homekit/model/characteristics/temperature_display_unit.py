@@ -14,10 +14,8 @@
 # limitations under the License.
 #
 
-from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
-from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
-from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
-from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic
+from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
+    AbstractCharacteristic
 
 
 class TemperatureDisplayUnitCharacteristic(AbstractCharacteristic):
@@ -43,8 +41,8 @@ class TemperatureDisplayUnitsMixin(object):
         self._temperatureDisplayUnits = TemperatureDisplayUnitCharacteristic(iid)
         self.characteristics.append(self._temperatureDisplayUnits)
 
-    def set_on_set_callback(self, callback):
+    def set_temperature_display_units_set_callback(self, callback):
         self._temperatureDisplayUnits.set_set_value_callback(callback)
 
-    def set_on_get_callback(self, callback):
+    def set_temperature_display_units_get_callback(self, callback):
         self._temperatureDisplayUnits.set_get_value_callback(callback)

@@ -15,9 +15,8 @@
 #
 
 from homekit.model import get_id
-from homekit.model.characteristics.on import OnCharacteristic, OnCharacteristicMixin
-from homekit.model.services.service_types import ServicesTypes
-from homekit.model.services.abstract_service import AbstractService
+from homekit.model.characteristics.on import OnCharacteristicMixin
+from homekit.model.services import ServicesTypes, AbstractService
 
 
 class FanService(AbstractService, OnCharacteristicMixin):

@@ -14,11 +14,8 @@
 # limitations under the License.
 #
 
-from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
-from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
-from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
-from homekit.model.characteristics.characteristic_units import CharacteristicUnits
-from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic
+from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
+    AbstractCharacteristic
 
 
 class CurrentTemperatureCharacteristic(AbstractCharacteristic):
@@ -42,5 +39,5 @@ class CurrentTemperatureCharacteristicMixin(object):
         self._currentTemperature = CurrentTemperatureCharacteristic(iid)
         self.characteristics.append(self._currentTemperature)
 
-    def set_on_get_callback(self, callback):
+    def set_current_temperature_get_callback(self, callback):
         self._currentTemperature.set_get_value_callback(callback)

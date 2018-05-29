@@ -51,6 +51,11 @@ BBE117577A615D6C770988C0BAD946E208E24FA074E5AB3143DB5BFC\
 E0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF'''), 16))
         # HomeKit requires SHA-512 (See page 36)
         self.h = hashlib.sha512
+        self.A = None
+        self.B = None
+        self.salt = None
+        self.username = None
+        self.password = None
 
     def _calculate_k(self) -> gmpy2.mpz:
         # calculate k (see https://tools.ietf.org/html/rfc5054#section-2.5.3)
@@ -99,6 +104,9 @@ E0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF'''), 16))
         hash_instance.update(hash_value)
 
         return int(binascii.hexlify(hash_instance.digest()), 16)
+
+    def get_shared_secret(self):
+        raise NotImplementedError()
 
 
 class SrpClient(Srp):

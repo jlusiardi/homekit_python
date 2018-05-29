@@ -131,7 +131,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             self.close_connection = True
             return
         except UnicodeDecodeError as e:
-            # self.log_error('exception %s' % e)
+            self.log_error('Unicode exception %s' % e)
             pass
 
         # the first 2 bytes are the length of the encrypted data to follow
@@ -807,7 +807,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
 
     class Wrapper:
         """
-        Wraps a bytes or bytearray data into a file like object.
+        Wraps a bytes or byte array data into a file like object.
         """
 
         def __init__(self, data):

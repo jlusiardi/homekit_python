@@ -91,7 +91,7 @@ class TLV:
         return result
 
     @staticmethod
-    def decode_bytes_to_list(bs) -> dict:
+    def decode_bytes_to_list(bs) -> list:
         return TLV.decode_bytearray_to_list(bytearray(bs))
 
     @staticmethod
@@ -201,7 +201,6 @@ class TLV:
 class TlvParseException(Exception):
     """Raised upon parse error with some TLV"""
     pass
-
 
 
 if __name__ == '__main__':

@@ -15,13 +15,11 @@
 #
 
 from homekit.model import get_id
-from homekit.model.characteristics.outlet_in_use import OutletInUseCharacteristic
-from homekit.model.characteristics.on import OnCharacteristic, OnCharacteristicMixin
-from homekit.model.services.abstract_service import AbstractService
-from homekit.model.services.service_types import ServicesTypes
+from homekit.model.characteristics import OnCharacteristicMixin, OutletInUseCharacteristicMixin
+from homekit.model.services import ServicesTypes, AbstractService
 
 
-class OutletService(AbstractService, OnCharacteristicMixin):
+class OutletService(AbstractService, OnCharacteristicMixin, OutletInUseCharacteristicMixin):
     """
     Defined on page 219
     """
@@ -29,6 +27,4 @@ class OutletService(AbstractService, OnCharacteristicMixin):
     def __init__(self):
         AbstractService.__init__(self, ServicesTypes.get_uuid('public.hap.service.outlet'), get_id())
         OnCharacteristicMixin.__init__(self, get_id())
-
-        self._outletInUse = OutletInUseCharacteristic(get_id())
-        self.characteristics.append(self._outletInUse)
+        OutletInUseCharacteristicMixin.__init__(self, get_id())

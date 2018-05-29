@@ -19,11 +19,8 @@
 import json
 import argparse
 import sys
-from distutils.util import strtobool
 
-from homekit import SecureHttp, load_pairing, HapStatusCodes, save_pairing, create_session
-from time import sleep
-from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
+from homekit import SecureHttp, HapStatusCodes, create_session
 
 
 def setup_args_parser():
@@ -71,10 +68,13 @@ if __name__ == '__main__':
                   format(aid=aid, iid=iid, reason=HapStatusCodes[status], code=status))
 
     print('waiting on events for {chars}'.format(chars=', '.join(characteristics_set)))
-    while True:
-        r = sec_http.handle_event_response()
-        r = json.loads(r)
-        for c in r['characteristics']:
-            print('event for {aid}.{iid}: {event}'.format(aid=c['aid'], iid=c['iid'], event=c['value']))
+    try:
+        while True:
+            r = sec_http.handle_event_response()
+            r = json.loads(r)
+            for c in r['characteristics']:
+                print('event for {aid}.{iid}: {event}'.format(aid=c['aid'], iid=c['iid'], event=c['value']))
+    except KeyboardInterrupt:
+        pass
 
     conn.close()

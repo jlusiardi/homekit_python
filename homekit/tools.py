@@ -80,7 +80,7 @@ def create_session(file):
             conn.connect()
             c2a_key, a2c_key = get_session_keys(conn, pairing_data)
             connected = True
-        except Exception as e:
+        except Exception:
             connected = False
 
     if not connected:

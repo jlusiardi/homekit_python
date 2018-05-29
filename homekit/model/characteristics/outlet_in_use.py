@@ -14,10 +14,8 @@
 # limitations under the License.
 #
 
-from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
-from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
-from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
-from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic
+from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
+    AbstractCharacteristic
 
 
 class OutletInUseCharacteristic(AbstractCharacteristic):
@@ -30,3 +28,12 @@ class OutletInUseCharacteristic(AbstractCharacteristic):
         self.description = 'Outlet in use'
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.events]
         self.value = False
+
+
+class OutletInUseCharacteristicMixin(object):
+    def __init__(self, iid):
+        self._outletInUse = OutletInUseCharacteristic(iid)
+        self.characteristics.append(self._outletInUse)
+
+    def set_outlet_in_use_get_callback(self, callback):
+        self._outletInUse.set_get_value_callback(callback)

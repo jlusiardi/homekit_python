@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-import sys
 import hkdf
 import hashlib
 import ed25519

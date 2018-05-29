@@ -15,17 +15,12 @@
 #
 
 from homekit.model import get_id
-from homekit.model.characteristics.name import NameCharacteristic
-from homekit.model.characteristics.model import ModelCharacteristic
-from homekit.model.characteristics.manufacturer import ManufacturerCharacteristic
-from homekit.model.characteristics.identify import IdentifyCharacteristic
-from homekit.model.characteristics.firmware_revision import FirmwareRevisionCharacteristic
-from homekit.model.characteristics.serialnumber import SerialNumberCharacteristic
-from homekit.model.services.service_types import ServicesTypes
-from homekit.model.services.abstract_service import AbstractService
+from homekit.model.characteristics import NameCharacteristic, ModelCharacteristic, ManufacturerCharacteristic, \
+    IdentifyCharacteristic, FirmwareRevisionCharacteristic, SerialNumberCharacteristic
+from homekit.model.services import ServicesTypes, AbstractService
 
 
-class AccessoryInformationAbstractService(AbstractService):
+class AccessoryInformationService(AbstractService):
     """
     Defined on page 216
     """

@@ -14,10 +14,8 @@
 # limitations under the License.
 #
 
-from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
-from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
-from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
-from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic
+from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
+    AbstractCharacteristic
 
 
 class IdentifyCharacteristic(AbstractCharacteristic):
@@ -29,3 +27,12 @@ class IdentifyCharacteristic(AbstractCharacteristic):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.IDENTIFY, CharacteristicFormats.bool)
         self.perms = [CharacteristicPermissions.paired_write]
         self.description = 'Identify'
+
+
+class IdentifyCharacteristicMixin(object):
+    def __init__(self, iid):
+        self._identify = IdentifyCharacteristic(iid)
+        self.characteristics.append(self._identify)
+
+    def set_identify_set_callback(self, callback):
+        self._identify.set_get_value_callback(callback)

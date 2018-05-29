@@ -14,10 +14,8 @@
 # limitations under the License.
 #
 
-from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
-from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
-from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
-from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic
+from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
+    AbstractCharacteristic
 
 
 class CurrentHeatingCoolingStateCharacteristic(AbstractCharacteristic):
@@ -29,7 +27,8 @@ class CurrentHeatingCoolingStateCharacteristic(AbstractCharacteristic):
     """
 
     def __init__(self, iid):
-        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.HEATING_COOLING_CURRENT, CharacteristicFormats.uint8)
+        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.HEATING_COOLING_CURRENT,
+                                        CharacteristicFormats.uint8)
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.events]
         self.description = 'Current mode of operation'
         self.minValue = 0
@@ -43,5 +42,5 @@ class CurrentHeatingCoolingStateCharacteristicMixin(object):
         self._currentHeatingCoolingState = CurrentHeatingCoolingStateCharacteristic(iid)
         self.characteristics.append(self._currentHeatingCoolingState)
 
-    def set_on_get_callback(self, callback):
+    def set_current_heating_cooling_state_get_callback(self, callback):
         self._currentHeatingCoolingState.set_get_value_callback(callback)

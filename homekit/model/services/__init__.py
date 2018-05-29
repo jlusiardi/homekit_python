@@ -14,9 +14,10 @@
 # limitations under the License.
 #
 
-from homekit.model.services.abstract_service import AbstractService
 from homekit.model.services.service_types import ServicesTypes
-from homekit.model.services.accessoryinformation_service import AccessoryInformationAbstractService
+
+from homekit.model.services.abstract_service import AbstractService
+from homekit.model.services.accessoryinformation_service import AccessoryInformationService
 from homekit.model.services.bhslightbulb_service import BHSLightBulbService
 from homekit.model.services.fan_service import FanService
 from homekit.model.services.lightbulb_service import LightBulbService

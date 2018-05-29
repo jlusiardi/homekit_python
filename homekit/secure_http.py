@@ -63,7 +63,7 @@ class SecureHttp:
 
     def put(self, target, body, content_type=HttpContentTypes.JSON):
         headers = 'Host: hap-770D90.local\n' + \
-                  'Content-Type: application/hap+json\n' + \
+                  'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'PUT {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
         return self._handle_request(data)
@@ -109,9 +109,6 @@ class SecureHttp:
             r = http.client.HTTPResponse(SecureHttp.Wrapper(result))
             r.begin()
             return r
-        elif result.startswith(b'EVENT/1.0'):
-            result = SecureHttp._parseEvents(result)
-            return result
         else:
             data = SecureHttp._parse(result)
             return self.HTTPResponseWrapper(data)

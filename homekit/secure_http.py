@@ -16,6 +16,7 @@
 
 import io
 import http.client
+import select
 
 from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 from homekit.statuscodes import HttpContentTypes
@@ -121,7 +122,20 @@ class SecureHttp:
         tmp = bytearray()
         exp_len = 512
         while True:
+            # make sure we read all blocks but without blocking to long. Was introduced to support chunked transfer mode
+            # from https://github.com/maximkulkin/esp-homekit
+            self.sock.setblocking(0)
+            ready = select.select([self.sock], [], [], 1)
+            if not ready[0]:
+                break
+
+            self.sock.settimeout(0.1)
             data = self.sock.recv(exp_len)
+
+            # ready but no data => quit
+            if not data:
+                break
+
             tmp += data
             length = int.from_bytes(tmp[0:2], 'little')
             if length + 18 > len(tmp):
@@ -142,8 +156,6 @@ class SecureHttp:
             if int.from_bytes(tmp[0:2], 'little') < 1024:
                 exp_len = int.from_bytes(tmp[0:2], 'little') - len(tmp) + 18
 
-            if length < 1024:
-                break
         # now decrypt the blocks and assemble the answer to our request
         result = bytearray()
         for b in blocks:

@@ -125,7 +125,7 @@ class SecureHttp:
             # make sure we read all blocks but without blocking to long. Was introduced to support chunked transfer mode
             # from https://github.com/maximkulkin/esp-homekit
             self.sock.setblocking(0)
-            ready = select.select([self.sock], [], [], 1)
+            ready = select.select([self.sock], [], [], 10)
             if not ready[0]:
                 break
 

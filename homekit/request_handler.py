@@ -547,6 +547,12 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             d_res[TLV.kTLVType_State] = TLV.M2
             self._send_response_tlv(d_res)
             self.log_message('after step #2\n%s', TLV.to_string(d_res))
+
+            # 6) + 7) invalidate HAP session and close connections
+            # TODO implement this in more details
+            # close connection if we just removed our own pairing.
+            if self.server.sessions[self.session_id]['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
+                self.close_connection = True
             return
 
         if d_req[TLV.kTLVType_State] == TLV.M1 and d_req[TLV.kTLVType_Method] == TLV.ListPairings:

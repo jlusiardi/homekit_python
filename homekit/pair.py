@@ -61,4 +61,4 @@ if __name__ == '__main__':
         save_pairing(args.file, pairing)
     except UnavailableError:
         print('The accessory is already paired!')
-        exit(1)
+        sys.exit(-2)

@@ -20,6 +20,7 @@ import select
 
 from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 from homekit.statuscodes import HttpContentTypes
+from homekit.httpparser import HttpResponse
 
 
 class SecureHttp:
@@ -85,7 +86,7 @@ class SecureHttp:
         self.c2a_counter += 1
         ciper_and_mac = chacha20_aead_encrypt(len_bytes, self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]), data.encode())
         self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
-        return self._handle_response()
+        return self._read_response()
 
     @staticmethod
     def _parse(chunked_data):
@@ -99,29 +100,15 @@ class SecureHttp:
         tmp[1] = tmp[1][length + 2:]
         return chunk + SecureHttp._parse(tmp[1])
 
-    def _handle_response(self):
-        result = self._read_response()
-
-        #
-        #   I expected a full http response but the first real homekit accessory (Koogeek-P1) just replies with body
-        #   in chunked mode...
-        #
-        if result.startswith(b'HTTP/1.1'):
-            r = http.client.HTTPResponse(SecureHttp.Wrapper(result))
-            r.begin()
-            return r
-        else:
-            data = SecureHttp._parse(result)
-            return self.HTTPResponseWrapper(data)
-
     def _read_response(self):
         # following the information from page 71 about HTTP Message splitting:
         # The blocks start with 2 byte little endian defining the length of the encrypted data (max 1024 bytes)
         # followed by 16 byte authTag
         blocks = []
         tmp = bytearray()
-        exp_len = 512
-        while True:
+        exp_len = 2048
+        response = HttpResponse()
+        while not response.is_read_completly():
             # make sure we read all blocks but without blocking to long. Was introduced to support chunked transfer mode
             # from https://github.com/maximkulkin/esp-homekit
             self.sock.setblocking(0)
@@ -150,33 +137,27 @@ class SecureHttp:
             tag = tmp[0:16]
             tmp = tmp[16:]
 
-            blocks.append((length, block, tag))
+            response.parse(self.decrypt_block(length, block, tag))
 
             # check how long next block will be
             if int.from_bytes(tmp[0:2], 'little') < 1024:
                 exp_len = int.from_bytes(tmp[0:2], 'little') - len(tmp) + 18
 
-        # now decrypt the blocks and assemble the answer to our request
-        result = bytearray()
-        for b in blocks:
-            tmp = chacha20_aead_decrypt(b[0].to_bytes(2, byteorder='little'),
-                                        self.a2c_key,
-                                        self.a2c_counter.to_bytes(8, byteorder='little'),
-                                        bytes([0, 0, 0, 0]), b[1] + b[2])
-            if tmp is not False:
-                result += tmp
+        return response
+
+    def decrypt_block(self, length, block, tag):
+        tmp = chacha20_aead_decrypt(length.to_bytes(2, byteorder='little'),
+                                    self.a2c_key,
+                                    self.a2c_counter.to_bytes(8, byteorder='little'),
+                                    bytes([0, 0, 0, 0]), block + tag)
+        if tmp is not False:
             self.a2c_counter += 1
-        return result
+
+        return tmp
 
     def handle_event_response(self):
         """
         This reads the enciphered response from an accessory after registering for events.
         :return: the event data as string (not as json object)
         """
-        result = self._read_response()
-        if result.startswith(b'EVENT/1.0'):
-            tmp = result.decode()
-            tmp = tmp.split('\r\n\r\n')[1]
-            return tmp
-        else:
-            raise IOError('The response was no EVENT/1.0 data')
+        return self._read_response()

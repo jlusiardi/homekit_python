@@ -106,7 +106,7 @@ class SecureHttp:
         # followed by 16 byte authTag
         blocks = []
         tmp = bytearray()
-        exp_len = 2048
+        exp_len = 128
         response = HttpResponse()
         while not response.is_read_completly():
             # make sure we read all blocks but without blocking to long. Was introduced to support chunked transfer mode

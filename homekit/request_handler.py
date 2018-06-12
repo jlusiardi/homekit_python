@@ -331,7 +331,11 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                         if 'ev' in characteristic_to_set:
                             if HomeKitRequestHandler.DEBUG_PUT_CHARACTERISTICS:
                                 self.log_message('set ev >%s< >%s< >%s<', aid, cid, characteristic_to_set['ev'])
-                            characteristic.set_events(characteristic_to_set['ev'])
+                            if 'ev' in characteristic.perms:
+                                characteristic.set_events(characteristic_to_set['ev'])
+                                result['characteristics'].append({'aid': aid, 'iid': cid, 'status': 0})
+                            else:
+                                result['characteristics'].append({'aid': aid, 'iid': cid, 'status': HapStatusCodes.NOTIFICATION_NOT_SUPPORTED})
 
                         if 'value' in characteristic_to_set:
                             if HomeKitRequestHandler.DEBUG_PUT_CHARACTERISTICS:

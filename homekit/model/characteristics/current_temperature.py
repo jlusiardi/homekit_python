@@ -15,7 +15,7 @@
 #
 
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
-    AbstractCharacteristic
+    AbstractCharacteristic, CharacteristicUnits
 
 
 class CurrentTemperatureCharacteristic(AbstractCharacteristic):

@@ -38,7 +38,10 @@ The demonstration uses this JSON in `~/.homekit/demoserver.json`:
   "accessory_pin": "031-45-154",
   "peers": {},
   "unsuccessful_tries": 0,
-  "c#": 0
+  "c#": 0,
+  "name": "demoserver",
+  "category": "Lightbulb"
+
 }
 ```
 

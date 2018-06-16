@@ -16,6 +16,8 @@
 
 import json
 import binascii
+from homekit.exception import HomeKitConfigurationException
+from homekit.model import Categories
 
 
 class HomeKitServerData:
@@ -64,6 +66,16 @@ class HomeKitServerData:
     @property
     def name(self) -> str:
         return self.data['name']
+
+    @property
+    def category(self) -> str:
+        try:
+            category = self.data['category']
+        except KeyError:
+            raise HomeKitConfigurationException('category missing in "{f}"'.format(f=self.data_file))
+        if category not in Categories:
+            raise HomeKitConfigurationException('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))
+        return category
 
     def remove_peer(self, pairing_id: bytes):
         del self.data['peers'][pairing_id.decode()]

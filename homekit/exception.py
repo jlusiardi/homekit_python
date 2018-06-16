@@ -90,3 +90,8 @@ class InvalidSignature(HomeKitException):
 class HomeKitStatusException(Exception):
     def __init__(self, status_code):
         self.status_code = status_code
+
+
+class HomeKitConfigurationException(Exception):
+    def __init__(self, message):
+        Exception.__init__(self, message)

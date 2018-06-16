@@ -19,31 +19,59 @@ class _Categories(object):
     """
     This data is taken from Table 12-3 Accessory Categories on page 254. Values above 19 are reserved.
     """
+    OTHER = 1
+    BRIDGE = 2
+    FAN = 3
+    GARAGE = 4
+    LIGHTBULB = 5
+    DOOR_LOCK = 6
+    OUTLET = 7
+    SWITCH = 8
+    THERMOSTAT = 9
+    SENSOR = 10
+    SECURITY_SYSTEM = 11
+    DOOR = 12
+    WINDOW = 13
+    WINDOW_COVERING = 14
+    PROGRAMMABLE_SWITCH = 15
+    RANGE_EXTENDER = 16
+    IP_CAMERA = 17
+    VIDEO_DOOR_BELL = 18
+    AIR_PURIFIER = 19
 
     def __init__(self):
         self._categories = {
-            1: 'Other',
-            2: 'Bridge',
-            3: 'Fan',
-            4: 'Garage',
-            5: 'Lightbulb',
-            6: 'Door Lock',
-            7: 'Outlet',
-            8: 'Switch',
-            9: 'Thermostat',
-            10: 'Sensor',
-            11: 'Security System',
-            12: 'Door',
-            13: 'Window',
-            14: 'Window Covering',
-            15: 'Programmable Switch',
-            16: 'Range Extender',
-            17: 'IP Camera',
-            18: 'Video Door Bell',
-            19: 'Air Purifier'
+            _Categories.OTHER: 'Other',
+            _Categories.BRIDGE: 'Bridge',
+            _Categories.FAN: 'Fan',
+            _Categories.GARAGE: 'Garage',
+            _Categories.LIGHTBULB: 'Lightbulb',
+            _Categories.DOOR_LOCK: 'Door Lock',
+            _Categories.OUTLET: 'Outlet',
+            _Categories.SWITCH: 'Switch',
+            _Categories.THERMOSTAT: 'Thermostat',
+            _Categories.SENSOR: 'Sensor',
+            _Categories.SECURITY_SYSTEM: 'Security System',
+            _Categories.DOOR: 'Door',
+            _Categories.WINDOW: 'Window',
+            _Categories.WINDOW_COVERING: 'Window Covering',
+            _Categories.PROGRAMMABLE_SWITCH: 'Programmable Switch',
+            _Categories.RANGE_EXTENDER: 'Range Extender',
+            _Categories.IP_CAMERA: 'IP Camera',
+            _Categories.VIDEO_DOOR_BELL: 'Video Door Bell',
+            _Categories.AIR_PURIFIER: 'Air Purifier'
         }
 
         self._categories_rev = {self._categories[k]: k for k in self._categories.keys()}
+
+    def __contains__(self, item):
+        if item in self._categories:
+            return True
+
+        if item in self._categories_rev:
+            return True
+
+        return False
 
     def __getitem__(self, item):
         if item in self._categories:
@@ -52,7 +80,7 @@ class _Categories(object):
         if item in self._categories_rev:
             return self._categories_rev[item]
 
-        raise KeyError('Item {item} not found'.format_map(item=item))
+        raise KeyError('Item {item} not found'.format(item=item))
 
 
 Categories = _Categories()

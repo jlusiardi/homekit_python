@@ -39,7 +39,6 @@ The demonstration uses this JSON in `~/.homekit/demoserver.json`:
   "peers": {},
   "unsuccessful_tries": 0,
   "c#": 0,
-  "name": "demoserver",
   "category": "Lightbulb"
 
 }

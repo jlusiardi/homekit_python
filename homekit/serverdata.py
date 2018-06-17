@@ -22,13 +22,18 @@ from homekit.model import Categories
 
 class HomeKitServerData:
     """
-    This class is used to take care of the servers persistence to be able to managage restarts,
+    This class is used to take care of the servers persistence to be able to manage restarts,
     """
 
     def __init__(self, data_file):
         self.data_file = data_file
         with open(data_file, 'r') as input_file:
             self.data = json.load(input_file)
+        # set some default values
+        if 'peers' not in self.data:
+            self.data['peers'] = {}
+        if 'unsuccessful_tries' not in self.data:
+            self.data['unsuccessful_tries'] = 0
 
     def _save_data(self):
         with open(self.data_file, 'w') as output_file:
@@ -125,6 +130,20 @@ class HomeKitServerData:
     def increase_configuration_number(self):
         self.data['c#'] += 1
         self._save_data()
+
+    def check(self, paired=False):
+        """
+        Checks a accessory config file for completeness.
+        :param paired: if True, check for keys that must exist after successful pairing as well.
+        :return: None, but a HomeKitConfigurationException is raised if a key is missing
+        """
+        required_fields = ['name', 'host_ip', 'host_port', 'accessory_pairing_id', 'accessory_pin', 'c#', 'category']
+        if paired:
+            required_fields.extend(['accessory_ltpk', 'accessory_ltsk', 'peers', 'unsuccessful_tries'])
+        for f in required_fields:
+            if f not in self.data:
+                raise HomeKitConfigurationException(
+                    '"{r}" is missing in the config file "{f}"!'.format(r=f, f=self.data_file))
 
 
 if __name__ == '__main__':

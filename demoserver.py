@@ -19,8 +19,7 @@
 import os.path
 import logging
 
-from homekit import HomeKitServer
-
+from homekit import HomeKitServer, HomeKitServerData, HomeKitConfigurationException
 from homekit.model import Accessory, LightBulbService
 
 
@@ -36,8 +35,15 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     logger.addHandler(ch)
     logger.info('starting')
+    config_file = os.path.expanduser('~/.homekit/demoserver.json')
     try:
-        httpd = HomeKitServer(os.path.expanduser('~/.homekit/demoserver.json'),logger)
+        HomeKitServerData(config_file).check(True)
+    except HomeKitConfigurationException as e:
+        print(e)
+        exit()
+
+    try:
+        httpd = HomeKitServer(config_file, logger)
 
         accessory = Accessory('Testlicht', 'lusiardi.de', 'Demoserver', '0001', '0.1')
         lightBulbService = LightBulbService()

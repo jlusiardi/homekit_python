@@ -37,7 +37,7 @@ if __name__ == '__main__':
     logger.info('starting')
     config_file = os.path.expanduser('~/.homekit/demoserver.json')
     try:
-        HomeKitServerData(config_file).check(True)
+        HomeKitServerData(config_file).check()
     except HomeKitConfigurationException as e:
         print(e)
         exit()

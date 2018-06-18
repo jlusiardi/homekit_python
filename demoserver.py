@@ -28,13 +28,15 @@ def light_switched(new_value):
 
 
 if __name__ == '__main__':
+    # setup logger
     logger = logging.getLogger('accessory')
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ch.setFormatter(formatter)
+    ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(ch)
     logger.info('starting')
+
+    # load and check configuration
     config_file = os.path.expanduser('~/.homekit/demoserver.json')
     try:
         HomeKitServerData(config_file).check()
@@ -42,6 +44,7 @@ if __name__ == '__main__':
         print(e)
         exit()
 
+    # create a server and an accessory an run it unless ctrl+c was hit
     try:
         httpd = HomeKitServer(config_file, logger)
 
@@ -51,14 +54,14 @@ if __name__ == '__main__':
         accessory.services.append(lightBulbService)
         httpd.accessories.add_accessory(accessory)
 
-        print(httpd.accessories.__str__())
-
         httpd.publish_device()
-        print('published device and start serving')
+        logger.info('published device and start serving')
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
-    print('unpublish device')
+
+    # unpublish the device and shut down
+    logger.info('unpublish device')
     httpd.unpublish_device()
     httpd.shutdown()
 

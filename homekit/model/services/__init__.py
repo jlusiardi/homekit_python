@@ -23,3 +23,4 @@ from homekit.model.services.fan_service import FanService
 from homekit.model.services.lightbulb_service import LightBulbService
 from homekit.model.services.outlet_service import OutletService
 from homekit.model.services.thermostat_service import ThermostatService
+from homekit.model.services.speaker import SpeakerService

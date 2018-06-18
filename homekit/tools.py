@@ -13,13 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import base64
+import binascii
 
 import json
 import sys
+from distutils.util import strtobool
 
+from homekit import TLV
 from homekit.http_client import HomeKitHTTPConnection
+from homekit.model.characteristics import CharacteristicFormats
+from homekit.tlv import TlvParseException
 from homekit.zeroconf_ import find_device_ip_and_port
 from homekit.protocol import get_session_keys
+from homekit.exception import HomeKitTypeException
 
 
 def load_pairing(file: str) -> dict:
@@ -70,6 +77,16 @@ def create_session(file):
         sys.exit(-1)
 
     # we need ip and port of the device
+    try:
+        conn, c2a_key, a2c_key = create_session_from_pairing_data(pairing_data)
+    except Exception:
+        print('Device {id} not found'.format(id=pairing_data['AccessoryPairingID']))
+        sys.exit(-1)
+    save_pairing(file, pairing_data)
+    return conn, c2a_key, a2c_key
+
+
+def create_session_from_pairing_data(pairing_data):
     connected = False
     if 'AccessoryIP' in pairing_data and 'AccessoryPort' in pairing_data:
         # if it is known, try it
@@ -82,18 +99,52 @@ def create_session(file):
             connected = True
         except Exception:
             connected = False
-
     if not connected:
         # no connection yet, so ip / port might have changed and we need to fall back to slow zeroconf lookup
         device_id = pairing_data['AccessoryPairingID']
         connection_data = find_device_ip_and_port(device_id)
-        if connection_data is None:
-            print('Device {id} not found'.format(id=device_id))
-            sys.exit(-1)
         conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
         pairing_data['AccessoryIP'] = connection_data['ip']
         pairing_data['AccessoryPort'] = connection_data['port']
-        save_pairing(file, pairing_data)
         c2a_key, a2c_key = get_session_keys(conn, pairing_data)
-
     return conn, c2a_key, a2c_key
+
+
+def check_convert_value(val, target_type):
+    """
+    Checks if the given value is of the given type or is convertible into the type. If the value is not convertible, a
+    HomeKitTypeException is thrown.
+
+    :param val: the original value
+    :param target_type: the target type of the conversion
+    :return: the converted value
+    """
+    if target_type == CharacteristicFormats.bool:
+        try:
+            val = strtobool(val)
+        except ValueError:
+            raise HomeKitTypeException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+    if target_type in [CharacteristicFormats.uint64, CharacteristicFormats.uint32,
+                       CharacteristicFormats.uint16, CharacteristicFormats.uint8,
+                       CharacteristicFormats.int]:
+        try:
+            val = int(val)
+        except ValueError:
+            raise HomeKitTypeException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+    if target_type == CharacteristicFormats.float:
+        try:
+            val = float(val)
+        except ValueError:
+            raise HomeKitTypeException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+    if target_type == CharacteristicFormats.data:
+        try:
+            base64.decodebytes(val.encode())
+        except binascii.Error:
+            raise HomeKitTypeException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+    if target_type == CharacteristicFormats.tlv8:
+        try:
+            tmp_bytes = base64.decodebytes(val.encode())
+            TLV.decode_bytes(tmp_bytes)
+        except (binascii.Error, TlvParseException):
+            raise HomeKitTypeException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+    return val

@@ -50,10 +50,9 @@ class HttpResponse(object):
                 self.headers.append((name, value))
 
             elif self._state == HttpResponse.STATE_BODY:
-                # print('raw', self._raw_response)
                 if self._is_chunked:
                     length = int(line, 16)
-                    if length > len(self._raw_response):
+                    if length + 2 > len(self._raw_response):
                         self._raw_response = line + b'\r\n' + self._raw_response
                         # the remaining bytes in raw response are not sufficient. bail out and wait for an other call.
                         break

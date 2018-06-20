@@ -17,7 +17,10 @@
 
 class _CharacteristicsTypes(object):
     """
-    This data is taken from Table 12-3 Accessory Categories on page 254. Values above 19 are reserved.
+    Translate the characteristic's UUIDs into the type description (as defined by Apple).
+    E.g:
+        "6D" becomes "0000006D-0000-1000-8000-0026BB765291" and translates to
+        "public.hap.characteristic.position.current" or "position.current"
     """
     ACCESSORY_PROPERTIES = 'A6'
     ACTIVE = 'B0'
@@ -249,18 +252,32 @@ class _CharacteristicsTypes(object):
         # raise KeyError('Item {item} not found'.format_map(item=item))
         return 'Unknown Characteristic {i}?'.format(i=item)
 
-    def get_short(self, item: str):
-        orig_item = item
-        if item.endswith(self.baseUUID):
-            item = item.split('-', 1)[0]
-            item = item.lstrip('0')
+    def get_short(self, uuid: str):
+        """
+        Returns the short type for a given UUID. That means that "0000006D-0000-1000-8000-0026BB765291" and "6D" both
+        translates to "position.current" (after looking up "public.hap.characteristic.position.current").
 
-        if item in self._characteristics:
-            return self._characteristics[item].split('.')[-1]
+        :param uuid: the UUID in long form or the shortened version as defined in chapter 5.6.1 page 72.
+        :return: the textual representation TODO raise exception on not found?
+        """
+        orig_item = uuid
+        if uuid.endswith(self.baseUUID):
+            uuid = uuid.split('-', 1)[0]
+            uuid = uuid.lstrip('0')
+
+        if uuid in self._characteristics:
+            return self._characteristics[uuid].split('.', maxsplit=3)[3]
 
         return 'Unknown Characteristic {i}?'.format(i=orig_item)
 
     def get_uuid(self, item_name):
+        """
+        Returns the full length UUID for a characteristic.
+
+        :param item_name: either a full length textual description (e.g. "public.hap.characteristic.position.current")
+            or a short version of the UUID
+        :return: the full length UUID (e.g. "0000006D-0000-1000-8000-0026BB765291")
+        """
         if item_name in self._characteristics_rev:
             short = self._characteristics_rev[item_name]
         if item_name in self._characteristics:

@@ -18,30 +18,36 @@ import hkdf
 import hashlib
 import ed25519
 import py25519
-import homekit.exception
 from binascii import hexlify
 from homekit.tlv import TLV
 from homekit.srp import SrpClient
 from homekit.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
+from homekit.exception import IncorrectPairingID, InvalidAuth, InvalidSignature, IllegalData, UnavailableError, \
+    AuthenticationError, InvalidError, BusyError, MaxTriesError, MaxPeersError, BackoffError
 
 
 def error_handler(error, stage):
+    """
+    Transform the various error messages defined in table 4-5 page 60 into exceptions
+
+    :param error: the kind of error
+    :param stage: the stage it appeared in
+    :return: None
+    """
     if error == TLV.kTLVError_Unavailable:
-        raise homekit.exception.UnavailableError(stage)
+        raise UnavailableError(stage)
     elif error == TLV.kTLVError_Authentication:
-        raise homekit.exception.AuthenticationError(stage)
+        raise AuthenticationError(stage)
     elif error == TLV.kTLVError_Backoff:
-        raise homekit.exception.BackoffError(stage)
+        raise BackoffError(stage)
     elif error == TLV.kTLVError_MaxPeers:
-        raise homekit.exception.MaxPeersError(stage)
+        raise MaxPeersError(stage)
     elif error == TLV.kTLVError_MaxTries:
-        raise homekit.exception.MaxTriesError(stage)
-    elif error == TLV.kTLVError_Unavailable:
-        raise homekit.exception.UnavailableError(stage)
+        raise MaxTriesError(stage)
     elif error == TLV.kTLVError_Busy:
-        raise homekit.exception.BusyError(stage)
+        raise BusyError(stage)
     else:
-        raise homekit.exception.InvalidError(stage)
+        raise InvalidError(stage)
 
 
 def perform_pair_setup(connection, pin, ios_pairing_id):
@@ -52,6 +58,12 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     :param pin: the setup code from the accessory
     :param ios_pairing_id: the id of the simulated ios device
     :return: a dict with the ios device's part of the pairing information
+    :raises UnavailableError: if the device is already paired
+    :raises MaxTriesError: if the device received more than 100 unsuccessful attempts
+    :raises BusyError: if a parallel pairing is ongoing
+    :raises AuthenticationError: if the verification of the device's SRP proof fails
+    :raises MaxPeersError: if the device cannot accept an additional pairing
+    :raises IllegalData: if the verification of the accessory's data fails
     """
     headers = {
         'Content-Type': 'application/pairing+tlv8'
@@ -75,6 +87,7 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     assert TLV.kTLVType_State in response_tlv, response_tlv
     assert response_tlv[TLV.kTLVType_State] == TLV.M2
     if TLV.kTLVType_Error in response_tlv:
+        # evaluate the results of step #2
         error_handler(response_tlv[TLV.kTLVType_Error], "step 3")
 
     srp_client = SrpClient('Pair-Setup', pin)
@@ -164,7 +177,7 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     decrypted_data = chacha20_aead_decrypt(bytes(), session_key, 'PS-Msg06'.encode(), bytes([0, 0, 0, 0]),
                                            response_tlv[TLV.kTLVType_EncryptedData])
     if decrypted_data == False:
-        raise homekit.exception.IllegalData("step 7")
+        raise IllegalData("step 7")
 
     response_tlv = TLV.decode_bytearray(decrypted_data)
     assert TLV.kTLVType_Signature in response_tlv
@@ -201,6 +214,10 @@ def get_session_keys(conn, pairing_data):
     :param conn: the http connection to the target accessory
     :param pairing_data: the paring data as returned by perform_pair_setup
     :return: tuple of the session keys (controller_to_accessory_key and  accessory_to_controller_key)
+    :raises InvalidAuth: if the auth tag could not be verified,
+    :raises IncorrectPairingID: if the accessory's LTPK could not be found
+    :raises InvalidSignature: if the accessory's signature could not be verified
+    :raises AuthenticationError: if the secured session could not be established
     """
     headers = {
         'Content-Type': 'application/pairing+tlv8'
@@ -237,12 +254,12 @@ def get_session_keys(conn, pairing_data):
     hkdf_inst = hkdf.Hkdf('Pair-Verify-Encrypt-Salt'.encode(), shared_secret, hash=hashlib.sha512)
     session_key = hkdf_inst.expand('Pair-Verify-Encrypt-Info'.encode(), 32)
 
-    # 3) verify authtag on encrypted data and 4) decrypt
+    # 3) verify auth tag on encrypted data and 4) decrypt
     encrypted = response_tlv[TLV.kTLVType_EncryptedData]
     decrypted = chacha20_aead_decrypt(bytes(), session_key, 'PV-Msg02'.encode(), bytes([0, 0, 0, 0]),
                                       encrypted)
     if decrypted == False:
-        raise homekit.exception.InvalidAuth("step 3")
+        raise InvalidAuth("step 3")
     d1 = TLV.decode_bytes(decrypted)
     assert TLV.kTLVType_Identifier in d1
     assert TLV.kTLVType_Signature in d1
@@ -251,8 +268,8 @@ def get_session_keys(conn, pairing_data):
     accessory_name = d1[TLV.kTLVType_Identifier].decode()
 
     if pairing_data['AccessoryPairingID'] != accessory_name:
-        raise homekit.exception.IncorrectPairingID("step 3")
-        
+        raise IncorrectPairingID("step 3")
+
     accessory_ltpk = py25519.Key25519(pubkey=bytes(), verifyingkey=bytes.fromhex(pairing_data['AccessoryLTPK']))
 
     # 6) verify accessory's signature
@@ -260,7 +277,7 @@ def get_session_keys(conn, pairing_data):
     accessory_session_pub_key_bytes = response_tlv[TLV.kTLVType_PublicKey]
     accessory_info = accessory_session_pub_key_bytes + accessory_name.encode() + ios_key.pubkey
     if not accessory_ltpk.verify(bytes(accessory_sig), bytes(accessory_info)):
-        raise homekit.exception.InvalidSignature("step 3")
+        raise InvalidSignature("step 3")
 
     # 7) create iOSDeviceInfo
     ios_device_info = ios_key.pubkey + pairing_data['iOSPairingId'].encode() + accessorys_session_pub_key_bytes

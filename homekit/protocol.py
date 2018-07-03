@@ -60,10 +60,10 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     #
     # Step #1 ios --> accessory (send SRP start Request) (see page 39)
     #
-    request_tlv = TLV.encode_dict({
-        TLV.kTLVType_State: TLV.M1,
-        TLV.kTLVType_Method: TLV.PairSetup
-    })
+    request_tlv = TLV.encode_list([
+        (TLV.kTLVType_State, TLV.M1),
+        (TLV.kTLVType_Method, TLV.PairSetup)
+    ])
 
     connection.request('POST', '/pair-setup', request_tlv, headers)
     resp = connection.getresponse()
@@ -83,11 +83,11 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     client_pub_key = srp_client.get_public_key()
     client_proof = srp_client.get_proof()
 
-    response_tlv = TLV.encode_dict({
-        TLV.kTLVType_State: TLV.M3,
-        TLV.kTLVType_PublicKey: SrpClient.to_byte_array(client_pub_key),
-        TLV.kTLVType_Proof: SrpClient.to_byte_array(client_proof),
-    })
+    response_tlv = TLV.encode_list([
+        (TLV.kTLVType_State, TLV.M3),
+        (TLV.kTLVType_PublicKey, SrpClient.to_byte_array(client_pub_key)),
+        (TLV.kTLVType_Proof, SrpClient.to_byte_array(client_proof)),
+    ])
 
     connection.request('POST', '/pair-setup', response_tlv, headers)
     resp = connection.getresponse()
@@ -128,12 +128,12 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
 
     ios_device_signature = ios_device_ltsk.sign(ios_device_info)
 
-    sub_tlv = {
-        TLV.kTLVType_Identifier: ios_device_pairing_id,
-        TLV.kTLVType_PublicKey: ios_device_ltpk.to_bytes(),
-        TLV.kTLVType_Signature: ios_device_signature
-    }
-    sub_tlv_b = TLV.encode_dict(sub_tlv)
+    sub_tlv = [
+        (TLV.kTLVType_Identifier, ios_device_pairing_id),
+        (TLV.kTLVType_PublicKey, ios_device_ltpk.to_bytes()),
+        (TLV.kTLVType_Signature, ios_device_signature)
+    ]
+    sub_tlv_b = TLV.encode_list(sub_tlv)
 
     # taking tge iOSDeviceX as key was reversed from
     # https://github.com/KhaosT/HAP-NodeJS/blob/2ea9d761d9bd7593dd1949fec621ab085af5e567/lib/HAPServer.js
@@ -143,11 +143,11 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     tmp = bytearray(encrypted_data_with_auth_tag[0])
     tmp += encrypted_data_with_auth_tag[1]
 
-    response_tlv = {
-        TLV.kTLVType_State: TLV.M5,
-        TLV.kTLVType_EncryptedData: tmp
-    }
-    body = TLV.encode_dict(response_tlv)
+    response_tlv = [
+        (TLV.kTLVType_State, TLV.M5),
+        (TLV.kTLVType_EncryptedData, tmp)
+    ]
+    body = TLV.encode_list(response_tlv)
 
     connection.request('POST', '/pair-setup', body, headers)
     resp = connection.getresponse()
@@ -211,10 +211,10 @@ def get_session_keys(conn, pairing_data):
     #
     ios_key = py25519.Key25519()
 
-    request_tlv = TLV.encode_dict({
-        TLV.kTLVType_State: TLV.M1,
-        TLV.kTLVType_PublicKey: ios_key.pubkey
-    })
+    request_tlv = TLV.encode_list([
+        (TLV.kTLVType_State, TLV.M1),
+        (TLV.kTLVType_PublicKey, ios_key.pubkey)
+    ])
 
     conn.request('POST', '/pair-verify', request_tlv, headers)
     resp = conn.getresponse()
@@ -271,10 +271,10 @@ def get_session_keys(conn, pairing_data):
     ios_device_signature = ios_device_ltsk.sign(ios_device_info)
 
     # 9) construct sub tlv
-    sub_tlv = TLV.encode_dict({
-        TLV.kTLVType_Identifier: pairing_data['iOSPairingId'].encode(),
-        TLV.kTLVType_Signature: ios_device_signature
-    })
+    sub_tlv = TLV.encode_list([
+        (TLV.kTLVType_Identifier, pairing_data['iOSPairingId'].encode()),
+        (TLV.kTLVType_Signature, ios_device_signature)
+    ])
 
     # 10) encrypt and sign
     encrypted_data_with_auth_tag = chacha20_aead_encrypt(bytes(), session_key, 'PV-Msg03'.encode(), bytes([0, 0, 0, 0]),
@@ -283,10 +283,10 @@ def get_session_keys(conn, pairing_data):
     tmp += encrypted_data_with_auth_tag[1]
 
     # 11) create tlv
-    request_tlv = TLV.encode_dict({
-        TLV.kTLVType_State: TLV.M3,
-        TLV.kTLVType_EncryptedData: tmp
-    })
+    request_tlv = TLV.encode_list([
+        (TLV.kTLVType_State, TLV.M3),
+        (TLV.kTLVType_EncryptedData, tmp)
+    ])
 
     # 12) send to accessory
     conn.request('POST', '/pair-verify', request_tlv, headers)

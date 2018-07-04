@@ -1,0 +1,86 @@
+@startuml
+
+package homekit {
+}
+class homekit.Pairing {
+    + get_accessories()
+    + get_characteristics(characteristics[], include_meta, include_perms, include_type, include_events)
+    + get_events(characteristics[], callback_fun, max_events=-1, max_seconds=-1)
+    + list_pairings()
+    + put_characteristics(characteristics_values[])
+    + identify()
+}
+
+class homekit.Controller {
+    + __init__(self, data)
+    + get_pairings()
+    + load_data(filename)
+    + perform_pairing(alias, accessory_id, pin)
+    + remove_pairing(alias)
+    + save_data(filename)
+    + {static}discover(max_seconds)
+    + {static}identify(accessory_id)
+}
+
+homekit.Pairing "*" <-- "1" homekit.Controller
+
+
+class homekit.discover <<(E,#FF7700) executable>> {
+    + timeout
+}
+
+class homekit.get_accessories <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + output_format
+}
+
+homekit.discover --> homekit.Controller
+
+homekit.get_accessories --> homekit.Controller
+
+
+hide <<executable>> methods
+hide <<executable>> circle
+
+@enduml
+
+
+class homekit.Session {
+    + {static} create_from_pairing_data(data)
+    + {static} create_from_file(file)
+    + get(self, url)
+    + put(self, url, body, content_type=HttpContentTypes.JSON)
+    + post(self, url, body, content_type=HttpContentTypes.JSON)
+    + get_from_pairing_data(self, key)
+    + set_in_pairing_data(self, key, value)
+}
+
+    package exceptions {
+        class AuthenticationError
+        class HomeKitTypeException
+        class AccessoryNotFoundException
+        class UnknownError
+        class ConfigSavingException
+        class AlreadyPairedException
+    }
+
+
+    Note "Table 5-12 page 80" as N1
+    homekit.HapStatusCodes .. N1
+
+class homekit.TLV {
+    + {static} encode_dict(data)
+    + {static} decode_bytes(data)
+}
+
+class homekit.CharacteristicsTypes {
+    + __getitem__(self, item)
+    + get_short(self, uuid)
+    + get_uuid(self, item_name)
+}
+
+class homekit.HapStatusCodes {
+}
+
+class homekit.Categories {
+}

@@ -1,0 +1,14 @@
+@startuml
+title Use cases as controller
+
+Controller -down->  (Discover)
+Controller -down->  (Identify)
+Controller -down->  (Pair Accessory)
+Controller -down->  (Unpair Accessory)
+Controller -down->  (Get Accessories)
+Controller -down->  (Get Characteristics)
+Controller -down->  (Get Events)
+Controller -down->  (Put Characteristics)
+
+@enduml
+

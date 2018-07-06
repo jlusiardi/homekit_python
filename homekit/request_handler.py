@@ -131,7 +131,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             self.close_connection = True
             return
         except UnicodeDecodeError as e:
-            self.log_error('Unicode exception %s' % e)
+            self.log_debug('Unicode exception %s' % e)
             pass
 
         # the first 2 bytes are the length of the encrypted data to follow
@@ -869,6 +869,14 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             BaseHTTPRequestHandler.log_message(self, format, *args)
         else:
             self.server.logger.info("%s" % (format % args))
+
+    def log_debug(self, format, *args):
+        if self.server.logger is None:
+            pass
+        elif self.server.logger == sys.stderr:
+            BaseHTTPRequestHandler.log_message(self, format, *args)
+        else:
+            self.server.logger.debug("%s" % (format % args))
 
     def log_error(self, format, *args):
         if self.server.logger is None:

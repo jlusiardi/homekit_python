@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 #
 # Copyright 2018 Joachim Lusiardi
 #

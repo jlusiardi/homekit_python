@@ -163,8 +163,6 @@ class TLV:
             if not TLV.validate_key(key):
                 raise ValueError('Invalid key')
 
-            #value = d[key]
-
             # handle separators properly
             if key == TLV.kTLVType_Separator:
                 if len(value) == 0:

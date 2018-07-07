@@ -1,3 +1,24 @@
+# -*- coding: UTF-8 -*-
+
+#
+# Copyright 2018 Joachim Lusiardi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+from homekit.http_impl.http_client import HomeKitHTTPConnection
+
+
 class HttpResponse(object):
     STATE_PRE_STATUS = 0
     STATE_HEADERS = 1
@@ -16,9 +37,11 @@ class HttpResponse(object):
         self.reason = None
         self.headers = []
         self.body = bytearray()
+        print('init')
 
     def parse(self, part):
         self._raw_response += part
+        print(self._raw_response)
         pos = self._raw_response.find(b'\r\n')
         while pos != -1:
             line = self._raw_response[:pos]
@@ -100,8 +123,6 @@ class HttpException(Exception):
 
 
 if __name__ == '__main__':
-    import json
-
 
     def test(data):
         res = HttpResponse()
@@ -164,3 +185,47 @@ if __name__ == '__main__':
             b'c9a66","iid":11,"characteristics":[{"iid":12,"value":"\r\n3fb\r\nAHAAAAABAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","format":"tlv8","description":"TIMER_SETTINGS","type":"4aaaf942-0dec-11e5-b939-0800200c9a66","perms":["pr","pw"]}]},{"type":"151909D0-3802-11E4-916C-0800200C9A66","iid":13,"hidden":true,"characteristics":[{"iid":14,"value":"url,data","format":"string","description":"FW Upgrade supported types","type":"151909D2-3802-11E4-916C-0800200C9A66","perms":["pr","hd"]},{"iid":15,"format":"string","description":"FW Upgrade URL","maxLen":256,"type":"151909D1-3802-11E4-916C-0800200C9A66","perms":["pw","hd"]},{"iid":16,"value":0,"format":"int","description":"FW Upgrade Status","type":"151909D6-3802-11E4-916C-0800200C9A66","perms":["pr","ev","hd"],"ev":false},{"iid":17,"format":"data","description":"FW Upgrade Data","type":"151909D7-3802-11E4-916C-0800200C9A66","perms":["pw","hd"]}]},{"type":"151909D3-3802-11E4-9')
     ]
     test(parts)
+
+
+class _HttpContentTypes:
+    JSON = 'application/hap+json'
+    TLV = 'application/pairing+tlv8'
+
+
+class _HttpStatusCodes:
+    """
+    See Table 4-2 Chapter 4.15 Page 59
+    """
+    OK = 200
+    NO_CONTENT = 204
+    MULTI_STATUS = 207
+    BAD_REQUEST = 400
+    FORBIDDEN = 403
+    NOT_FOUND = 404
+    METHOD_NOT_ALLOWED = 405
+    TOO_MANY_REQUESTS = 429
+    CONNECTION_AUTHORIZATION_REQUIRED = 470
+    INTERNAL_SERVER_ERROR = 500
+
+    def __init__(self):
+        self._codes = {
+            _HttpStatusCodes.OK: 'OK',
+            _HttpStatusCodes.NO_CONTENT: 'No Content',
+            _HttpStatusCodes.MULTI_STATUS: 'Multi-Status',
+            _HttpStatusCodes.BAD_REQUEST: 'Bad Request',
+            _HttpStatusCodes.METHOD_NOT_ALLOWED: 'Method Not Allowed',
+            _HttpStatusCodes.TOO_MANY_REQUESTS: 'Too Many Requests',
+            _HttpStatusCodes.CONNECTION_AUTHORIZATION_REQUIRED: 'Connection Authorization Required',
+            _HttpStatusCodes.INTERNAL_SERVER_ERROR: 'Internal Server Error'
+        }
+        self._categories_rev = {self._codes[k]: k for k in self._codes.keys()}
+
+    def __getitem__(self, item):
+        if item in self._codes:
+            return self._codes[item]
+
+        raise KeyError('Item {item} not found'.format(item=item))
+
+
+HttpStatusCodes = _HttpStatusCodes()
+HttpContentTypes = _HttpContentTypes

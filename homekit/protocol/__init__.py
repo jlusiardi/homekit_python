@@ -19,9 +19,9 @@ import hashlib
 import ed25519
 import py25519
 from binascii import hexlify
-from homekit.tlv import TLV
-from homekit.srp import SrpClient
-from homekit.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
+from homekit.protocol.tlv import TLV
+from homekit.crypto.srp import SrpClient
+from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.exception import IncorrectPairingID, InvalidAuth, InvalidSignature, IllegalData, UnavailableError, \
     AuthenticationError, InvalidError, BusyError, MaxTriesError, MaxPeersError, BackoffError
 
@@ -54,7 +54,7 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     """
     Performs a pair setup operation as described in chapter 4.7 page 39 ff.
 
-    :param connection: the http connection to the target accessory
+    :param connection: the http_impl connection to the target accessory
     :param pin: the setup code from the accessory
     :param ios_pairing_id: the id of the simulated ios device
     :return: a dict with the ios device's part of the pairing information
@@ -211,7 +211,7 @@ def get_session_keys(conn, pairing_data):
     """
     Performs a pair verify operation as described in chapter 4.8 page 47 ff.
 
-    :param conn: the http connection to the target accessory
+    :param conn: the http_impl connection to the target accessory
     :param pairing_data: the paring data as returned by perform_pair_setup
     :return: tuple of the session keys (controller_to_accessory_key and  accessory_to_controller_key)
     :raises InvalidAuth: if the auth tag could not be verified,

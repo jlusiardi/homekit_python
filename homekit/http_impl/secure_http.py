@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 #
 # Copyright 2018 Joachim Lusiardi
 #
@@ -15,12 +17,11 @@
 #
 
 import io
-import http.client
 import select
 
-from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
-from homekit.statuscodes import HttpContentTypes
-from homekit.httpparser import HttpResponse
+from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
+from homekit.http_impl import HttpContentTypes
+from homekit.http_impl import HttpResponse
 
 
 class SecureHttp:
@@ -44,7 +45,7 @@ class SecureHttp:
         def read(self):
             return self.data
 
-    def __init__(self, sock, a2c_key, c2a_key):
+    def __init__(self, session):
         """
         Initializes the secure HTTP class. The required keys can be obtained with get_session_keys
 
@@ -52,9 +53,9 @@ class SecureHttp:
         :param a2c_key: the key used for the communication between accessory and controller
         :param c2a_key: the key used for the communication between controller and accessory
         """
-        self.sock = sock
-        self.a2c_key = a2c_key
-        self.c2a_key = c2a_key
+        self.sock = session.sock
+        self.a2c_key = session.a2c_key
+        self.c2a_key = session.c2a_key
         self.c2a_counter = 0
         self.a2c_counter = 0
 
@@ -64,18 +65,15 @@ class SecureHttp:
         return self._handle_request(data)
 
     def put(self, target, body, content_type=HttpContentTypes.JSON):
-        headers = 'Host: hap-770D90.local\n' + \
-                  'Content-Type: {ct}\n'.format(ct=content_type) + \
+        headers = 'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'PUT {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
         return self._handle_request(data)
 
     def post(self, target, body, content_type=HttpContentTypes.TLV):
-        headers = 'Host: hap-770D90.local\n' + \
-                  'Content-Type: {ct}\n'.format(ct=content_type) + \
+        headers = 'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'POST {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
-
         return self._handle_request(data)
 
     def _handle_request(self, data):
@@ -100,21 +98,23 @@ class SecureHttp:
         tmp[1] = tmp[1][length + 2:]
         return chunk + SecureHttp._parse(tmp[1])
 
-    def _read_response(self):
+    def _read_response(self, timeout=10):
         # following the information from page 71 about HTTP Message splitting:
         # The blocks start with 2 byte little endian defining the length of the encrypted data (max 1024 bytes)
         # followed by 16 byte authTag
         blocks = []
         tmp = bytearray()
-        exp_len = 128
+        exp_len = 1024
         response = HttpResponse()
         while not response.is_read_completly():
             # make sure we read all blocks but without blocking to long. Was introduced to support chunked transfer mode
             # from https://github.com/maximkulkin/esp-homekit
             self.sock.setblocking(0)
-            ready = select.select([self.sock], [], [], 10)
+            ready = select.select([self.sock], [], [], timeout)
             if not ready[0]:
-                break
+                #break
+                # TODO we disrespect the timeout here at the moment
+                continue
 
             self.sock.settimeout(0.1)
             data = self.sock.recv(exp_len)
@@ -137,7 +137,10 @@ class SecureHttp:
             tag = tmp[0:16]
             tmp = tmp[16:]
 
-            response.parse(self.decrypt_block(length, block, tag))
+            decypted = self.decrypt_block(length, block, tag)
+            # TODO how to react to False?
+            if tmp is not False:
+                response.parse(decypted)
 
             # check how long next block will be
             if int.from_bytes(tmp[0:2], 'little') < 1024:
@@ -160,4 +163,5 @@ class SecureHttp:
         This reads the enciphered response from an accessory after registering for events.
         :return: the event data as string (not as json object)
         """
-        return self._read_response()
+        # Must be 2 for the esp-homekits, they seem slow
+        return self._read_response(1)

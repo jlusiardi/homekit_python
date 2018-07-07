@@ -58,46 +58,4 @@ class _HapStatusCodes(object):
         raise KeyError('Item {item} not found'.format(item=item))
 
 
-class _HttpContentTypes:
-    JSON = 'application/hap+json'
-    TLV = 'application/pairing+tlv8'
-
-
-class _HttpStatusCodes:
-    """
-    See Table 4-2 Chapter 4.15 Page 59
-    """
-    OK = 200
-    NO_CONTENT = 204
-    MULTI_STATUS = 207
-    BAD_REQUEST = 400
-    FORBIDDEN = 403
-    NOT_FOUND = 404
-    METHOD_NOT_ALLOWED = 405
-    TOO_MANY_REQUESTS = 429
-    CONNECTION_AUTHORIZATION_REQUIRED = 470
-    INTERNAL_SERVER_ERROR = 500
-
-    def __init__(self):
-        self._codes = {
-            _HttpStatusCodes.OK: 'OK',
-            _HttpStatusCodes.NO_CONTENT: 'No Content',
-            _HttpStatusCodes.MULTI_STATUS: 'Multi-Status',
-            _HttpStatusCodes.BAD_REQUEST: 'Bad Request',
-            _HttpStatusCodes.METHOD_NOT_ALLOWED: 'Method Not Allowed',
-            _HttpStatusCodes.TOO_MANY_REQUESTS: 'Too Many Requests',
-            _HttpStatusCodes.CONNECTION_AUTHORIZATION_REQUIRED: 'Connection Authorization Required',
-            _HttpStatusCodes.INTERNAL_SERVER_ERROR: 'Internal Server Error'
-        }
-        self._categories_rev = {self._codes[k]: k for k in self._codes.keys()}
-
-    def __getitem__(self, item):
-        if item in self._codes:
-            return self._codes[item]
-
-        raise KeyError('Item {item} not found'.format(item=item))
-
-
 HapStatusCodes = _HapStatusCodes()
-HttpStatusCodes = _HttpStatusCodes()
-HttpContentTypes = _HttpContentTypes

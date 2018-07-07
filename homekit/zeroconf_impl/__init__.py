@@ -14,12 +14,13 @@
 # limitations under the License.
 #
 
-from socket import inet_ntoa
+from _socket import inet_ntoa
 from time import sleep
-from zeroconf import ServiceBrowser, Zeroconf
 
-from homekit.feature_flags import FeatureFlags
-from homekit.model.categories import Categories
+from zeroconf import Zeroconf, ServiceBrowser
+
+from homekit.model import Categories
+from homekit.model.feature_flags import FeatureFlags
 
 
 class CollectingListener(object):
@@ -32,36 +33,54 @@ class CollectingListener(object):
 
     def add_service(self, zeroconf, type, name):
         info = zeroconf.get_service_info(type, name)
-        self.data.append(info)
+        if info is not None:
+            self.data.append(info)
 
     def get_data(self):
         return self.data
 
 
-def discover_homekit_devices():
+def discover_homekit_devices(max_seconds=10):
     zeroconf = Zeroconf()
     listener = CollectingListener()
     ServiceBrowser(zeroconf, '_hap._tcp.local.', listener)
-    sleep(1)
+    sleep(max_seconds)
+    tmp = []
     for info in listener.get_data():
-        print('Name: {name}'.format(name=info.name))
-        print('Url: http://{ip}:{port}'.format(ip=inet_ntoa(info.address), port=info.port))
-        print('Configuration number (c#): {conf}'.format(conf=info.properties[b'c#'].decode()))
+        d = {}
+        tmp.append(d)
+
+        # from Bonjour discovery
+        d['name'] = info.name
+        d['address'] = inet_ntoa(info.address)
+        d['port'] = info.port
+
+        # stuff taken from the Bonjour TXT record (see table 5-7 on page 69)
         flags = int(info.properties[b'ff'].decode())
-        print('Feature Flags (ff): {f} (Flag: {flags})'.format(f=FeatureFlags[flags], flags=flags))
-        print('Device ID (id): {id}'.format(id=info.properties[b'id'].decode()))
-        print('Model Name (md): {md}'.format(md=info.properties[b'md'].decode()))
-        if b'pv' in info.properties:
-            print('Protocol Version (pv): {pv}'.format(pv=info.properties[b'pv'].decode()))
-        else:
-            print('Protocol Version (pv): 1.0 (default, not set in TXT record)')
-        print('State Number (s#): {sn}'.format(sn=info.properties[b's#'].decode()))
-        print('Status Flags (sf): {sf}'.format(sf=info.properties[b'sf'].decode()))
         category = int(info.properties[b'ci'].decode())
-        print('Category Identifier (ci): {c} (Id: {ci})'.format(c=Categories[category], ci=category))
-        print()
+        d['c#'] = info.properties[b'c#'].decode()
+
+        d['ff'] = flags
+        d['flags'] = FeatureFlags[flags]
+
+        d['id'] = info.properties[b'id'].decode()
+
+        d['md'] = info.properties[b'md'].decode()
+
+        if b'pv' in info.properties:
+            d['pv'] = info.properties[b'pv'].decode()
+        else:
+            d['pv'] = '1.0'
+
+        d['s#'] = info.properties[b's#'].decode()
+
+        d['sf'] = info.properties[b'sf'].decode()
+
+        d['ci'] = category
+        d['category'] = Categories[category]
 
     zeroconf.close()
+    return tmp
 
 
 def find_device_ip_and_port(device_id: str):

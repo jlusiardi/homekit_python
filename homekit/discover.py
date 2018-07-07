@@ -18,15 +18,30 @@
 
 import argparse
 
-from homekit import discover_homekit_devices
+from homekit.controller import Controller
 
 
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit discover app - list all HomeKit devices on the same network')
+    parser.add_argument('-t', action='store', required=False, dest='timeout', type=int, default=10,
+                        help='Number of seconds to wait')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
 
-    discover_homekit_devices()
+    results = Controller.discover()
+    for info in results:
+        # TODO wait for result of https://github.com/jlusiardi/homekit_python/issues/40
+        print('Name: {name}'.format(name=info['name']))
+        print('Url: http_impl://{ip}:{port}'.format(ip=info['address'], port=info['port']))
+        print('Configuration number (c#): {conf}'.format(conf=info['c#']))
+        print('Feature Flags (ff): {f} (Flag: {flags})'.format(f=info['flags'], flags=info['ff']))
+        print('Device ID (id): {id}'.format(id=info['id']))
+        print('Model Name (md): {md}'.format(md=info['md']))
+        print('Protocol Version (pv): {pv}'.format(pv=info['pv']))
+        print('State Number (s#): {sn}'.format(sn=info['s#']))
+        print('Status Flags (sf): {sf}'.format(sf=info['sf']))
+        print('Category Identifier (ci): {c} (Id: {ci})'.format(c=info['category'], ci=info['ci']))
+        print()

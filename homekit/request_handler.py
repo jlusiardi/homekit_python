@@ -131,7 +131,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             self.close_connection = True
             return
         except UnicodeDecodeError as e:
-            self.log_error('Unicode exception %s' % e)
+            self.log_debug('Unicode exception %s' % e)
             pass
 
         # the first 2 bytes are the length of the encrypted data to follow
@@ -527,8 +527,46 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
 
         if d_req[TLV.kTLVType_State] == TLV.M1 and d_req[TLV.kTLVType_Method] == TLV.AddPairing:
             self.log_message('Step #2 /pairings add pairing')
+            d_res[TLV.kTLVType_State] = TLV.M2
+
             # see page 51
-            self.send_error(HttpStatusCodes.METHOD_NOT_ALLOWED)
+            # 1)
+
+            # 2) verify admin bit is set
+            ios_device_pairing_id = session['ios_device_pairing_id']
+            if not server_data.is_peer_admin(ios_device_pairing_id):
+                self.send_error_reply(TLV.M2, TLV.kTLVError_Authentication)
+                self.log_error('error in step #2: admin bit')
+                return
+
+            additional_controller_pairing_identifier = d_req[TLV.kTLVType_Identifier]
+            additional_controller_LTPK = d_req[TLV.kTLVType_PublicKey]
+            additional_controller_permissions = d_req[TLV.kTLVType_Permissions]
+            is_admin = additional_controller_permissions == b'\x01'
+
+            # 3) pairing exists?
+            registered_controller_LTPK = server_data.get_peer_key(additional_controller_pairing_identifier)
+            if registered_controller_LTPK is not None:
+                self.log_message('controller was registered!')
+                if registered_controller_LTPK != additional_controller_LTPK:
+                    self.log_message('with different key')
+                    # 3.a)
+                    d_res[TLV.kTLVType_Error] = TLV.kTLVError_Authentication
+                    self._send_response_tlv(d_res)
+                else:
+                    self.log_message('with different permissions')
+                    # 3.b) update permission
+                    server_data.set_peer_permissions(additional_controller_pairing_identifier, is_admin)
+            else:
+                self.log_message('add pairing')
+
+                # 4) no pairing exists
+                # 4.a) no limit applied to number of pairings
+                # 4.b) add pairing
+                server_data.add_peer(additional_controller_pairing_identifier, additional_controller_LTPK, is_admin)
+
+            self.log_message('after step #2\n%s', TLV.to_string(d_res))
+
             return
 
         if d_req[TLV.kTLVType_State] == TLV.M1 and d_req[TLV.kTLVType_Method] == TLV.RemovePairing:
@@ -869,6 +907,14 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             BaseHTTPRequestHandler.log_message(self, format, *args)
         else:
             self.server.logger.info("%s" % (format % args))
+
+    def log_debug(self, format, *args):
+        if self.server.logger is None:
+            pass
+        elif self.server.logger == sys.stderr:
+            BaseHTTPRequestHandler.log_message(self, format, *args)
+        else:
+            self.server.logger.debug("%s" % (format % args))
 
     def log_error(self, format, *args):
         if self.server.logger is None:

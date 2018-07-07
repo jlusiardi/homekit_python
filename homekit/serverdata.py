@@ -69,8 +69,7 @@ class HomeKitServerData:
         del self.data['peers'][pairing_id.decode()]
         self._save_data()
 
-    def add_peer(self, pairing_id: bytes, ltpk: bytes):
-        admin = (len(self.data['peers']) == 0)
+    def add_peer(self, pairing_id: bytes, ltpk: bytes, admin=True):
         self.data['peers'][pairing_id.decode()] = {'key': binascii.hexlify(ltpk).decode(), 'admin': admin}
         self._save_data()
 
@@ -82,6 +81,9 @@ class HomeKitServerData:
 
     def is_peer_admin(self, pairing_id: bytes) -> bool:
         return self.data['peers'][pairing_id.decode()]['admin']
+
+    def set_peer_permissions(self, pairing_id: bytes, admin):
+        self.data['peers'][pairing_id.decode()]['admin'] = admin
 
     @property
     def peers(self):

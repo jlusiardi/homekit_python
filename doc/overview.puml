@@ -1,13 +1,41 @@
 @startuml
 
 package homekit {
+    class Device {
+    }
+    package model {
+        class Accessory {
+            + aid
+        }
+
+        package services {
+            class AbstractService {
+                + iid
+            }
+
+            class AccessoryInformationService {
+            }
+
+            AccessoryInformationService --|> AbstractService
+        }
+        package characteristics {
+            class AbstractCharacteristic {
+                + iid
+            }
+        }
+    }
+
+    Device --> "*" Accessory
+    Accessory --> "*" AbstractService: services
+    AbstractService --> "*" AbstractCharacteristic : characteristics
 }
+
 class homekit.Pairing {
     + get_accessories()
     + get_characteristics(characteristics[], include_meta, include_perms, include_type, include_events)
     + get_events(characteristics[], callback_fun, max_events=-1, max_seconds=-1)
     + list_pairings()
-    + put_characteristics(characteristics_values[])
+    + put_characteristics(characteristics_and_values[], do_conversion)
     + identify()
 }
 
@@ -22,21 +50,70 @@ class homekit.Controller {
     + {static}identify(accessory_id)
 }
 
-homekit.Pairing "*" <-- "1" homekit.Controller
+
+
+homekit.Pairing "*" <-down- "1" homekit.Controller
 
 
 class homekit.discover <<(E,#FF7700) executable>> {
     + timeout
 }
 
+homekit.discover --> homekit.Controller
+
 class homekit.get_accessories <<(E,#FF7700) executable>> {
     + pairing_data_file
+    + alias
     + output_format
 }
 
-homekit.discover --> homekit.Controller
-
 homekit.get_accessories --> homekit.Controller
+
+class homekit.get_characteristics <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
+    + characteristics[]
+    + meta
+    + permissions
+    + type
+    + events
+}
+
+homekit.get_characteristics --> homekit.Controller
+
+class homekit.get_events <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
+    + characteristics[]
+}
+
+homekit.get_events --> homekit.Controller
+
+class homekit.list_pairings <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
+}
+
+homekit.list_pairings--> homekit.Controller
+
+class homekit.pair <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
+    + accessory_id
+    + pin
+}
+
+homekit.pair--> homekit.Controller
+
+class homekit.put_characteristics <<(E,#FF7700) executable>> {
+}
+
+homekit.put_characteristics--> homekit.Controller
+
+class homekit.unpair <<(E,#FF7700) executable>> {
+}
+
+homekit.unpair --> homekit.Controller
 
 
 hide <<executable>> methods

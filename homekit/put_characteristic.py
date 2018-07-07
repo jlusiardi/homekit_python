@@ -37,17 +37,6 @@ def setup_args_parser():
     return args
 
 
-def get_format(accessories_data, aid, iid):
-    format = None
-    for d in accessories_data:
-        if 'aid' in d and d['aid'] == aid:
-            for s in d['services']:
-                for c in s['characteristics']:
-                    if 'iid' in c and c['iid'] == iid:
-                        format = c['format']
-    return format
-
-
 if __name__ == '__main__':
     args = setup_args_parser()
 
@@ -59,66 +48,16 @@ if __name__ == '__main__':
 
     pairing = controller.get_pairings()[args.alias]
 
-    characteristics = [(c[0].split('.')[0], c[0].split('.')[1], c[1]) for c in args.characteristics]
-    print(characteristics)
-    pairing.put_characteristics(characteristics)
-
-    # session = Session.create_from_file(args.file)
-    # accessories = session.get_from_pairing_data('accessories')
-    #
-    # # pairing_data = load_pairing(args.file)
-    #
-    # # args.characteristics contains a list of lists like [['1.10', 'on'], ['1.11', '50']]
-    # characteristics_set = set()
-    # characteristics = []
-    # for characteristic in args.characteristics:
-    #     # extract aid, iid and value from cli params
-    #     tmp = characteristic[0].split('.')
-    #     aid = int(tmp[0])
-    #     iid = int(tmp[1])
-    #     value = characteristic[1]
-    #
-    #     # first check if the accessories data is in the paring data
-    #     characteristic_type = None
-    #     if not accessories or not get_format(accessories, aid, iid):
-    #         # nope, so get it via /accessories and save it
-    #         response = session.get('/accessories')
-    #         data = json.loads(response.read().decode())
-    #         accessories = data['accessories']
-    #         session.set_in_pairing_data('accessories', accessories)
-    #         session.save_pairing_data(args.file)
-    #     # after loading the accessories data the aid.iid should be there...
-    #     characteristic_type = get_format(accessories, aid, iid)
-    #     if not characteristic_type:
-    #         print('Characteristic {aid}.{iid} not found'.format(aid=aid, iid=iid))
-    #         sys.exit(-1)
-    #
-    #     # reformat the value to fit the required format
-    #     try:
-    #         value = check_convert_value(value, characteristic_type)
-    #     except HomeKitTypeException as e:
-    #         print(e)
-    #         sys.exit(-1)
-    #
-    #     # Nothing to do for CharacteristicFormats.string!
-    #
-    #     characteristics.append({'aid': aid, 'iid': iid, 'value': value})
-    #     characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
-    #
-    # body = json.dumps({'characteristics': characteristics})
-    # response = session.put('/characteristics', body)
-    # if response.code != 204:
-    #     data = response.read().decode()
-    #     data = json.loads(data)
-    #     for characteristic in data['characteristics']:
-    #         status = characteristic['status']
-    #         if status == 0:
-    #             continue
-    #         aid = characteristic['aid']
-    #         iid = characteristic['iid']
-    #         characteristics_set.remove('{a}.{i}'.format(a=aid, i=iid))
-    #         print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.
-    #               format(aid=aid, iid=iid, reason=HapStatusCodes[status], code=status))
-    # if len(characteristics_set):
-    #     print('put_characteristics succeeded for {chars}'.format(chars=', '.join(characteristics_set)))
-    #
+    characteristics = [(int(c[0].split('.')[0]),  # the first part is the aid, must be int
+                        int(c[0].split('.')[1]),  # the second part is the iid, must be int
+                        c[1]) for c in args.characteristics]
+    results = pairing.put_characteristics(characteristics, do_conversion=True)
+    for key, value in results.items():
+        aid = key[0]
+        iid = key[1]
+        status = value['status']
+        desc = value['description']
+        if status < 0:
+            print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.format(aid=aid, iid=iid,
+                                                                                                reason=desc,
+                                                                                                code=status))

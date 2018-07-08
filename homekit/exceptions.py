@@ -93,10 +93,50 @@ class HomeKitStatusException(Exception):
 
 
 class HomeKitConfigurationException(Exception):
+    """
+    Used if any configuration in the HomeKit context was wrong.
+    """
     def __init__(self, message):
         Exception.__init__(self, message)
 
 
-class HomeKitTypeException(Exception):
+class HomeKitFormatException(Exception):
+    """
+    Used if any format conversion fails or is impossible.
+    """
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+class AccessoryNotFoundException(HomeKitException):
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+class ConfigLoadingException(HomeKitException):
+    """
+    Used on problems loading some config.
+    """
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+class ConfigSavingException(HomeKitException):
+    """
+    Used on problems saving some config.
+    """
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+class UnpairedException(HomeKitException):
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+class AlreadyPairedException(HomeKitException):
+    """
+    This should be raised if an unpaired accessory is expected but the accessory is already paired.
+    """
     def __init__(self, message):
         Exception.__init__(self, message)

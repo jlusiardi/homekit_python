@@ -43,3 +43,4 @@ if __name__ == '__main__':
     pairing = controller.get_pairings()[args.alias]
     pairing.get_accessories()
     controller.save_data(args.file)
+    print('Pairing for {a} was established.'.format(a=args.alias))

@@ -3,6 +3,6 @@
 !include overview.puml
 
 hide model
-hide Device
-
+hide AccessoryServer
+hide exceptions
 @enduml

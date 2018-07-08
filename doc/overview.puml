@@ -1,13 +1,15 @@
 @startuml
 
 package homekit {
-    class Device {
+    class AccessoryServer {
+        + __init__(self, config_file, logger)
+        + publish_device()
+        + unpublish_device()
+        + shutdown()
+        + add_accessory()
+        + serve_forever()
     }
     package model {
-        class Accessory {
-            + aid
-        }
-
         package services {
             class AbstractService {
                 + iid
@@ -16,18 +18,44 @@ package homekit {
             class AccessoryInformationService {
             }
 
-            AccessoryInformationService --|> AbstractService
+            class LightBulbService {
+            }
+
+            AccessoryInformationService -up-|> AbstractService
+            LightBulbService -up-|> AbstractService
+            xxxService -up-|> AbstractService
         }
         package characteristics {
             class AbstractCharacteristic {
                 + iid
             }
+            xxxCharacteristic -up-|> AbstractCharacteristic
+        }
+
+        class Accessory {
+            + aid
         }
     }
 
-    Device --> "*" Accessory
+    AccessoryServer --> "*" Accessory : accessories
+    AbstractService -right-> "*" AbstractCharacteristic : characteristics
     Accessory --> "*" AbstractService: services
-    AbstractService --> "*" AbstractCharacteristic : characteristics
+
+    package exceptions {
+        class HomeKitException
+        class HomeKitFormatException
+        HomeKitFormatException -up-|> HomeKitException
+        class AuthenticationError
+        AuthenticationError -up-|> HomeKitException
+        class AccessoryNotFoundException
+        class UnknownError
+        class ConfigSavingException
+        ConfigSavingException -up-|> HomeKitException
+        class ConfigLoadingException
+        ConfigLoadingException -up-|> HomeKitException
+        class AlreadyPairedException
+        class HomeKitConfigurationException
+    }
 }
 
 class homekit.Pairing {
@@ -111,6 +139,8 @@ class homekit.put_characteristics <<(E,#FF7700) executable>> {
 homekit.put_characteristics--> homekit.Controller
 
 class homekit.unpair <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
 }
 
 homekit.unpair --> homekit.Controller
@@ -139,6 +169,7 @@ class homekit.Session {
         class UnknownError
         class ConfigSavingException
         class AlreadyPairedException
+        class HomeKitConfigurationException
     }
 
 

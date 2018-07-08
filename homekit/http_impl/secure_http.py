@@ -18,6 +18,8 @@
 
 import io
 import select
+import threading
+import http.client
 
 from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 from homekit.http_impl import HttpContentTypes
@@ -58,6 +60,7 @@ class SecureHttp:
         self.c2a_key = session.c2a_key
         self.c2a_counter = 0
         self.a2c_counter = 0
+        self.lock = threading.Lock()
 
     def get(self, target):
         data = 'GET {tgt} HTTP/1.1\n\n'.format(tgt=target)
@@ -77,14 +80,15 @@ class SecureHttp:
         return self._handle_request(data)
 
     def _handle_request(self, data):
-        data = data.replace("\n", "\r\n")
-        assert len(data) < 1024
-        len_bytes = len(data).to_bytes(2, byteorder='little')
-        cnt_bytes = self.c2a_counter.to_bytes(8, byteorder='little')
-        self.c2a_counter += 1
-        ciper_and_mac = chacha20_aead_encrypt(len_bytes, self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]), data.encode())
-        self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
-        return self._read_response()
+        with self.lock:
+            data = data.replace("\n", "\r\n")
+            assert len(data) < 1024
+            len_bytes = len(data).to_bytes(2, byteorder='little')
+            cnt_bytes = self.c2a_counter.to_bytes(8, byteorder='little')
+            self.c2a_counter += 1
+            ciper_and_mac = chacha20_aead_encrypt(len_bytes, self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]), data.encode())
+            self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
+            return self._handle_response()
 
     @staticmethod
     def _parse(chunked_data):

@@ -34,6 +34,7 @@ package homekit {
 
         class Accessory {
             + aid
+            + add_service()
         }
     }
 

@@ -18,14 +18,15 @@ from distutils.core import setup
 
 setup(
     name='homekit',
-    packages=['homekit', 'homekit.model', 'homekit.model.services', 'homekit.model.characteristics'],
+    packages=['homekit', 'homekit.crypto', 'homekit.http_impl', 'homekit.model', 'homekit.model.services',
+              'homekit.model.characteristics', 'homekit.protocol', 'homekit.zeroconf_impl'],
     version='0.9',
     description='Python code to interface HomeKit Accessories and Controllers',
     author='Joachim Lusiardi',
     author_email='pypi@lusiardi.de',
-    url='https://github.com/jlusiardi/homekit_python',  
+    url='https://github.com/jlusiardi/homekit_python',
     download_url='https://github.com/jlusiardi/homekit_python/archive/0.9.tar.gz',
-    keywords=['HomeKit'],  
+    keywords=['HomeKit'],
     classifiers=[],
     install_requires=[
         'zeroconf',

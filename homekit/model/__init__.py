@@ -28,6 +28,9 @@ class Accessory(ToDictMixin):
             AccessoryInformationService(name, manufacturer, model, serial_number, firmware_revision)
         ]
 
+    def add_service(self, service):
+        self.services.append(service)
+
     def get_name(self):
         for service in self.services:
             if isinstance(service, AccessoryInformationService):

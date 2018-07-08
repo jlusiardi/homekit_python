@@ -88,7 +88,7 @@ class SecureHttp:
             self.c2a_counter += 1
             ciper_and_mac = chacha20_aead_encrypt(len_bytes, self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]), data.encode())
             self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
-            return self._handle_response()
+            return self._read_response()
 
     @staticmethod
     def _parse(chunked_data):

@@ -13,31 +13,241 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from http.server import BaseHTTPRequestHandler
 import binascii
+import gmpy2
+import hashlib
 import io
 import json
-import gmpy2
-import py25519
-import hkdf
-import hashlib
-import sys
-import socket
+from json.decoder import JSONDecodeError
 import select
 
-from homekit.tlv import TLV
-from homekit.srp import SrpServer
-from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
-from homekit.statuscodes import HttpStatusCodes, HapStatusCodes
-from homekit.exception import HomeKitStatusException
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
+
+import hkdf
+import py25519
+from zeroconf import Zeroconf, ServiceInfo
+import socket
+import sys
+import logging
+
+from homekit.exceptions import HomeKitStatusException
+from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
+from homekit.crypto.srp import SrpServer
+
+from homekit.exceptions import HomeKitConfigurationException, ConfigLoadingException, ConfigSavingException
+from homekit.http_impl import HttpStatusCodes
+from homekit.model import Accessories, Categories
+from homekit.protocol import TLV
+from homekit.protocol.statuscodes import HapStatusCodes
 
 
-def bytes_to_mpz(input_bytes):
-    return gmpy2.mpz(binascii.hexlify(input_bytes), 16)
+class AccessoryServer(ThreadingMixIn, HTTPServer):
+    """
+    This server makes accessories accessible via the HomeKit protocol.
+    """
+    def __init__(self, config_file, logger=sys.stderr):
+        """
+        Create a new server that acts like a homekit accessory. The config file is loaded and checked.
+
+        :param config_file: the file that contains the configuration data. Must be a string representing an absolute
+        path to the file
+        :param logger: this can be None to disable logging, sys.stderr to use the default behaviour of the python
+        implementation or an instance of logging.Logger to use this.
+        :raises HomeKitConfigurationException: if the config file is malformed. Reason will be in the message.
+        """
+        if logger is None or logger == sys.stderr or isinstance(logger, logging.Logger):
+            self.logger = logger
+        else:
+            raise HomeKitConfigurationException('Invalid logger given.')
+
+        self.data = AccessoryServerData(config_file)
+        self.data.increase_configuration_number()
+        self.sessions = {}
+        self.zeroconf = Zeroconf()
+        self.mdns_type = '_hap._tcp.local.'
+        self.mdns_name = self.data.name + '._hap._tcp.local.'
+
+        self.accessories = Accessories()
+
+        HTTPServer.__init__(self, (self.data.ip, self.data.port), AccessoryRequestHandler)
+
+    def add_accessory(self, accessory):
+        self.accessories.add_accessory(accessory)
+
+    def publish_device(self):
+        desc = {'md': str(self.data.name),  # model name of accessory
+                # category identifier (page 254, 2 means bridge), must be a String
+                'ci': str(Categories[self.data.category]),
+                'pv': '1.0',  # protocol version
+                'c#': str(self.data.configuration_number),
+                # configuration (consecutive number, 1 or greater, must be changed on every configuration change)
+                'id': self.data.accessory_pairing_id_bytes,  # id MUST look like Mac Address
+                'ff': '0',  # feature flags (Table 5-8, page 69)
+                's#': '1',  # must be 1
+                'sf': '1'  # status flag, lowest bit encodes pairing status, 1 means unpaired
+                }
+        if self.data.is_paired:
+            desc['sf'] = '0'
+
+        info = ServiceInfo(self.mdns_type, self.mdns_name, socket.inet_aton(self.data.ip), self.data.port, 0, 0, desc,
+                           'ash-2.local.')
+        self.zeroconf.unregister_all_services()
+        self.zeroconf.register_service(info, allow_name_change=True)
+
+    def unpublish_device(self):
+        self.zeroconf.unregister_all_services()
+
+    def shutdown(self):
+        # tell all handlers to close the connection
+        for session in self.sessions:
+            self.sessions[session]['handler'].close_connection = True
+        self.socket.close()
+        HTTPServer.shutdown(self)
 
 
-class HomeKitRequestHandler(BaseHTTPRequestHandler):
+class AccessoryServerData:
+    """
+    This class is used to take care of the servers persistence to be able to manage restarts,
+    """
+
+    def __init__(self, data_file):
+        self.data_file = data_file
+        try:
+            with open(data_file, 'r') as input_file:
+                self.data = json.load(input_file)
+        except PermissionError as e:
+            raise ConfigLoadingException('Could not open "{f}" due to missing permissions'.format(f=input_file))
+        except JSONDecodeError as e:
+            raise ConfigLoadingException('Cannot parse "{f}" as JSON file'.format(f=input_file))
+        except FileNotFoundError as e:
+            raise ConfigLoadingException('Could not open "{f}" because it does not exist'.format(f=input_file))
+
+        self.check()
+
+        # set some default values
+        if 'peers' not in self.data:
+            self.data['peers'] = {}
+        if 'unsuccessful_tries' not in self.data:
+            self.data['unsuccessful_tries'] = 0
+
+    def _save_data(self):
+        try:
+            with open(self.data_file, 'w') as output_file:
+                json.dump(self.data, output_file, indent=2, sort_keys=True)
+        except PermissionError as e:
+            raise ConfigSavingException('Could not write "{f}" due to missing permissions'.format(f=filename))
+        except FileNotFoundError as e:
+            raise ConfigSavingException(
+                'Could not write "{f}" because it (or the folder) does not exist'.format(f=filename))
+
+    @property
+    def ip(self) -> str:
+        return self.data['host_ip']
+
+    @property
+    def port(self) -> int:
+        return self.data['host_port']
+
+    @property
+    def setup_code(self) -> str:
+        return self.data['accessory_pin']
+
+    @property
+    def accessory_pairing_id_bytes(self) -> bytes:
+        return self.data['accessory_pairing_id'].encode()
+
+    @property
+    def unsuccessful_tries(self) -> int:
+        return self.data['unsuccessful_tries']
+
+    def register_unsuccessful_try(self):
+        self.data['unsuccessful_tries'] += 1
+        self._save_data()
+
+    @property
+    def is_paired(self) -> bool:
+        return len(self.data['peers']) > 0
+
+    @property
+    def name(self) -> str:
+        return self.data['name']
+
+    @property
+    def category(self) -> str:
+        try:
+            category = self.data['category']
+        except KeyError:
+            raise HomeKitConfigurationException('category missing in "{f}"'.format(f=self.data_file))
+        if category not in Categories:
+            raise HomeKitConfigurationException('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))
+        return category
+
+    def remove_peer(self, pairing_id: bytes):
+        del self.data['peers'][pairing_id.decode()]
+        self._save_data()
+
+    def add_peer(self, pairing_id: bytes, ltpk: bytes):
+        admin = (len(self.data['peers']) == 0)
+        self.data['peers'][pairing_id.decode()] = {'key': binascii.hexlify(ltpk).decode(), 'admin': admin}
+        self._save_data()
+
+    def get_peer_key(self, pairing_id: bytes) -> bytes:
+        if pairing_id.decode() in self.data['peers']:
+            return bytes.fromhex(self.data['peers'][pairing_id.decode()]['key'])
+        else:
+            return None
+
+    def is_peer_admin(self, pairing_id: bytes) -> bool:
+        return self.data['peers'][pairing_id.decode()]['admin']
+
+    @property
+    def peers(self):
+        return self.data['peers'].keys()
+
+    @property
+    def accessory_ltsk(self) -> bytes:
+        if 'accessory_ltsk' in self.data:
+            return bytes.fromhex(self.data['accessory_ltsk'])
+        else:
+            return None
+
+    @property
+    def accessory_ltpk(self) -> bytes:
+        if 'accessory_ltpk' in self.data:
+            return bytes.fromhex(self.data['accessory_ltpk'])
+        else:
+            return None
+
+    def set_accessory_keys(self, accessory_ltpk: bytes, accessory_ltsk: bytes):
+        self.data['accessory_ltpk'] = binascii.hexlify(accessory_ltpk).decode()
+        self.data['accessory_ltsk'] = binascii.hexlify(accessory_ltsk).decode()
+        self._save_data()
+
+    @property
+    def configuration_number(self) -> int:
+        return self.data['c#']
+
+    def increase_configuration_number(self):
+        self.data['c#'] += 1
+        self._save_data()
+
+    def check(self, paired=False):
+        """
+        Checks a accessory config file for completeness.
+        :param paired: if True, check for keys that must exist after successful pairing as well.
+        :return: None, but a HomeKitConfigurationException is raised if a key is missing
+        """
+        required_fields = ['name', 'host_ip', 'host_port', 'accessory_pairing_id', 'accessory_pin', 'c#', 'category']
+        if paired:
+            required_fields.extend(['accessory_ltpk', 'accessory_ltsk', 'peers', 'unsuccessful_tries'])
+        for f in required_fields:
+            if f not in self.data:
+                raise HomeKitConfigurationException(
+                    '"{r}" is missing in the config file "{f}"!'.format(r=f, f=self.data_file))
+
+
+class AccessoryRequestHandler(BaseHTTPRequestHandler):
     VALID_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE']
     DEBUG_PUT_CHARACTERISTICS = False
     DEBUG_CRYPT = False
@@ -85,10 +295,9 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
 
     def handle_one_request(self):
         """
-        This is used to determine wether the request is encrypted or not. This is done by looking at the first bytes of
+        This is used to determine whether the request is encrypted or not. This is done by looking at the first bytes of
         the request. To be valid unencrypted HTTP call, it must be one of the methods defined in RFC7231 Section 4
         "Request Methods".
-        :return:
         """
         try:
             # make connection non blocking so the select can work
@@ -139,9 +348,9 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         len_bytes = self.rfile.read(2)
         data_len = int.from_bytes(len_bytes, byteorder='little')
 
-        # the authtag is not counted, so add its length
+        # the auth tag is not counted, so add its length
         data = self.rfile.read(data_len + 16)
-        if HomeKitRequestHandler.DEBUG_CRYPT:
+        if AccessoryRequestHandler.DEBUG_CRYPT:
             self.log_message('data >%i< >%s<', len(data), binascii.hexlify(data))
 
         # get the crypto key from the session
@@ -152,12 +361,13 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                                                                                                     byteorder='little')
         decrypted = chacha20_aead_decrypt(len_bytes, c2a_key, cnt_bytes, bytes([0, 0, 0, 0]),
                                           data)
-        if decrypted == False:
-            self.log_error('Could not decrypt %s', binascii.hexlify(data))
-            # TODO: handle errors
-            pass
+        if decrypted is False:
+            # crypto error, log it and request close of connection
+            self.log_error('SEVERE: Could not decrypt %s', binascii.hexlify(data))
+            self.close_connection = True
+            return
 
-        if HomeKitRequestHandler.DEBUG_CRYPT:
+        if AccessoryRequestHandler.DEBUG_CRYPT:
             self.log_message('crypted request >%s<', decrypted)
 
         self.server.sessions[self.session_id]['controller_to_accessory_count'] += 1
@@ -178,7 +388,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         self.wfile.seek(0)
         in_data = self.wfile.read(65537)
 
-        if HomeKitRequestHandler.DEBUG_CRYPT:
+        if AccessoryRequestHandler.DEBUG_CRYPT:
             self.log_message('response >%s<', in_data)
             self.log_message('len(response) %s', len(in_data))
 
@@ -186,7 +396,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         out_data = bytearray()
         while len(in_data) > 0:
             block = in_data[:block_size]
-            if HomeKitRequestHandler.DEBUG_CRYPT:
+            if AccessoryRequestHandler.DEBUG_CRYPT:
                 self.log_message('==> BLOCK: len %s', len(block))
             in_data = in_data[block_size:]
 
@@ -211,7 +421,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         As described on page 84
         :return:
         """
-        if HomeKitRequestHandler.DEBUG_GET_CHARACTERISTICS:
+        if AccessoryRequestHandler.DEBUG_GET_CHARACTERISTICS:
             self.log_message('GET /characteristics')
 
         # analyse
@@ -244,7 +454,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         if 'ev' in params:
             ev = params['ev'] == 1
 
-        if HomeKitRequestHandler.DEBUG_GET_CHARACTERISTICS:
+        if AccessoryRequestHandler.DEBUG_GET_CHARACTERISTICS:
             self.log_message('query parameters: ids: %s, meta: %s, perms: %s, type: %s, ev: %s', ids, meta, perms, type,
                              ev)
 
@@ -284,7 +494,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                         {'aid': aid, 'iid': cid, 'status': HapStatusCodes.RESOURCE_NOT_EXIST})
                     errors += 1
 
-        if HomeKitRequestHandler.DEBUG_GET_CHARACTERISTICS:
+        if AccessoryRequestHandler.DEBUG_GET_CHARACTERISTICS:
             self.log_message('chars: %s', json.dumps(result))
 
         # set the proper status code depending on the count of characteristics and error
@@ -306,7 +516,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
         Defined page 80 ff
         :return:
         """
-        if HomeKitRequestHandler.DEBUG_PUT_CHARACTERISTICS:
+        if AccessoryRequestHandler.DEBUG_PUT_CHARACTERISTICS:
             self.log_message('PUT /characteristics')
             self.log_message('body: %s', self.body)
 
@@ -329,7 +539,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                             continue
                         found = True
                         if 'ev' in characteristic_to_set:
-                            if HomeKitRequestHandler.DEBUG_PUT_CHARACTERISTICS:
+                            if AccessoryRequestHandler.DEBUG_PUT_CHARACTERISTICS:
                                 self.log_message('set ev >%s< >%s< >%s<', aid, cid, characteristic_to_set['ev'])
                             if 'ev' in characteristic.perms:
                                 characteristic.set_events(characteristic_to_set['ev'])
@@ -338,7 +548,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
                                 result['characteristics'].append({'aid': aid, 'iid': cid, 'status': HapStatusCodes.NOTIFICATION_NOT_SUPPORTED})
 
                         if 'value' in characteristic_to_set:
-                            if HomeKitRequestHandler.DEBUG_PUT_CHARACTERISTICS:
+                            if AccessoryRequestHandler.DEBUG_PUT_CHARACTERISTICS:
                                 self.log_message('set value >%s< >%s< >%s<', aid, cid, characteristic_to_set['value'])
                             try:
                                 characteristic.set_value(characteristic_to_set['value'])
@@ -401,7 +611,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
 
         if d_req[TLV.kTLVType_State] == TLV.M1:
             # step #2 Accessory -> iOS Device Verify Start Response
-            if HomeKitRequestHandler.DEBUG_PAIR_VERIFY:
+            if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
                 self.log_message('Step #2 /pair-verify')
 
             # 1) generate new curve25519 key pair
@@ -452,13 +662,13 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             d_res[TLV.kTLVType_EncryptedData] = tmp
 
             self._send_response_tlv(d_res)
-            if HomeKitRequestHandler.DEBUG_PAIR_VERIFY:
+            if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
                 self.log_message('after step #2\n%s', TLV.to_string(d_res))
             return
 
         if d_req[TLV.kTLVType_State] == TLV.M3:
             # step #4 Accessory -> iOS Device Verify Finish Response
-            if HomeKitRequestHandler.DEBUG_PAIR_VERIFY:
+            if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
                 self.log_message('Step #4 /pair-verify')
 
             session_key = self.server.sessions[self.session_id]['session_key']
@@ -511,7 +721,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             d_res[TLV.kTLVType_State] = TLV.M4
 
             self._send_response_tlv(d_res)
-            if HomeKitRequestHandler.DEBUG_PAIR_VERIFY:
+            if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
                 self.log_message('after step #4\n%s', TLV.to_string(d_res))
             return
 
@@ -682,7 +892,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             self.log_message('Step #4 /pair-setup')
 
             # 1) use ios pub key to compute shared secret key
-            ios_pub_key = bytes_to_mpz(d_req[TLV.kTLVType_PublicKey])
+            ios_pub_key = gmpy2.mpz(binascii.hexlify(d_req[TLV.kTLVType_PublicKey]), 16)
             server = self.server.sessions[self.session_id]['srp']
             server.set_client_public_key(ios_pub_key)
 
@@ -692,7 +902,7 @@ class HomeKitRequestHandler(BaseHTTPRequestHandler):
             self.server.sessions[self.session_id]['session_key'] = session_key
 
             # 2) verify ios proof
-            ios_proof = bytes_to_mpz(d_req[TLV.kTLVType_Proof])
+            ios_proof = gmpy2.mpz(binascii.hexlify(d_req[TLV.kTLVType_Proof]), 16)
             if not server.verify_clients_proof(ios_proof):
                 d_res[TLV.kTLVType_State] = TLV.M4
                 d_res[TLV.kTLVType_Error] = TLV.kTLVError_Authentication

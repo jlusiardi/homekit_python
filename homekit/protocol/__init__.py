@@ -22,7 +22,7 @@ from binascii import hexlify
 from homekit.protocol.tlv import TLV
 from homekit.crypto.srp import SrpClient
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
-from homekit.exception import IncorrectPairingID, InvalidAuth, InvalidSignature, IllegalData, UnavailableError, \
+from homekit.exceptions import IncorrectPairingID, InvalidAuth, InvalidSignature, IllegalData, UnavailableError, \
     AuthenticationError, InvalidError, BusyError, MaxTriesError, MaxPeersError, BackoffError
 
 

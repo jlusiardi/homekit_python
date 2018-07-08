@@ -21,8 +21,8 @@ from decimal import Decimal
 
 from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions
-from homekit.statuscodes import HapStatusCodes
-from homekit.exception import HomeKitStatusException
+from homekit.protocol.statuscodes import HapStatusCodes
+from homekit.exceptions import HomeKitStatusException
 
 
 class AbstractCharacteristic(ToDictMixin):

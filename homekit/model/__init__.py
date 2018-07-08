@@ -18,7 +18,8 @@ from homekit.model.mixin import ToDictMixin, get_id
 from homekit.model.services import AccessoryInformationService, LightBulbService, FanService, \
     BHSLightBulbService
 from homekit.model.categories import Categories
-from homekit.model.characteristics import CharacteristicPermissions
+from homekit.model.characteristics import CharacteristicPermissions, CharacteristicFormats
+
 
 class Accessory(ToDictMixin):
     def __init__(self, name, manufacturer, model, serial_number, firmware_revision):

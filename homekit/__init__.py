@@ -14,32 +14,6 @@
 # limitations under the License.
 #
 
-import homekit.feature_flags
-import homekit.model.categories
-import homekit.model.services
-import homekit.model.characteristics
-import homekit.statuscodes
-import homekit.zeroconf_
-from homekit.model import *
-from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
-from homekit.protocol import perform_pair_setup, get_session_keys
-from homekit.secure_http import SecureHttp
-from homekit.server import HomeKitServer
-from homekit.srp import SrpClient
-from homekit.tlv import TLV
-from homekit.tools import load_pairing, save_pairing, create_session, create_session_from_pairing_data
-from homekit.http_client import HomeKitHTTPConnection
-from homekit.serverdata import HomeKitServerData
-from homekit.exception import *
-
-# Init lookup objects
-FeatureFlags = homekit.feature_flags.FeatureFlags
-Categories = homekit.model.categories.Categories
-HapStatusCodes = homekit.statuscodes.HapStatusCodes
-HttpStatusCodes = homekit.statuscodes.HttpStatusCodes
-HttpContentTypes = homekit.statuscodes.HttpContentTypes
-CharacteristicsTypes = homekit.model.characteristics.CharacteristicsTypes
-ServicesTypes = homekit.model.services.ServicesTypes
-
-discover_homekit_devices = homekit.zeroconf_.discover_homekit_devices
-find_device_ip_and_port = homekit.zeroconf_.find_device_ip_and_port
+from homekit.controller import Controller
+from homekit.accessoryserver import AccessoryServer
+from homekit.exceptions import *

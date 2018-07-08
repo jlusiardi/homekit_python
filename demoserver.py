@@ -19,7 +19,7 @@
 import os.path
 import logging
 
-from homekit import HomeKitServer, HomeKitServerData, HomeKitConfigurationException
+from homekit import AccessoryServer
 from homekit.model import Accessory, LightBulbService
 
 
@@ -36,23 +36,17 @@ if __name__ == '__main__':
     logger.addHandler(ch)
     logger.info('starting')
 
-    # load and check configuration
     config_file = os.path.expanduser('~/.homekit/demoserver.json')
-    try:
-        HomeKitServerData(config_file).check()
-    except HomeKitConfigurationException as e:
-        print(e)
-        exit()
 
     # create a server and an accessory an run it unless ctrl+c was hit
     try:
-        httpd = HomeKitServer(config_file, logger)
+        httpd = AccessoryServer(config_file, logger)
 
         accessory = Accessory('Testlicht', 'lusiardi.de', 'Demoserver', '0001', '0.1')
         lightBulbService = LightBulbService()
         lightBulbService.set_on_set_callback(light_switched)
         accessory.services.append(lightBulbService)
-        httpd.accessories.add_accessory(accessory)
+        httpd.add_accessory(accessory)
 
         httpd.publish_device()
         logger.info('published device and start serving')

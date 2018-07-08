@@ -258,7 +258,7 @@ class _CharacteristicsTypes(object):
         translates to "position.current" (after looking up "public.hap.characteristic.position.current").
 
         :param uuid: the UUID in long form or the shortened version as defined in chapter 5.6.1 page 72.
-        :return: the textual representation TODO raise exception on not found?
+        :return: the textual representation
         """
         orig_item = uuid
         if uuid.endswith(self.baseUUID):
@@ -280,8 +280,10 @@ class _CharacteristicsTypes(object):
         """
         if item_name in self._characteristics_rev:
             short = self._characteristics_rev[item_name]
-        if item_name in self._characteristics:
+        elif item_name in self._characteristics:
             short = item_name
+        else:
+            return item_name
         medium = '0' * (8 - len(short)) + short
         long = medium + self.baseUUID
         return long

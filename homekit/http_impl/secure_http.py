@@ -19,7 +19,6 @@
 import io
 import select
 import threading
-import http.client
 
 from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 from homekit.http_impl import HttpContentTypes
@@ -28,7 +27,7 @@ from homekit.http_impl import HttpResponse
 
 class SecureHttp:
     """
-    Class to helf in the handling of HTTP requests and responses that are performed following chapter 5.5 page 70ff of
+    Class to help in the handling of HTTP requests and responses that are performed following chapter 5.5 page 70ff of
     the HAP specification.
     """
 

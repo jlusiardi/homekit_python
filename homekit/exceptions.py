@@ -27,6 +27,13 @@ class HomeKitException(Exception):
     pass
 
 
+class HttpException(HomeKitException):
+    """
+    Used within the HTTP Parser.
+    """
+    pass
+
+
 class UnknownError(HomeKitException):
     """Raised upon receipt of an unknown error"""
     pass
@@ -100,7 +107,7 @@ class HomeKitConfigurationException(Exception):
         Exception.__init__(self, message)
 
 
-class HomeKitFormatException(Exception):
+class FormatException(Exception):
     """
     Used if any format conversion fails or is impossible.
     """

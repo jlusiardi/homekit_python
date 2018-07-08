@@ -43,8 +43,7 @@ package homekit {
 
     package exceptions {
         class HomeKitException
-        class HomeKitFormatException
-        HomeKitFormatException -up-|> HomeKitException
+        FormatException -up-|> HomeKitException
         class AuthenticationError
         AuthenticationError -up-|> HomeKitException
         class AccessoryNotFoundException
@@ -55,6 +54,7 @@ package homekit {
         ConfigLoadingException -up-|> HomeKitException
         class AlreadyPairedException
         class HomeKitConfigurationException
+        HttpException -up-|> HomeKitException
     }
 }
 

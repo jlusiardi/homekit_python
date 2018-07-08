@@ -26,7 +26,7 @@ from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.exceptions import AccessoryNotFoundException, ConfigLoadingException, UnknownError, UnpairedException, \
-    AuthenticationError, ConfigSavingException, AlreadyPairedException, HomeKitFormatException
+    AuthenticationError, ConfigSavingException, AlreadyPairedException, FormatException
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, perform_pair_setup
 from homekit.protocol.tlv import TLV, TlvParseException
@@ -575,28 +575,28 @@ def check_convert_value(val, target_type):
         try:
             val = strtobool(str(val))
         except ValueError:
-            raise HomeKitFormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     if target_type in [CharacteristicFormats.uint64, CharacteristicFormats.uint32,
                        CharacteristicFormats.uint16, CharacteristicFormats.uint8,
                        CharacteristicFormats.int]:
         try:
             val = int(val)
         except ValueError:
-            raise HomeKitFormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     if target_type == CharacteristicFormats.float:
         try:
             val = float(val)
         except ValueError:
-            raise HomeKitFormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     if target_type == CharacteristicFormats.data:
         try:
             base64.decodebytes(val.encode())
         except binascii.Error:
-            raise HomeKitFormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     if target_type == CharacteristicFormats.tlv8:
         try:
             tmp_bytes = base64.decodebytes(val.encode())
             TLV.decode_bytes(tmp_bytes)
         except (binascii.Error, TlvParseException):
-            raise HomeKitFormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     return val

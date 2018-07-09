@@ -20,7 +20,8 @@ import os.path
 import logging
 
 from homekit import AccessoryServer
-from homekit.model import Accessory, LightBulbService
+from homekit.model import Accessory
+from homekit.model.services import LightBulbService
 
 
 def light_switched(new_value):
@@ -30,7 +31,7 @@ def light_switched(new_value):
 if __name__ == '__main__':
     # setup logger
     logger = logging.getLogger('accessory')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(ch)

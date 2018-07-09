@@ -11,10 +11,16 @@ package homekit {
     }
     package model {
         package services {
+            note as n1
+                This package contains all
+                services as defined in the
+                spec chapter 9.
+            end note
             class AbstractService {
                 + iid
                 + append_characteristic()
             }
+
 
             class AccessoryInformationService {
             }
@@ -24,14 +30,55 @@ package homekit {
 
             AccessoryInformationService -up-|> AbstractService
             LightBulbService -up-|> AbstractService
-            xxxService -up-|> AbstractService
+            GenericService -up-|> AbstractService
         }
         package characteristics {
+            note as n2
+                This package contains all
+                characteristics as defined in the
+                spec chapter 8.
+            end note
+
             class AbstractCharacteristic {
                 + iid
+                + type
+                + perms
+                + format
+                + value
+                + ev
+                + description
+                + unit
+                + minValue
+                + maxValue
+                + minStep
+                + maxLen
+                + maxDataLen
+                + valid_values
+                + valid_values_range
+                - _set_value_callback
+                - _get_value_callback
+                + set_set_value_callback(callback)
+                + set_get_value_callback(callback)
+                + set_events(value)
+                + set_value(value)
+                + get_value(value)
             }
-            xxxCharacteristic -up-|> AbstractCharacteristic
+
+            class OnCharacteristicMixin {
+                + set_on_set_callback()
+                + set_on_get_callback()
+            }
+
+            OnCharacteristic -up-|> AbstractCharacteristic
+
+            OnCharacteristicMixin -up-> OnCharacteristic : _onCharacteristic
+
+            GenericCharacteristic -up-|> AbstractCharacteristic
+            NameCharacteristic -up-|> AbstractCharacteristic
         }
+
+        AccessoryInformationService --> NameCharacteristic
+        LightBulbService -up-|> OnCharacteristicMixin
 
         class Accessory {
             + aid
@@ -40,8 +87,8 @@ package homekit {
     }
 
     AccessoryServer --> "*" Accessory : accessories
-    AbstractService -right-> "*" AbstractCharacteristic : characteristics
-    Accessory --> "*" AbstractService: services
+    AbstractService -right-> "1..*" AbstractCharacteristic : characteristics
+    Accessory -down-> "*" AbstractService: services
 
     package exceptions {
         class HomeKitException

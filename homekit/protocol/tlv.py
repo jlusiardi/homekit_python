@@ -107,7 +107,10 @@ class TLV:
                 raise TlvParseException('Not enough data for length {}'.format(length))
             tail = tail[length:]
 
-            result.append((key, value))
+            if len(result) > 0 and result[-1][0] == key:
+                result[-1][1] += value
+            else:
+                result.append([key, value])
         return result
 
     @staticmethod
@@ -188,11 +191,17 @@ class TLV:
         return result
 
     @staticmethod
-    def to_string(d: dict) -> str:
-        res = '{\n'
-        for k in sorted(d.keys()):
-            res += '  {k}: {v}\n'.format(k=k, v=d[k])
-        res += '}\n'
+    def to_string(d) -> str:
+        if isinstance(d, dict):
+            res = '{\n'
+            for k in d.keys():
+                res += '  {k}: {v}\n'.format(k=k, v=d[k])
+            res += '}\n'
+        else:
+            res = '[\n'
+            for k in d:
+                res += '  {k}: {v}\n'.format(k=k[0], v=k[1])
+            res += ']\n'
         return res
 
 

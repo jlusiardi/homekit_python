@@ -100,6 +100,7 @@ class HomeKitStatusException(Exception):
 
 
 class HomeKitConfigurationException(Exception):
+    # TODO rename to ConfigurationException
     """
     Used if any configuration in the HomeKit context was wrong.
     """
@@ -110,6 +111,14 @@ class HomeKitConfigurationException(Exception):
 class FormatException(Exception):
     """
     Used if any format conversion fails or is impossible.
+    """
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+class PermissionException(Exception):
+    """
+    Used if the characteristic's permissions do not allow the action
     """
     def __init__(self, message):
         Exception.__init__(self, message)

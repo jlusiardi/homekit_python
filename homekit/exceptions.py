@@ -99,8 +99,7 @@ class HomeKitStatusException(Exception):
         self.status_code = status_code
 
 
-class HomeKitConfigurationException(Exception):
-    # TODO rename to ConfigurationException
+class ConfigurationException(Exception):
     """
     Used if any configuration in the HomeKit context was wrong.
     """

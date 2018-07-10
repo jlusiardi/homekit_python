@@ -35,7 +35,7 @@ from homekit.exceptions import HomeKitStatusException
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.crypto.srp import SrpServer
 
-from homekit.exceptions import HomeKitConfigurationException, ConfigLoadingException, ConfigSavingException
+from homekit.exceptions import ConfigurationException, ConfigLoadingException, ConfigSavingException
 from homekit.http_impl import HttpStatusCodes
 from homekit.model import Accessories, Categories
 from homekit.protocol import TLV
@@ -48,18 +48,20 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
     """
     def __init__(self, config_file, logger=sys.stderr):
         """
-        Create a new server that acts like a homekit accessory. The config file is loaded and checked.
+        Create a new server that acts like a homekit accessory. The config file is loaded and checked. There are not
+        accessories added on creation.
 
         :param config_file: the file that contains the configuration data. Must be a string representing an absolute
         path to the file
         :param logger: this can be None to disable logging, sys.stderr to use the default behaviour of the python
         implementation or an instance of logging.Logger to use this.
-        :raises HomeKitConfigurationException: if the config file is malformed. Reason will be in the message.
+        :raises ConfigLoadingException: If the configuration file could not be loaded. Reason will be in the message.
+        :raises ConfigurationException: if the config file is malformed. Reason will be in the message.
         """
         if logger is None or logger == sys.stderr or isinstance(logger, logging.Logger):
             self.logger = logger
         else:
-            raise HomeKitConfigurationException('Invalid logger given.')
+            raise ConfigurationException('Invalid logger given.')
 
         self.data = AccessoryServerData(config_file)
         self.data.increase_configuration_number()
@@ -73,9 +75,17 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         HTTPServer.__init__(self, (self.data.ip, self.data.port), AccessoryRequestHandler)
 
     def add_accessory(self, accessory):
+        """
+        Adds an accessory to the accessory server.
+
+        :param accessory: The accessory to add
+        """
         self.accessories.add_accessory(accessory)
 
     def publish_device(self):
+        """
+        Uses Bonjour / Zeroconf to announce the accessory server to possible controllers in the background.
+        """
         desc = {'md': str(self.data.name),  # model name of accessory
                 # category identifier (page 254, 2 means bridge), must be a String
                 'ci': str(Categories[self.data.category]),
@@ -96,9 +106,15 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         self.zeroconf.register_service(info, allow_name_change=True)
 
     def unpublish_device(self):
+        """
+        Stop announcing the accessory server to controllers.
+        """
         self.zeroconf.unregister_all_services()
 
     def shutdown(self):
+        """
+        Shuts down the accessory server.
+        """
         # tell all handlers to close the connection
         for session in self.sessions:
             self.sessions[session]['handler'].close_connection = True
@@ -178,9 +194,9 @@ class AccessoryServerData:
         try:
             category = self.data['category']
         except KeyError:
-            raise HomeKitConfigurationException('category missing in "{f}"'.format(f=self.data_file))
+            raise ConfigurationException('category missing in "{f}"'.format(f=self.data_file))
         if category not in Categories:
-            raise HomeKitConfigurationException('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))
+            raise ConfigurationException('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))
         return category
 
     def remove_peer(self, pairing_id: bytes):
@@ -236,18 +252,23 @@ class AccessoryServerData:
         """
         Checks a accessory config file for completeness.
         :param paired: if True, check for keys that must exist after successful pairing as well.
-        :return: None, but a HomeKitConfigurationException is raised if a key is missing
+        :return: None, but a ConfigurationException is raised if a key is missing
         """
         required_fields = ['name', 'host_ip', 'host_port', 'accessory_pairing_id', 'accessory_pin', 'c#', 'category']
         if paired:
             required_fields.extend(['accessory_ltpk', 'accessory_ltsk', 'peers', 'unsuccessful_tries'])
         for f in required_fields:
             if f not in self.data:
-                raise HomeKitConfigurationException(
+                raise ConfigurationException(
                     '"{r}" is missing in the config file "{f}"!'.format(r=f, f=self.data_file))
 
 
 class AccessoryRequestHandler(BaseHTTPRequestHandler):
+    """
+    Extension to BaseHTTPRequestHandler. This implements all functions to react to controller calls to an accessory
+    server.
+    """
+
     VALID_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE']
     DEBUG_PUT_CHARACTERISTICS = False
     DEBUG_CRYPT = False
@@ -598,6 +619,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
     def _get_accessories(self):
 
         result_bytes = self.server.accessories.__str__().encode()
+        print(result_bytes)
         self.send_response(HttpStatusCodes.OK)
         self.send_header('Content-Type', 'application/hap+json')
         self.send_header('Content-Length', len(result_bytes))
@@ -1084,44 +1106,60 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         """
-        Can use
-            * command
-            * headers
-            * path
-            * ...
-        :return:
+        Handle a GET request.
+
+        It uses the PATHMAPPING to determine which function to call. If no function can be found it logs an error and
+        returns HTTP Status code 404.
+
+        This function is called by BaseHTTPRequestHandler.handle_one_request by name. So no direct references in code
+        can be found.
         """
         absolute_path = self.path.split('?')[0]
         if absolute_path in self.PATHMAPPING:
             if 'GET' in self.PATHMAPPING[absolute_path]:
-                # self.log_message('-' * 80 + '\ndo_GET / path: %s', self.path)
                 self.PATHMAPPING[absolute_path]['GET']()
                 return
-        self.log_error('send error because of unmapped path: %s', self.path)
+        self.log_error('send error because of unmapped GET path: %s', self.path)
         self.send_error(HttpStatusCodes.NOT_FOUND)
 
     def do_POST(self):
+        """
+        Handle a POST request.
+
+        It uses the PATHMAPPING to determine which function to call. If no function can be found it logs an error and
+        returns HTTP Status code 404.
+
+        This function is called by BaseHTTPRequestHandler.handle_one_request by name. So no direct references in code
+        can be found.
+        """
         # read the body identified by its length
         content_length = int(self.headers['Content-Length'])
         self.body = self.rfile.read(content_length)
         if self.path in self.PATHMAPPING:
             if 'POST' in self.PATHMAPPING[self.path]:
-                # self.log_message('-' * 80 + '\ndo_POST / path: %s', self.path)
                 self.PATHMAPPING[self.path]['POST']()
                 return
-        self.log_error('send error because of unmapped path: %s', self.path)
+        self.log_error('send error because of unmapped POST path: %s', self.path)
         self.send_error(HttpStatusCodes.NOT_FOUND)
 
     def do_PUT(self):
+        """
+        Handle a PUT request.
+
+        It uses the PATHMAPPING to determine which function to call. If no function can be found it logs an error and
+        returns HTTP Status code 404.
+
+        This function is called by BaseHTTPRequestHandler.handle_one_request by name. So no direct references in code
+        can be found.
+        """
         # read the body identified by its length
         content_length = int(self.headers['Content-Length'])
         self.body = self.rfile.read(content_length)
         if self.path in self.PATHMAPPING:
             if 'PUT' in self.PATHMAPPING[self.path]:
-                # self.log_message('-' * 80 + '\ndo_PUT / path: %s', self.path)
                 self.PATHMAPPING[self.path]['PUT']()
                 return
-        self.log_error('send error because of unmapped path: %s', self.path)
+        self.log_error('send error because of unmapped PUT path: %s', self.path)
         self.send_error(HttpStatusCodes.NOT_FOUND)
 
     def log_message(self, format, *args):

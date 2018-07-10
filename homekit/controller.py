@@ -359,6 +359,8 @@ class Pairing(object):
         :param do_conversion: select if conversion is done (False is default)
         :return: a list of 3-tupels of accessory id, instance id and status for all characteristics that could not be
                  written successfully. The status values can be looked up in HapStatusCodes.
+        :raises FormatException: if conversion is requested and the input value could not be converted to the
+                target type
         """
         if not self.session:
             self.session = Session(self.pairing_data)
@@ -379,8 +381,12 @@ class Pairing(object):
                             for c in s['characteristics']:
                                 if 'iid' in c and c['iid'] == iid:
                                     c_format = c['format']
-
-                value = check_convert_value(value, c_format)
+                # try to do conversion, if it fails report proper exception
+                try:
+                    value = check_convert_value(value, c_format)
+                except FormatException as e:
+                    message = 'Error occurred on conversion for {a}.{i}: {m}'.format(a=aid, i=iid, f=c_format, m=str(e))
+                    raise FormatException(message)
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
             data.append({'aid': aid, 'iid': iid, 'value': value})
         data = json.dumps({'characteristics': data})
@@ -391,7 +397,7 @@ class Pairing(object):
             data = {(d['aid'], d['iid']): {'status': d['status'], 'description': HapStatusCodes[d['status']]} for d in
                     data}
             return data
-        return []
+        return {}
 
     def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
         """
@@ -569,7 +575,7 @@ def check_convert_value(val, target_type):
     :param val: the original value
     :param target_type: the target type of the conversion
     :return: the converted value
-    :raises HomeKitTypeException: if the input value could not be converted to the target type
+    :raises FormatException: if the input value could not be converted to the target type
     """
     if target_type == CharacteristicFormats.bool:
         try:

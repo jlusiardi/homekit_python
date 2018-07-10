@@ -102,7 +102,7 @@ package homekit {
         class ConfigLoadingException
         ConfigLoadingException -up-|> HomeKitException
         class AlreadyPairedException
-        class HomeKitConfigurationException
+        ConfigurationException  -up-|> HomeKitException
         HttpException -up-|> HomeKitException
     }
 }
@@ -218,7 +218,7 @@ class homekit.Session {
         class UnknownError
         class ConfigSavingException
         class AlreadyPairedException
-        class HomeKitConfigurationException
+        class ConfigurationException
     }
 
 

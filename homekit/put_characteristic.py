@@ -20,7 +20,7 @@ import argparse
 import sys
 
 from homekit.controller import Controller
-
+from homekit.exceptions import FormatException
 
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit put_characteristic app - change values of characteristics ' +
@@ -51,7 +51,12 @@ if __name__ == '__main__':
     characteristics = [(int(c[0].split('.')[0]),  # the first part is the aid, must be int
                         int(c[0].split('.')[1]),  # the second part is the iid, must be int
                         c[1]) for c in args.characteristics]
-    results = pairing.put_characteristics(characteristics, do_conversion=True)
+    try:
+        results = pairing.put_characteristics(characteristics, do_conversion=True)
+    except FormatException as e:
+        print(str(e))
+        exit(-2)
+
     for key, value in results.items():
         aid = key[0]
         iid = key[1]

@@ -16,7 +16,7 @@
 
 from homekit.model.mixin import ToDictMixin, get_id
 from homekit.model.services import AccessoryInformationService, LightBulbService, FanService, \
-    BHSLightBulbService
+    BHSLightBulbService, ThermostatService
 from homekit.model.categories import Categories
 
 

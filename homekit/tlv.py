@@ -202,27 +202,3 @@ class TlvParseException(Exception):
     """Raised upon parse error with some TLV"""
     pass
 
-
-if __name__ == '__main__':
-    # TLV Example 1 from Chap 12.1.2 Page 252
-    example_1 = bytearray.fromhex('060103010568656c6c6f')
-    dict_1_1 = TLV.decode_bytearray(example_1)
-
-    bytearray_1 = TLV.encode_dict(dict_1_1)
-    dict_1_2 = TLV.decode_bytearray(bytearray_1)
-    assert dict_1_1 == dict_1_2
-
-    # TLV Example 1 from Chap 12.1.2 Page 252
-    example_2 = bytearray.fromhex('060103' + ('09FF' + 255 * '61' + '092D' + 45 * '61') + '010568656c6c6f')
-    dict_2_1 = TLV.decode_bytearray(example_2)
-
-    bytearray_2 = TLV.encode_dict(dict_2_1)
-    dict_2_2 = TLV.decode_bytearray(bytearray_2)
-    assert dict_2_1 == dict_2_2
-
-    example_3 = {
-        TLV.kTLVType_Separator: bytes()
-    }
-    print(TLV.encode_dict(example_3))
-
-    print(TLV.to_string(dict_2_1))

@@ -237,24 +237,6 @@ def pad16(x: bytes) -> bytes:
     return bytearray([0 for i in range(0, tmp)])
 
 
-def chacha20_aead_encrypt(aad: bytes, key: bytes, iv: bytes, constant: bytes, plaintext: bytes):
-    assert type(plaintext) in [bytes, bytearray], 'plaintext is no instance of bytes: %s' % str(type(plaintext))
-    assert type(key) is bytes, 'key is no instance of bytes'
-    assert len(key) == 32
-    nonce = constant + iv
-    otk = poly1305_key_gen(key, nonce)
-    ciphertext = chacha20_encrypt(key, 1, nonce, plaintext)
-    assert len(plaintext) == len(ciphertext)
-    mac_data = aad + pad16(aad)
-    assert len(mac_data) % 16 == 0
-    mac_data += ciphertext + pad16(ciphertext)
-    assert len(mac_data) % 16 == 0
-    mac_data += len(aad).to_bytes(length=8, byteorder='little')
-    mac_data += len(ciphertext).to_bytes(length=8, byteorder='little')
-    tag = poly1305_mac(mac_data, otk)
-    return ciphertext, tag
-
-
 def chacha20_aead_verify_tag(aad: bytes, key: bytes, iv: bytes, constant: bytes, ciphertext: bytes):
     digest = ciphertext[-16:]
     ciphertext = ciphertext[:-16]
@@ -272,8 +254,49 @@ def chacha20_aead_verify_tag(aad: bytes, key: bytes, iv: bytes, constant: bytes,
     return digest == tag
 
 
+def chacha20_aead_encrypt(aad: bytes, key: bytes, iv: bytes, constant: bytes, plaintext: bytes):
+    """
+    The encrypt method for chacha20 aead as required by the Apple specification. The 96-bit nonce from RFC7539 is
+    formed from the constant and the initialisation vector.
+
+    :param aad: arbitrary length additional authenticated data
+    :param key: 256-bit (32-byte) key of type bytes
+    :param iv: the initialisation vector
+    :param constant: constant
+    :param plaintext: arbitrary length plaintext of type bytes or bytearray
+    :return: the cipher text and tag
+    """
+    assert type(plaintext) in [bytes, bytearray], 'plaintext is no instance of bytes: %s' % str(type(plaintext))
+    assert type(key) is bytes, 'key is no instance of bytes'
+    assert len(key) == 32
+
+    nonce = constant + iv
+    otk = poly1305_key_gen(key, nonce)
+    ciphertext = chacha20_encrypt(key, 1, nonce, plaintext)
+    assert len(plaintext) == len(ciphertext)
+    mac_data = aad + pad16(aad)
+    assert len(mac_data) % 16 == 0
+    mac_data += ciphertext + pad16(ciphertext)
+    assert len(mac_data) % 16 == 0
+    mac_data += len(aad).to_bytes(length=8, byteorder='little')
+    mac_data += len(ciphertext).to_bytes(length=8, byteorder='little')
+    tag = poly1305_mac(mac_data, otk)
+    return ciphertext, tag
+
+
 def chacha20_aead_decrypt(aad: bytes, key: bytes, iv: bytes, constant: bytes, ciphertext: bytes):
-    assert type(ciphertext) in [bytes, bytearray], 'plaintext is no instance of bytes: %s' % str(type(ciphertext))
+    """
+    The decrypt method for chacha20 aead as required by the Apple specification. The 96-bit nonce from RFC7539 is
+    formed from the constant and the initialisation vector.
+
+    :param aad: arbitrary length additional authenticated data
+    :param key: 256-bit (32-byte) key of type bytes
+    :param iv: the initialisation vector
+    :param constant: constant
+    :param ciphertext: arbitrary length plaintext of type bytes or bytearray
+    :return: False if the tag could not be verified or the plaintext as bytes
+    """
+    assert type(ciphertext) in [bytes, bytearray], 'ciphertext is no instance of bytes: %s' % str(type(ciphertext))
     assert type(key) is bytes, 'key is no instance of bytes'
     assert len(key) == 32
 

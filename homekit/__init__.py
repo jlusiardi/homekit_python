@@ -16,18 +16,16 @@
 
 import homekit.feature_flags
 import homekit.model.categories
-import homekit.model.services
 import homekit.model.characteristics
+import homekit.model.services
 import homekit.statuscodes
 import homekit.zeroconf_
-from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
+from homekit.http_client import HomeKitHTTPConnection
 from homekit.protocol import perform_pair_setup, get_session_keys
 from homekit.secure_http import SecureHttp
 from homekit.server import HomeKitServer
-from homekit.srp import SrpClient
 from homekit.tlv import TLV
 from homekit.tools import load_pairing, save_pairing, create_session
-from homekit.http_client import HomeKitHTTPConnection
 
 # Init lookup objects
 FeatureFlags = homekit.feature_flags.FeatureFlags

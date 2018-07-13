@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
+import http.client
 import io
 import threading
-import http.client
 
-from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
+from homekit.crypto import chacha20_aead_encrypt, chacha20_aead_decrypt
 from homekit.statuscodes import HttpContentTypes
 
 

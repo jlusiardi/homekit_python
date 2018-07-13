@@ -14,23 +14,23 @@
 # limitations under the License.
 #
 
-from http.server import BaseHTTPRequestHandler
 import binascii
+import gmpy2
+import hashlib
 import io
 import json
-import gmpy2
-import py25519
-import hkdf
-import hashlib
-import sys
-import socket
 import select
+import socket
+import sys
+from http.server import BaseHTTPRequestHandler
 
-from homekit.tlv import TLV
-from homekit.srp import SrpServer
-from homekit.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
-from homekit.statuscodes import HttpStatusCodes, HapStatusCodes
+import hkdf
+import py25519
+
+from homekit.crypto import chacha20_aead_encrypt, chacha20_aead_decrypt, SrpServer
 from homekit.exception import HomeKitStatusException
+from homekit.statuscodes import HttpStatusCodes, HapStatusCodes
+from homekit.tlv import TLV
 
 
 def bytes_to_mpz(input_bytes):

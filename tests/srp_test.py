@@ -1,6 +1,7 @@
 import unittest
 
-from homekit.srp import *
+from homekit.crypto.srp import *
+
 
 class TestSrp(unittest.TestCase):
 

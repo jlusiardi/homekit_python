@@ -14,15 +14,16 @@
 # limitations under the License.
 #
 
-import hkdf
 import hashlib
-import ed25519
-import py25519
-import homekit.exception
 from binascii import hexlify
+
+import ed25519
+import hkdf
+import py25519
+
+import homekit.exception
+from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt, SrpClient
 from homekit.tlv import TLV
-from homekit.srp import SrpClient
-from homekit.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 
 
 def error_handler(error, stage):

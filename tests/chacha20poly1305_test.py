@@ -1,6 +1,6 @@
 import unittest
 
-from homekit.chacha20poly1305 import *
+from homekit.crypto.chacha20poly1305 import *
 
 
 class TestChacha20poly1305(unittest.TestCase):

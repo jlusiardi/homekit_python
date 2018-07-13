@@ -53,7 +53,8 @@ class HomeKitServer(ThreadingMixIn, HTTPServer):
 
     def publish_device(self):
         desc = {'md': 'My Lightbulb',  # model name of accessory
-                'ci': str(Categories['Lightbulb']),  # category identifier (page 254, 2 means bridge), must be a String
+                # category identifier (page 254, 2 means bridge), must be a String
+                'ci': str(Categories[self.data.category]),
                 'pv': '1.0',  # protocol version
                 'c#': str(self.data.configuration_number),
                 # configuration (consecutive number, 1 or greater, must be changed on every configuration change)

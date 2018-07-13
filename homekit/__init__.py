@@ -23,7 +23,7 @@ import homekit.zeroconf_
 from homekit.http_client import HomeKitHTTPConnection
 from homekit.protocol import perform_pair_setup, get_session_keys
 from homekit.secure_http import SecureHttp
-from homekit.server import HomeKitServer
+from homekit.server import HomeKitServer, HomeKitServerData
 from homekit.tlv import TLV
 from homekit.tools import load_pairing, save_pairing, create_session
 

@@ -17,6 +17,9 @@
 import json
 import binascii
 
+from homekit.exception import ConfigurationException
+from homekit.model import Categories
+
 
 class HomeKitServerData:
     """
@@ -27,6 +30,11 @@ class HomeKitServerData:
         self.data_file = data_file
         with open(data_file, 'r') as input_file:
             self.data = json.load(input_file)
+        # set some default values
+        if 'peers' not in self.data:
+            self.data['peers'] = {}
+        if 'unsuccessful_tries' not in self.data:
+            self.data['unsuccessful_tries'] = 0
 
     def _save_data(self):
         with open(self.data_file, 'w') as output_file:
@@ -64,6 +72,16 @@ class HomeKitServerData:
     @property
     def name(self) -> str:
         return self.data['name']
+
+    @property
+    def category(self) -> str:
+        try:
+            category = self.data['category']
+        except KeyError:
+            raise ConfigurationException('category missing in "{f}"'.format(f=self.data_file))
+        if category not in Categories:
+            raise ConfigurationException('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))
+        return category
 
     def remove_peer(self, pairing_id: bytes):
         del self.data['peers'][pairing_id.decode()]
@@ -115,3 +133,22 @@ class HomeKitServerData:
     def increase_configuration_number(self):
         self.data['c#'] += 1
         self._save_data()
+
+    def check(self, paired=False):
+        """
+        Checks a accessory config file for completeness.
+        :param paired: if True, check for keys that must exist after successful pairing as well.
+        :return: None, but a HomeKitConfigurationException is raised if a key is missing
+        """
+        required_fields = ['name', 'host_ip', 'host_port', 'accessory_pairing_id', 'accessory_pin', 'c#', 'category']
+        if paired:
+            required_fields.extend(['accessory_ltpk', 'accessory_ltsk', 'peers', 'unsuccessful_tries'])
+        for f in required_fields:
+            if f not in self.data:
+                raise ConfigurationException(
+                    '"{r}" is missing in the config file "{f}"!'.format(r=f, f=self.data_file))
+
+        category = self.data['category']
+        print(category)
+        if category not in Categories:
+            raise ConfigurationException('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))

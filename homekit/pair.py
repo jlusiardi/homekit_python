@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     if os.path.isfile(args.file) and not args.overwrite:
         print('The pairing data file already exists!')
-        exit(-1)
+        sys.exit(-1)
 
     connection_data = find_device_ip_and_port(args.device)
     if connection_data is None:
@@ -61,4 +61,4 @@ if __name__ == '__main__':
         save_pairing(args.file, pairing)
     except UnavailableError:
         print('The accessory is already paired!')
-        exit(1)
+        sys.exit(1)

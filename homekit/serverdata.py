@@ -149,6 +149,5 @@ class HomeKitServerData:
                     '"{r}" is missing in the config file "{f}"!'.format(r=f, f=self.data_file))
 
         category = self.data['category']
-        print(category)
         if category not in Categories:
             raise ConfigurationException('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))

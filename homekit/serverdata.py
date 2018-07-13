@@ -115,29 +115,3 @@ class HomeKitServerData:
     def increase_configuration_number(self):
         self.data['c#'] += 1
         self._save_data()
-
-
-if __name__ == '__main__':
-    import tempfile
-
-    fp = tempfile.NamedTemporaryFile(mode='w')
-    data = {
-        'host_ip': '12.34.56.78',
-        'port': 4711,
-        'accessory_pin': '123-45-678',
-        'accessory_pairing_id': '12:34:56:78:90:AB',
-        'name': 'test007',
-        'unsuccessful_tries': 0
-    }
-    json.dump(data, fp)
-    fp.flush()
-
-    print(fp.name)
-
-    hksd = HomeKitServerData(fp.name)
-    print(hksd.accessory_pairing_id_bytes)
-    pk = bytes([0x12, 0x34])
-    sk = bytes([0x56, 0x78])
-    hksd.set_accessory_keys(pk, sk)
-    assert hksd.accessory_ltpk == pk
-    assert hksd.accessory_ltsk == sk

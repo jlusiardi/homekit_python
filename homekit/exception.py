@@ -98,3 +98,11 @@ class ConfigurationException(Exception):
     """
     def __init__(self, message):
         Exception.__init__(self, message)
+
+
+class FormatException(Exception):
+    """
+    Used if a value is not in the proper format or cannot be converted.
+    """
+    def __init__(self, message):
+        Exception.__init__(self, message)

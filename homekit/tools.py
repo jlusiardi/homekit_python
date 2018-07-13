@@ -16,10 +16,17 @@
 
 import json
 import sys
+import base64
+import binascii
 
 from homekit.http_client import HomeKitHTTPConnection
 from homekit.zeroconf_ import find_device_ip_and_port
 from homekit.protocol import get_session_keys
+from homekit.model.characteristics import CharacteristicFormats
+from distutils.util import strtobool
+from homekit.exception import FormatException
+from homekit.tlv import TlvParseException
+from homekit import TLV
 
 
 def load_pairing(file: str) -> dict:
@@ -97,3 +104,43 @@ def create_session(file):
         c2a_key, a2c_key = get_session_keys(conn, pairing_data)
 
     return conn, c2a_key, a2c_key
+
+
+def check_convert_value(val, target_format):
+    """
+    Checks if the given value is of the given format or is convertible into the format. If the value is not convertible,
+    a FormatException is thrown.
+    :param val: the original value
+    :param target_format: the target type of the conversion
+    :raises FormatException: if the value is not of the given format or cannot be converted.
+    :return: the converted value
+    """
+    if target_format == CharacteristicFormats.bool:
+        try:
+            val = strtobool(val)
+        except ValueError:
+            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_format))
+    if target_format in [CharacteristicFormats.uint64, CharacteristicFormats.uint32,
+                         CharacteristicFormats.uint16, CharacteristicFormats.uint8,
+                         CharacteristicFormats.int]:
+        try:
+            val = int(val)
+        except ValueError:
+            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_format))
+    if target_format == CharacteristicFormats.float:
+        try:
+            val = float(val)
+        except ValueError:
+            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_format))
+    if target_format == CharacteristicFormats.data:
+        try:
+            base64.decodebytes(val.encode())
+        except binascii.Error:
+            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_format))
+    if target_format == CharacteristicFormats.tlv8:
+        try:
+            tmp_bytes = base64.decodebytes(val.encode())
+            TLV.decode_bytes(tmp_bytes)
+        except (binascii.Error, TlvParseException):
+            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_format))
+    return val

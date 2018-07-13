@@ -19,13 +19,10 @@
 import json
 import argparse
 import sys
-from distutils.util import strtobool
-import base64
-import binascii
 
 from homekit import SecureHttp, load_pairing, HapStatusCodes, save_pairing, create_session
-from homekit.model.characteristics import CharacteristicFormats
-from homekit.tlv import TLV, TlvParseException
+from homekit.tools import check_convert_value
+from homekit.exception import FormatException
 
 
 def setup_args_parser():
@@ -35,7 +32,12 @@ def setup_args_parser():
     parser.add_argument('-c', action='append', required=False, dest='characteristics', nargs=2,
                         help='Use aid.iid value to change the value. Repeat to change multiple characteristics.')
 
-    return parser
+    tmp_args = parser.parse_args()
+
+    if 'characteristics' not in tmp_args or not tmp_args.characteristics:
+        parser.print_help()
+        sys.exit(-1)
+    return tmp_args
 
 
 def get_format(pairing_data, aid, iid):
@@ -50,12 +52,8 @@ def get_format(pairing_data, aid, iid):
 
 
 if __name__ == '__main__':
-    parser = setup_args_parser()
-    args = parser.parse_args()
+    args = setup_args_parser()
 
-    if 'characteristics' not in args or not args.characteristics:
-        parser.print_help()
-        sys.exit(-1)
 
     conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
     sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
@@ -87,39 +85,11 @@ if __name__ == '__main__':
             sys.exit(-1)
 
         # reformat the value to fit the required format
-        if characteristic_type == CharacteristicFormats.bool:
-            try:
-                value = strtobool(value)
-            except ValueError:
-                print('{v} is no valid boolean!'.format(v=value))
-                sys.exit(-1)
-        if characteristic_type in [CharacteristicFormats.uint64, CharacteristicFormats.uint32,
-                                   CharacteristicFormats.uint16, CharacteristicFormats.uint8,
-                                   CharacteristicFormats.int]:
-            try:
-                value = int(value)
-            except ValueError:
-                print('{v} is no valid int!'.format(v=value))
-                sys.exit(-1)
-        if characteristic_type == CharacteristicFormats.float:
-            try:
-                value = float(value)
-            except ValueError:
-                print('{v} is no valid float!'.format(v=value))
-                sys.exit(-1)
-        if characteristic_type == CharacteristicFormats.data:
-            try:
-                base64.decodebytes(value.encode())
-            except binascii.Error:
-                print('{v} is no valid base64 encoded data!'.format(v=value))
-                sys.exit(-1)
-        if characteristic_type == CharacteristicFormats.tlv8:
-            try:
-                b = base64.decodebytes(value.encode())
-                tlv = TLV.decode_bytes(b)
-            except (binascii.Error, TlvParseException):
-                print('{v} is no valid base64 encoded tlv!'.format(v=value))
-                sys.exit(-1)
+        try:
+            value = check_convert_value(value, characteristic_type)
+        except FormatException as e:
+            print(e)
+            sys.exit(-1)
 
         # Nothing to do for CharacteristicFormats.string!
 

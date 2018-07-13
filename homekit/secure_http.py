@@ -29,11 +29,25 @@ class SecureHttp:
     """
 
     class Wrapper:
-        def __init__(self, data):
+        def __init__(self, data, parent):
             self.data = data
+            self.parent = parent
 
         def makefile(self, arg):
-            return io.BytesIO(self.data)
+            self.fp = io.BytesIO(self.data)
+            # Devices may send headers and body separately. We're not able
+            # to detect that easily ourselves, so we rely on the higher layers
+            # in Python's HTTP implementation to ask for more data if needed.
+            # That means we need our own read() implementation in order to
+            # trigger reading of more data from the remote server if necessary.
+            self.fp.read = self.read
+            return self.fp
+
+        def read(self, amt):
+            pos = self.fp.tell()
+            if pos >= len(self.data):
+                self.data += self.parent._read_response()
+            return self.data[pos:pos+amt]
 
     class HTTPResponseWrapper:
         def __init__(self, data):
@@ -109,7 +123,7 @@ class SecureHttp:
         #   in chunked mode...
         #
         if result.startswith(b'HTTP/1.1'):
-            r = http.client.HTTPResponse(SecureHttp.Wrapper(result))
+            r = http.client.HTTPResponse(SecureHttp.Wrapper(result, self))
             r.begin()
             return r
         else:

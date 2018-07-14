@@ -20,9 +20,8 @@ import homekit.model.characteristics
 import homekit.model.services
 import homekit.statuscodes
 import homekit.zeroconf_
-from homekit.http_client import HomeKitHTTPConnection
+from homekit.http_impl import HomeKitHTTPConnection, HttpStatusCodes, HttpContentTypes, SecureHttp
 from homekit.protocol import perform_pair_setup, get_session_keys
-from homekit.secure_http import SecureHttp
 from homekit.server import HomeKitServer, HomeKitServerData
 from homekit.tlv import TLV
 from homekit.tools import load_pairing, save_pairing, create_session
@@ -31,8 +30,6 @@ from homekit.tools import load_pairing, save_pairing, create_session
 FeatureFlags = homekit.feature_flags.FeatureFlags
 Categories = homekit.model.categories.Categories
 HapStatusCodes = homekit.statuscodes.HapStatusCodes
-HttpStatusCodes = homekit.statuscodes.HttpStatusCodes
-HttpContentTypes = homekit.statuscodes.HttpContentTypes
 CharacteristicsTypes = homekit.model.characteristics.CharacteristicsTypes
 ServicesTypes = homekit.model.services.ServicesTypes
 

@@ -29,7 +29,8 @@ import py25519
 
 from homekit.crypto import chacha20_aead_encrypt, chacha20_aead_decrypt, SrpServer
 from homekit.exception import HomeKitStatusException
-from homekit.statuscodes import HttpStatusCodes, HapStatusCodes
+from homekit.statuscodes import HapStatusCodes
+from homekit.http_impl import HttpStatusCodes
 from homekit.tlv import TLV
 
 

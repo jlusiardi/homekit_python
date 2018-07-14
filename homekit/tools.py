@@ -19,7 +19,7 @@ import sys
 import base64
 import binascii
 
-from homekit.http_client import HomeKitHTTPConnection
+from homekit.http_impl.http_client import HomeKitHTTPConnection
 from homekit.zeroconf_ import find_device_ip_and_port
 from homekit.protocol import get_session_keys
 from homekit.model.characteristics import CharacteristicFormats

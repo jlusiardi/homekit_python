@@ -71,9 +71,11 @@ if __name__ == '__main__':
     try:
         while True:
             r = sec_http.handle_event_response()
-            r = json.loads(r)
-            for c in r['characteristics']:
-                print('event for {aid}.{iid}: {event}'.format(aid=c['aid'], iid=c['iid'], event=c['value']))
+            body = r.read().decode()
+            if len(body) > 0:
+                r = json.loads(body)
+                for c in r['characteristics']:
+                    print('event for {aid}.{iid}: {event}'.format(aid=c['aid'], iid=c['iid'], event=c['value']))
     except KeyboardInterrupt:
         pass
 

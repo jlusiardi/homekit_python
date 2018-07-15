@@ -37,3 +37,24 @@ class TestTLV(unittest.TestCase):
         dict_2_2 = TLV.decode_bytearray(bytearray_2)
         self.assertEqual(dict_2_1, dict_2_2)
 
+    def test_long_values_decode_bytearray_to_list(self):
+        example = bytearray.fromhex('060103' + ('09FF' + 255 * '61' + '092D' + 45 * '61') + '010568656c6c6f')
+        expected = [
+            [6, bytearray(b'\x03')],
+            [9, bytearray(300 * b'a')],
+            [1, bytearray(b'hello')]
+        ]
+
+        data = TLV.decode_bytearray_to_list(example)
+        self.assertListEqual(data, expected)
+
+    def test_long_values_decode_bytearray(self):
+        example = bytearray.fromhex('060103' + ('09FF' + 255 * '61' + '092D' + 45 * '61') + '010568656c6c6f')
+        expected = {
+            6: bytearray(b'\x03'),
+            9: bytearray(300 * b'a'),
+            1: bytearray(b'hello')
+        }
+
+        data = TLV.decode_bytearray(example)
+        self.assertDictEqual(data, expected)

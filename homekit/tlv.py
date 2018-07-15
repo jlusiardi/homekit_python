@@ -63,9 +63,6 @@ class TLV:
     kTLVError_Unavailable = bytearray(b'\x06')
     kTLVError_Busy = bytearray(b'\x07')
 
-    def __init__(self):
-        pass
-
     @staticmethod
     def decode_bytes(bs) -> dict:
         return TLV.decode_bytearray(bytearray(bs))
@@ -107,7 +104,10 @@ class TLV:
                 raise TlvParseException('Not enough data for length {}'.format(length))
             tail = tail[length:]
 
-            result.append((key, value))
+            if len(result) > 0 and result[-1][0] == key:
+                result[-1][1] += value
+            else:
+                result.append([key, value])
         return result
 
     @staticmethod

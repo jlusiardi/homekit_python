@@ -57,6 +57,15 @@ E0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF'''), 16))
         self.username = None
         self.password = None
 
+    @staticmethod
+    def generate_private_key():
+        """
+        Static function to generate a 16 byte random key.
+
+        :return: the key as gmpy2 multi-precision integer
+        """
+        return gmpy2.mpz(int(binascii.hexlify(crypt.mksalt(crypt.METHOD_SHA512)[3:].encode()), 16))
+
     def _calculate_k(self) -> gmpy2.mpz:
         # calculate k (see https://tools.ietf.org/html/rfc5054#section-2.5.3)
         hash_instance = self.h()
@@ -118,7 +127,7 @@ class SrpClient(Srp):
         self.username = username
         self.password = password
         self.salt = None
-        self.a = gmpy2.mpz(int(binascii.hexlify(crypt.mksalt(crypt.METHOD_SHA512)[3:].encode()), 16))
+        self.a = self.generate_private_key()
         self.A = pow(self.g, self.a, self.n)
         self.B = None
 
@@ -201,17 +210,15 @@ class SrpServer(Srp):
         self.salt = SrpServer._create_salt()
         self.password = password
         self.verifier = self._get_verifier()
-        salt = crypt.mksalt(crypt.METHOD_SHA256)[3:].encode()
-        salt_b = binascii.hexlify(salt)
-        self.b = gmpy2.mpz(int(salt_b, 16))
+        self.b = self.generate_private_key()
         k = self._calculate_k()
         g_b = pow(self.g, self.b, self.n)
         self.B = (k * self.verifier + g_b) % self.n
-
         self.A = None
 
     @staticmethod
     def _create_salt() -> gmpy2.mpz:
+        # generate random salt
         salt = crypt.mksalt(crypt.METHOD_SHA512)[3:]
         salt_b = salt.encode()
         salt_hex = binascii.hexlify(salt_b)

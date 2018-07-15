@@ -19,6 +19,7 @@
 import os.path
 import logging
 import argparse
+import sys
 
 from homekit import HomeKitServer, HomeKitServerData
 from homekit.exception import ConfigurationException
@@ -54,7 +55,7 @@ if __name__ == '__main__':
         HomeKitServerData(config_file).check()
     except ConfigurationException as e:
         logger.error('Error in config file %s: %s', config_file, e)
-        exit()
+        sys.exit(-1)
 
     try:
         httpd = HomeKitServer(config_file, logger)
@@ -72,6 +73,8 @@ if __name__ == '__main__':
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
+
+    # unpublish the device and shut down
     logger.info('unpublish device')
     httpd.unpublish_device()
     httpd.shutdown()

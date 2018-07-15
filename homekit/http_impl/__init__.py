@@ -52,7 +52,7 @@ class _HttpStatusCodes:
         if item in self._codes:
             return self._codes[item]
 
-        raise KeyError('Item {item} not found'.format_map(item=item))
+        raise KeyError('Item {item} not found'.format(item=item))
 
 
 HttpStatusCodes = _HttpStatusCodes()

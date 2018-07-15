@@ -21,6 +21,11 @@ from homekit.crypto.chacha20poly1305 import *
 
 class TestChacha20poly1305(unittest.TestCase):
 
+    def test_pad16_does_not_pad_multiples_of_16(self):
+        input_data = b'1234567890ABCDEF'
+        pad = pad16(input_data)
+        self.assertEqual(pad, bytearray(b''))
+
     def test_example2_1_1(self):
         # Test aus 2.1.1
         s = [0x11111111, 0, 0, 0,

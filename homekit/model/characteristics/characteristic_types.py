@@ -17,7 +17,7 @@
 
 class _CharacteristicsTypes(object):
     """
-    This data is taken from Table 12-3 Accessory Categories on page 254. Values above 19 are reserved.
+    Data from chapter 8 of the specification (page 144ff)
     """
     ACCESSORY_PROPERTIES = 'A6'
     ACTIVE = 'B0'
@@ -127,6 +127,7 @@ class _CharacteristicsTypes(object):
     ZOOM_OPTICAL = '11C'
 
     def __init__(self):
+        # the HAP Base UUID from chapter 5.6.1 page 72
         self.baseUUID = '-0000-1000-8000-0026BB765291'
         self._characteristics = {
             '1': 'public.hap.characteristic.administrator-only-access',
@@ -246,25 +247,42 @@ class _CharacteristicsTypes(object):
         if item in self._characteristics_rev:
             return self._characteristics_rev[item]
 
-        # raise KeyError('Item {item} not found'.format_map(item=item))
-        return 'Unknown Characteristic {i}?'.format(i=item)
+        # https://docs.python.org/3.5/reference/datamodel.html#object.__getitem__ say, KeyError should be raised
+        raise KeyError('Unknown Characteristic {i}?'.format(i=item))
 
     def get_short(self, item: str):
+        """
+        Returns the short textual type name. Short means the 'public.hap.characteristic.' is removed.
+
+        :param item: either a full or a short UUID.
+        :return: the shortened characteristic type name or 'Unknown Characteristic $INPUT'
+        """
         orig_item = item
         if item.endswith(self.baseUUID):
             item = item.split('-', 1)[0]
             item = item.lstrip('0')
 
         if item in self._characteristics:
-            return self._characteristics[item].split('.')[-1]
+            return self._characteristics[item].split('.', 3)[3]
 
-        return 'Unknown Characteristic {i}?'.format(i=orig_item)
+        return 'Unknown Characteristic {i}'.format(i=orig_item)
 
     def get_uuid(self, item_name):
+        """
+        Returns the full UUID for either a shorted UUID or textual characteristic type name. For information on full and
+        short UUID consult chapter 5.6.1 page 72 of the specification.
+
+        :param item_name: either the type name or the short UUID.
+        :return: the full UUID
+        :raises KeyError: if the input is neither a short UUID nor a type name. Specific error is given in the message.
+        """
+        short = None
         if item_name in self._characteristics_rev:
             short = self._characteristics_rev[item_name]
         if item_name in self._characteristics:
             short = item_name
+        if short is None:
+            raise KeyError('No UUID found for Item {item} found'.format(item=item_name))
         medium = '0' * (8 - len(short)) + short
         long = medium + self.baseUUID
         return long

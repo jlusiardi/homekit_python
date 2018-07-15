@@ -46,3 +46,4 @@ class TestSrp(unittest.TestCase):
 
         # step M5
         self.assertTrue(client.verify_servers_proof(servers_proof))
+

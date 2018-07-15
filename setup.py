@@ -18,7 +18,7 @@ from distutils.core import setup
 
 setup(
     name='homekit',
-    packages=['homekit', 'homekit.model', 'homekit.model.services', 'homekit.model.characteristics'],
+    packages=['homekit', 'homekit.crypto', 'homekit.http_impl', 'homekit.model', 'homekit.model.services', 'homekit.model.characteristics'],
     version='0.9',
     description='Python code to interface HomeKit Accessories and Controllers',
     author='Joachim Lusiardi',

@@ -30,7 +30,7 @@ class _FeatureFlags(object):
         if item in self._data:
             return self._data[item]
 
-        raise KeyError('Item {item} not found'.format_map(item=item))
+        raise KeyError('Item {item} not found'.format(item=item))
 
 
 FeatureFlags = _FeatureFlags()

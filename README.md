@@ -1,4 +1,4 @@
-# HomeKit Python
+# HomeKit Python <img src='https://api.travis-ci.org/jlusiardi/homekit_python.svg' />
 
 With this code it is possible to implement either a HomeKit Accessory or simulate a
 HomeKit Controller.

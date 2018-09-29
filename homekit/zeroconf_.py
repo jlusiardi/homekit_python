@@ -46,7 +46,10 @@ def discover_homekit_devices():
     for info in listener.get_data():
         print('Name: {name}'.format(name=info.name))
         print('Url: http://{ip}:{port}'.format(ip=inet_ntoa(info.address), port=info.port))
-        print('Configuration number (c#): {conf}'.format(conf=info.properties[b'c#'].decode()))
+       	if b'c#' in info.properties:
+            print('Configuration number (c#): {conf}'.format(conf=info.properties[b'c#'].decode()))
+        else:
+            print('Configuration number not set')
         flags = int(info.properties[b'ff'].decode())
         print('Feature Flags (ff): {f} (Flag: {flags})'.format(f=FeatureFlags[flags], flags=flags))
         print('Device ID (id): {id}'.format(id=info.properties[b'id'].decode()))
@@ -55,7 +58,10 @@ def discover_homekit_devices():
             print('Protocol Version (pv): {pv}'.format(pv=info.properties[b'pv'].decode()))
         else:
             print('Protocol Version (pv): 1.0 (default, not set in TXT record)')
-        print('State Number (s#): {sn}'.format(sn=info.properties[b's#'].decode()))
+        if b's#' in info.properties:
+            print('State Number (s#): {sn}'.format(sn=info.properties[b's#'].decode()))
+        else:
+            print('State Number not set')
         print('Status Flags (sf): {sf}'.format(sf=info.properties[b'sf'].decode()))
         category = int(info.properties[b'ci'].decode())
         print('Category Identifier (ci): {c} (Id: {ci})'.format(c=Categories[category], ci=category))

@@ -46,7 +46,7 @@ def discover_homekit_devices():
     for info in listener.get_data():
         print('Name: {name}'.format(name=info.name))
         print('Url: http://{ip}:{port}'.format(ip=inet_ntoa(info.address), port=info.port))
-       	if b'c#' in info.properties:
+        if b'c#' in info.properties:
             print('Configuration number (c#): {conf}'.format(conf=info.properties[b'c#'].decode()))
         else:
             print('Configuration number not set')

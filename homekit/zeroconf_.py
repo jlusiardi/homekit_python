@@ -38,6 +38,32 @@ class CollectingListener(object):
         return self.data
 
 
+def get_from_properties(props, key, default=None, case_sensitive=True):
+    """
+    This function looks up the key in the given zeroconf service information properties. Those are a dict between bytes.
+    The key to lookup is therefore also of type bytes.
+
+    :param props: a dict from bytes to bytes.
+    :param key: bytes as key
+    :param default: the value to return, if the key was not found. Will be converted to str.
+    :param case_sensitive: If this is False, try to lookup keys also when they only match ignoring their case
+    :return: the value out of the dict as string (after decoding), the given default if the key was not not found but
+             the default was given or None
+    """
+    if case_sensitive:
+        tmp_props = props
+        tmp_key = key
+    else:
+        tmp_props = {k.lower(): props[k] for k in props}
+        tmp_key = key.lower()
+
+    if tmp_key in tmp_props:
+        return tmp_props[tmp_key].decode()
+    else:
+        if default:
+            return str(default)
+
+
 def discover_homekit_devices():
     zeroconf = Zeroconf()
     listener = CollectingListener()
@@ -46,19 +72,32 @@ def discover_homekit_devices():
     for info in listener.get_data():
         print('Name: {name}'.format(name=info.name))
         print('Url: http://{ip}:{port}'.format(ip=inet_ntoa(info.address), port=info.port))
-        print('Configuration number (c#): {conf}'.format(conf=info.properties[b'c#'].decode()))
-        flags = int(info.properties[b'ff'].decode())
+
+        props = info.properties
+
+        conf_number = get_from_properties(props, b'c#', case_sensitive=False)
+        print('Configuration number (c#): {conf}'.format(conf=conf_number))
+
+        flags = int(get_from_properties(props, b'ff', case_sensitive=False))
         print('Feature Flags (ff): {f} (Flag: {flags})'.format(f=FeatureFlags[flags], flags=flags))
-        print('Device ID (id): {id}'.format(id=info.properties[b'id'].decode()))
-        print('Model Name (md): {md}'.format(md=info.properties[b'md'].decode()))
-        if b'pv' in info.properties:
-            print('Protocol Version (pv): {pv}'.format(pv=info.properties[b'pv'].decode()))
-        else:
-            print('Protocol Version (pv): 1.0 (default, not set in TXT record)')
-        print('State Number (s#): {sn}'.format(sn=info.properties[b's#'].decode()))
-        print('Status Flags (sf): {sf}'.format(sf=info.properties[b'sf'].decode()))
-        category = int(info.properties[b'ci'].decode())
-        print('Category Identifier (ci): {c} (Id: {ci})'.format(c=Categories[category], ci=category))
+
+        id = get_from_properties(props, b'id', case_sensitive=False)
+        print('Device ID (id): {id}'.format(id=id))
+
+        md = get_from_properties(props, b'md', case_sensitive=False)
+        print('Model Name (md): {md}'.format(md=md))
+
+        pv = get_from_properties(props, b'pv', case_sensitive=False, default='1.0 (default, not set in TXT record)')
+        print('Protocol Version (pv): {pv}'.format(pv=pv))
+
+        state_number = get_from_properties(props, b's#', case_sensitive=False)
+        print('State Number (s#): {sn}'.format(sn=state_number))
+
+        sf = get_from_properties(props, b'sf', case_sensitive=False)
+        print('Status Flags (sf): {sf}'.format(sf=sf))
+
+        ci = get_from_properties(props, b'ci', case_sensitive=False)
+        print('Category Identifier (ci): {c} (Id: {ci})'.format(c=Categories[int(ci)], ci=ci))
         print()
 
     zeroconf.close()

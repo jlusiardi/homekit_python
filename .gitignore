@@ -1,3 +1,6 @@
+.homekit
+demoserver*.py
+.idea
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -107,3 +110,4 @@ ENV/
 /.idea/vcs.xml
 /tmp
 /.idea/homekit_python.iml
+*.json

@@ -15,7 +15,7 @@
 #
 
 from homekit.model import get_id
-from homekit.model.characteristics.on import OnCharacteristicMixin
+from homekit.model.characteristics import OnCharacteristicMixin
 from homekit.model.services import ServicesTypes, AbstractService
 
 

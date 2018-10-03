@@ -111,3 +111,4 @@ ENV/
 /tmp
 /.idea/homekit_python.iml
 *.json
+MANIFEST

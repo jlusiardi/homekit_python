@@ -27,12 +27,12 @@ class AccessoryInformationService(AbstractService):
 
     def __init__(self, name, manufacturer, model, serialnumber, firmwarerevision):
         AbstractService.__init__(self, ServicesTypes.get_uuid('public.hap.service.accessory-information'), get_id())
-        self.characteristics.append(IdentifyCharacteristic(get_id()))
-        self.characteristics.append(ManufacturerCharacteristic(get_id(), manufacturer))
-        self.characteristics.append(ModelCharacteristic(get_id(), model))
-        self.characteristics.append(NameCharacteristic(get_id(), name))
-        self.characteristics.append(SerialNumberCharacteristic(get_id(), serialnumber))
-        self.characteristics.append(FirmwareRevisionCharacteristic(get_id(), firmwarerevision))
+        self.append_characteristic(IdentifyCharacteristic(get_id()))
+        self.append_characteristic(ManufacturerCharacteristic(get_id(), manufacturer))
+        self.append_characteristic(ModelCharacteristic(get_id(), model))
+        self.append_characteristic(NameCharacteristic(get_id(), name))
+        self.append_characteristic(SerialNumberCharacteristic(get_id(), serialnumber))
+        self.append_characteristic(FirmwareRevisionCharacteristic(get_id(), firmwarerevision))
 
     def get_name(self):
         for characteristic in self.characteristics:

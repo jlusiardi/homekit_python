@@ -19,6 +19,7 @@ from homekit.model.characteristics.characteristic_units import CharacteristicUni
 from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
 
 from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic
+from homekit.model.characteristics.battery_level import BatteryLevelCharacteristic, BatteryLevelCharacteristicMixin
 from homekit.model.characteristics.brightness import BrightnessCharacteristicMixin, BrightnessCharacteristic
 from homekit.model.characteristics.current_heating_cooling_state import CurrentHeatingCoolingStateCharacteristicMixin, \
     CurrentHeatingCoolingStateCharacteristic
@@ -41,3 +42,4 @@ from homekit.model.characteristics.target_temperature import TargetTemperatureCh
     TargetTemperatureCharacteristic
 from homekit.model.characteristics.temperature_display_unit import TemperatureDisplayUnitsMixin, \
     TemperatureDisplayUnitCharacteristic
+from homekit.model.characteristics.volume import VolumeCharacteristic, VolumeCharacteristicMixin

@@ -21,8 +21,8 @@ from decimal import Decimal
 
 from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions
-from homekit.statuscodes import HapStatusCodes
-from homekit.exception import HomeKitStatusException
+from homekit.protocol.statuscodes import HapStatusCodes
+from homekit.exceptions import CharacteristicPermissionError, FormatError
 
 
 class AbstractCharacteristic(ToDictMixin):
@@ -59,8 +59,13 @@ class AbstractCharacteristic(ToDictMixin):
         self.ev = new_val
 
     def set_value(self, new_val):
+        """
+        This function sets the value of this characteristic. Permissions are checked first
+        :param new_val:
+        :raises CharacteristicPermissionError: if the characteristic cannot be written
+        """
         if CharacteristicPermissions.paired_write not in self.perms:
-            raise HomeKitStatusException(HapStatusCodes.CANT_READ_WRITE_ONLY)
+            raise CharacteristicPermissionError(HapStatusCodes.CANT_WRITE_READ_ONLY)
         try:
             # convert input to python int if it is any kind of int
             if self.format in [CharacteristicFormats.uint64, CharacteristicFormats.uint32, CharacteristicFormats.uint16,
@@ -73,14 +78,14 @@ class AbstractCharacteristic(ToDictMixin):
             if self.format == CharacteristicFormats.bool:
                 new_val = strtobool(str(new_val))
         except ValueError:
-            raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+            raise FormatError(HapStatusCodes.INVALID_VALUE)
 
         if self.format in [CharacteristicFormats.uint64, CharacteristicFormats.uint32, CharacteristicFormats.uint16,
                            CharacteristicFormats.uint8, CharacteristicFormats.int, CharacteristicFormats.float]:
             if self.minValue is not None and new_val < self.minValue:
-                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+                raise FormatError(HapStatusCodes.INVALID_VALUE)
             if self.maxValue is not None and self.maxValue < new_val:
-                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+                raise FormatError(HapStatusCodes.INVALID_VALUE)
             if self.minStep is not None:
                 tmp = new_val
 
@@ -90,34 +95,79 @@ class AbstractCharacteristic(ToDictMixin):
 
                 # use Decimal to calculate the module because it has not the precision problem as float...
                 if Decimal(str(tmp)) % Decimal(str(self.minStep)) != 0:
-                    raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+                    raise FormatError(HapStatusCodes.INVALID_VALUE)
             if self.valid_values is not None and new_val not in self.valid_values:
-                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+                raise FormatError(HapStatusCodes.INVALID_VALUE)
             if self.valid_values_range is not None and not (
                     self.valid_values_range[0] <= new_val <= self.valid_values_range[1]):
-                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+                raise FormatError(HapStatusCodes.INVALID_VALUE)
 
         if self.format == CharacteristicFormats.data:
             try:
                 byte_data = base64.decodebytes(new_val.encode())
             except binascii.Error:
-                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+                raise FormatError(HapStatusCodes.INVALID_VALUE)
             except Exception:
-                raise HomeKitStatusException(HapStatusCodes.OUT_OF_RESOURCES)
+                raise FormatError(HapStatusCodes.OUT_OF_RESOURCES)
             if self.maxDataLen < len(byte_data):
-                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+                raise FormatError(HapStatusCodes.INVALID_VALUE)
 
         if self.format == CharacteristicFormats.string:
             if len(new_val) > self.maxLen:
-                raise HomeKitStatusException(HapStatusCodes.INVALID_VALUE)
+                raise FormatError(HapStatusCodes.INVALID_VALUE)
 
         self.value = new_val
         if self._set_value_callback:
             self._set_value_callback(new_val)
 
     def get_value(self):
+        """
+        This method returns the value of this characteristic. Permissions are checked first, then either the callback
+        for getting the values is executed (execution time may vary) or the value is directly returned if not callback
+        is given.
+        :raises CharacteristicPermissionError: if the characteristic cannot be read
+        :return: the value of the characteristic
+        """
         if CharacteristicPermissions.paired_read not in self.perms:
-            raise HomeKitStatusException(HapStatusCodes.CANT_READ_WRITE_ONLY)
+            raise CharacteristicPermissionError(HapStatusCodes.CANT_READ_WRITE_ONLY)
         if self._get_value_callback:
             return self._get_value_callback()
         return self.value
+
+    def get_meta(self):
+        """
+        This method returns a dict of meta information for this characteristic. This includes at least the format of
+        the characteristic but may contain any other specific attribute.
+        :return: a dict
+        """
+        tmp = {'format': self.format}
+        # TODO implement handling of already defined maxLen (upto 256!)
+        if self.format == CharacteristicFormats.string:
+            tmp['maxLen'] = 64
+        # TODO implement handling of other fields! eg maxDataLen
+        return tmp
+
+    def to_accessory_and_service_list(self):
+        d = {
+            'type': self.type,
+            'iid': self.iid,
+            'value': self.value,
+            'perms': self.perms,
+            'format': self.format,
+        }
+        if self.ev:
+            d['ev'] = self.ev
+        if self.description:
+            d['description'] = self.description
+        if self.unit:
+            d['unit'] = self.unit
+        if self.minValue:
+            d['minValue'] = self.minValue
+        if self.maxValue:
+            d['maxValue'] = self.maxValue
+        if self.minStep:
+            d['minStep'] = self.minStep
+        if self.maxLen and self.format in [CharacteristicFormats.string]:
+            d['maxLen'] = self.maxLen
+
+        return d

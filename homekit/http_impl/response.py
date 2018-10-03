@@ -44,7 +44,7 @@ class HttpResponse(object):
                 # parse status line
                 line = line.split(b' ', 2)
                 if len(line) != 3:
-                    raise HttpException()
+                    raise HttpException('Malformed status line.')
                 self.version = line[0].decode()
                 self.code = int(line[1])
                 self.reason = line[2].decode()
@@ -84,12 +84,8 @@ class HttpResponse(object):
                 if self._content_length > -1:
                     self.body += self._raw_response
                     self._raw_response = bytearray()
-
-            elif self._state == HttpResponse.STATE_BODY:
-                raise HttpException
-
             else:
-                print('unknown state')
+                raise HttpException('Unknown parser state')
 
             pos = self._raw_response.find(b'\r\n')
 
@@ -104,7 +100,7 @@ class HttpResponse(object):
         """
         return self.body
 
-    def is_read_completly(self):
+    def is_read_completely(self):
         if self._is_chunked:
             return self._had_empty_chunk
         if self.code == 204:
@@ -113,7 +109,7 @@ class HttpResponse(object):
             return len(self.body) == self._content_length
         if self._state == HttpResponse.STATE_PRE_STATUS or self._state == HttpResponse.STATE_HEADERS:
             return False
-        raise HttpException()
+        raise HttpException('Could not determine if HTTP data was read completely')
 
     def get_http_name(self):
         """

@@ -19,6 +19,7 @@ class TLV:
     """
     as described in Appendix 12 (page 251)
     """
+    DEBUG = False
 
     # Steps
     M1 = bytearray(b'\x01')
@@ -53,6 +54,7 @@ class TLV:
     kTLVType_FragmentData = 12
     kTLVType_FragmentLast = 13
     kTLVType_Separator = 255
+    kTLVType_Separator_Pair = [255, bytearray(b'')]
 
     # Errors (see table 4-5 page 60)
     kTLVError_Unknown = bytearray(b'\x01')
@@ -64,35 +66,11 @@ class TLV:
     kTLVError_Busy = bytearray(b'\x07')
 
     @staticmethod
-    def decode_bytes(bs) -> dict:
+    def decode_bytes(bs) -> list:
         return TLV.decode_bytearray(bytearray(bs))
 
     @staticmethod
-    def decode_bytearray(ba: bytearray) -> dict:
-        result = {}
-        # do not influence caller!
-        tail = ba.copy()
-        while len(tail) > 0:
-            key = tail.pop(0)
-            length = tail.pop(0)
-            value = tail[:length]
-            if length != len(value):
-                raise TlvParseException('Not enough data for length {}'.format(length))
-            tail = tail[length:]
-
-            if key not in result:
-                result[key] = value
-            else:
-                for b in value:
-                    result[key].append(b)
-        return result
-
-    @staticmethod
-    def decode_bytes_to_list(bs) -> list:
-        return TLV.decode_bytearray_to_list(bytearray(bs))
-
-    @staticmethod
-    def decode_bytearray_to_list(ba: bytearray) -> list:
+    def decode_bytearray(ba: bytearray) -> list:
         result = []
         # do not influence caller!
         tail = ba.copy()
@@ -108,6 +86,8 @@ class TLV:
                 result[-1][1] += value
             else:
                 result.append([key, value])
+        if TLV.DEBUG:
+            print('receiving ' + TLV.to_string(result))
         return result
 
     @staticmethod
@@ -123,48 +103,15 @@ class TLV:
         return valid
 
     @staticmethod
-    def encode_dict(d: dict) -> bytearray:
-        result = bytearray()
-        for key in d:
-            if not TLV.validate_key(key):
-                raise ValueError('Invalid key')
-
-            value = d[key]
-
-            # handle separators properly
-            if key == TLV.kTLVType_Separator:
-                if len(value) == 0:
-                    result.append(key)
-                    result.append(0)
-                else:
-                    raise ValueError('Separator must not have data')
-
-            while len(value) > 0:
-                result.append(key)
-                if len(value) > 255:
-                    length = 255
-                    result.append(length)
-                    for b in value[:length]:
-                        result.append(b)
-                    value = value[length:]
-                else:
-                    length = len(value)
-                    result.append(length)
-                    for b in value[:length]:
-                        result.append(b)
-                    value = value[length:]
-        return result
-
-    @staticmethod
     def encode_list(d: list) -> bytearray:
+        if TLV.DEBUG:
+            print('sending ' + TLV.to_string(d))
         result = bytearray()
         for p in d:
             (key, value) = p
             if not TLV.validate_key(key):
                 raise ValueError('Invalid key')
 
-            #value = d[key]
-
             # handle separators properly
             if key == TLV.kTLVType_Separator:
                 if len(value) == 0:
@@ -190,12 +137,39 @@ class TLV:
         return result
 
     @staticmethod
-    def to_string(d: dict) -> str:
-        res = '{\n'
-        for k in sorted(d.keys()):
-            res += '  {k}: {v}\n'.format(k=k, v=d[k])
-        res += '}\n'
+    def to_string(d) -> str:
+        if isinstance(d, dict):
+            res = '{\n'
+            for k in d.keys():
+                res += '  {k}: ({l} bytes) {v}\n'.format(k=k, v=d[k], l=len(d[k]))
+            res += '}\n'
+        else:
+            res = '[\n'
+            for k in d:
+                res += '  {k}: ({l} bytes) {v}\n'.format(k=k[0], v=k[1], l=len(k[1]))
+            res += ']\n'
         return res
+
+
+    @staticmethod
+    def reorder(tlv_array, preferred_order):
+        """
+        This function is used to reorder the key value pairs of a TLV list according to a preferred order. If key from
+        the preferred_order list is not found, it is ignored. If a pair's key is not in the preferred order list it is
+        ignored as well.
+
+        It is mostly used, if some accessory does not respect the order mentioned in the specification.
+
+        :param tlv_array: a list of tupels containing key and value of the TLV
+        :param preferred_order: a list of keys describing how the key value pairs should be sorted.
+        :return: a TLV list containing only pairs whose key was in the preferred order list sorted by that order.
+        """
+        tmp = []
+        for key in preferred_order:
+            for item in tlv_array:
+                if item[0] == key:
+                    tmp.append(item)
+        return tmp
 
 
 class TlvParseException(Exception):

@@ -21,3 +21,6 @@ from tests.serverdata_test import TestServerData
 from tests.http_response_test import TestHttpResponse
 from tests.httpStatusCodes_test import TestHttpStatusCodes
 from tests.characteristicsTypes_test import TestCharacteristicsTypes
+from tests.zeroconf_test import TestZeroconf
+from tests.controller_test import TestControllerPaired, TestControllerUnpaired
+

@@ -38,7 +38,9 @@ The demonstration uses this JSON in `~/.homekit/demoserver.json`:
   "accessory_pin": "031-45-154",
   "peers": {},
   "unsuccessful_tries": 0,
-  "c#": 0
+  "c#": 0,
+  "category": "Lightbulb"
+
 }
 ```
 
@@ -82,8 +84,10 @@ This tool will list all available HomeKit IP Accessories within the local networ
 
 Usage:
 ```bash
-python3 -m homekit.discover
+python3 -m homekit.discover [-t ${TIMEOUT}]
 ```
+
+The option `-t` specifies the timeout for the inquiry. This is optional and 10s are the default.
 
 Output:
 ```
@@ -105,11 +109,13 @@ Hints:
 
 ## identify.py
 
+#TODO rework after identify.py was converted to controller
+
 This tool will use the Identify Routine of a HomeKit IP Accessory.
 
 Usage:
 ```bash
-python3 -m homekit.identify -d ${DEVICEID}
+python3 -m homekit.identify -d ${DEVICEID} 
 ```
 
 Output:
@@ -123,7 +129,7 @@ This tool will perform a pairing to a new accessory.
 
 Usage:
 ```bash
-python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -o
+python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -a ${ALIAS} 
 ```
 
 The option `-d` specifies the device id of the accessory to pair. Can be obtained via discovery.
@@ -132,8 +138,8 @@ The option `-p` specifies the HomeKit Setup Code. Can be obtained from the acces
 
 The option `-f` specifies the file that contains the pairing data.
 
-Since the pairing data file is important, the command will exit if the file already exists.
-The option `-o` will therefore overwrite the pairing data file if set.
+The option `-a` specifies the alias for the device.
+
 
 The file with the pairing data will be required to for any additional commands to the accessory.
 
@@ -143,10 +149,12 @@ This tool will perform a query to list all pairings of an accessory.
 
 Usage:
 ```bash
-python3 -m homekit.list_pairings -f ${PAIRINGDATAFILE}
+python3 -m homekit.list_pairings -f ${PAIRINGDATAFILE} -a ${ALIAS} 
 ```
 
 The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device.
 
 This will print information for each controller that is paired with the accessory:
 
@@ -164,12 +172,12 @@ This tool will remove a pairing from an accessory.
 
 Usage:
 ```bash
-python -m homekit.unpair -f ${PAIRINGDATAFILE} -d
+python -m homekit.unpair -f ${PAIRINGDATAFILE} -a ${ALIAS}
 ```
 
 The option `-f` specifies the file that contains the pairing data.
 
-The option `-d` is optional and will remove the pairing data file if set.
+The option `-a` specifies the alias for the device.
 
 ## get_accessories.py
 
@@ -177,10 +185,12 @@ This tool will read the accessory attribute database.
 
 Usage:
 ```bash
-python3 -m homekit.get_accessories -f ${PAIRINGDATAFILE} [-o {json,compact}]
+python3 -m homekit.get_accessories -f ${PAIRINGDATAFILE} -a ${ALIAS} [-o {json,compact}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device.
 
 The option `-o` specifies the format of the output:
  * `json` displays the result as pretty printed JSON
@@ -191,10 +201,12 @@ This tool will read values from one or more characteristics.
 
 Usage:
 ```bash
-python3 -m homekit.get_characteristic -f ${PAIRINGDATAFILE} -c ${Characteristics} [-m] [-p] [-t] [-e]
+python3 -m homekit.get_characteristic -f ${PAIRINGDATAFILE} -a ${ALIAS} -c ${Characteristics} [-m] [-p] [-t] [-e]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device.
 
 The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>`. This 
 option can be repeated to retrieve multiple characteristics with one call. 

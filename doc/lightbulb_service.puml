@@ -1,0 +1,27 @@
+@startuml
+
+!include overview.puml
+
+hide AccessoryServer
+hide Accessory
+hide AccessoryInformationService
+hide GenericService
+hide NameCharacteristic
+hide GenericCharacteristic
+hide n1
+hide n2
+hide homekit.Pairing
+hide homekit.Controller
+hide homekit.unpair
+hide homekit.pair
+hide homekit.list_pairings
+hide homekit.discover
+hide homekit.get_accessories
+hide homekit.get_events
+hide homekit.get_characteristics
+hide homekit.put_characteristics
+hide homekit.get_accessories
+hide exceptions
+
+
+@enduml

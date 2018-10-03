@@ -25,7 +25,7 @@ class TestHttpResponse(unittest.TestCase):
         response = HttpResponse()
         for i in range(0, len(data)):
             response.parse(data[i])
-            if response.is_read_completly():
+            if response.is_read_completely():
                 break
         return response
 

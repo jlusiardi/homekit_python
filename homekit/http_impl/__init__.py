@@ -14,10 +14,13 @@
 # limitations under the License.
 #
 
-from homekit.http_impl.response import HttpException, HttpResponse
-from homekit.http_impl.secure_http import SecureHttp
 from homekit.http_impl.http_client import HomeKitHTTPConnection
-from homekit.http_impl.contentTypes import HttpContentTypes
+from homekit.http_impl.response import HttpResponse
+
+
+class _HttpContentTypes:
+    JSON = 'application/hap+json'
+    TLV = 'application/pairing+tlv8'
 
 
 class _HttpStatusCodes:
@@ -37,14 +40,14 @@ class _HttpStatusCodes:
 
     def __init__(self):
         self._codes = {
-            200: 'OK',
-            204: 'No Content',
-            207: 'Multi-Status',
-            400: 'Bad Request',
-            405: 'Method Not Allowed',
-            429: 'Too Many Requests',
-            470: 'Connection Authorization Required',
-            500: 'Internal Server Error'
+            _HttpStatusCodes.OK: 'OK',
+            _HttpStatusCodes.NO_CONTENT: 'No Content',
+            _HttpStatusCodes.MULTI_STATUS: 'Multi-Status',
+            _HttpStatusCodes.BAD_REQUEST: 'Bad Request',
+            _HttpStatusCodes.METHOD_NOT_ALLOWED: 'Method Not Allowed',
+            _HttpStatusCodes.TOO_MANY_REQUESTS: 'Too Many Requests',
+            _HttpStatusCodes.CONNECTION_AUTHORIZATION_REQUIRED: 'Connection Authorization Required',
+            _HttpStatusCodes.INTERNAL_SERVER_ERROR: 'Internal Server Error'
         }
         self._categories_rev = {self._codes[k]: k for k in self._codes.keys()}
 
@@ -56,3 +59,4 @@ class _HttpStatusCodes:
 
 
 HttpStatusCodes = _HttpStatusCodes()
+HttpContentTypes = _HttpContentTypes

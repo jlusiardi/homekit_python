@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 
 import gatt.gatt_linux
+import uuid
 from argparse import ArgumentParser
+import homekit.protocol.tlv
+import struct
+import logging
+import json
 
 # OpCodes (table 6-7 page 97)
 HAP_CHAR_SIG_READ = 1
@@ -12,29 +17,33 @@ HAP_CHAR_EXEC_WRITE = 5
 HAP_SERVICES_SIG_READ = 6
 
 
-
-ServiceInstanceId = 'e604e95d-a759-4817-87d3-aa005083a0d1'
-HAP_Accessory_Information_Service = '0000003e-0000-1000-8000-0026bb765291'
-HAP_Battery_Service = '00000096-0000-1000-8000-0026bb765291'
-HAP_SERVICE_SIG_CHAR = '000000a5-0000-1000-8000-0026bb765291'
-HAP_BLE_2_0_Protocol_Information_Service = '000000a2-0000-1000-8000-0026bb765291'
-CHAR_VERSION = '00000037-0000-1000-8000-0026bb765291'
-CHAR_SERIAL_NUMBER = '00000030-0000-1000-8000-0026bb765291'
-CHAR_BATTERYY_LEVEL = '00000068-0000-1000-8000-0026bb765291'
-HAP_Contact_Sensor_Service = '00000080-0000-1000-8000-0026bb765291'
-CHAR_NAME = '00000023-0000-1000-8000-0026bb765291'
-HAP_PAIRING_SERVICE='00000055-0000-1000-8000-0026bb765291'
 CharacteristicInstanceID='dc46f0fe-81d2-4616-b5d9-6abdd796939a'
+
+
+# https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v4.x.x/doc/html/group___b_l_e___g_a_t_t___c_p_f___f_o_r_m_a_t_s.html
+characteristic_formats = {
+    0x01: 'bool',
+    0x04: 'uint8',
+    0x08: 'uint32',
+    0x10: 'int32',
+    0x19: 'utf-8',
+    0x1b: 'struct'
+}
+
+# https://www.bluetooth.com/specifications/assigned-numbers/units
+characteristic_units = {
+    0x2700: 'none',
+    0x27ad: 'percentage',
+}
 
 
 def parse_sig_read_response(data, tid):
     # parse header and check stuff
-    print('\t\t\t', 'Checks: ',data[0]==2, data[1] == tid, data[2] == 0)
+    logging.debug('parse sig read response %s', bytes([int(a) for a in data]).hex())
 
     # get body length
     length = int.from_bytes(data[3:5], byteorder='little')
-
-    #print(data[5:7])
+    tlv = homekit.protocol.tlv.TLV.decode_bytes(data[5:])
 
     # chr type
     chr_type = [int(a) for a in data[7:23]]
@@ -47,22 +56,57 @@ def parse_sig_read_response(data, tid):
     svc_type.reverse()
     svc_type = ''.join('%02x' % b for b in svc_type)
 
-    if int(data[45]) == 10:
-        chr_prop_int = int.from_bytes(data[47:49], byteorder='little')
-        chr_prop = [int(a) for a in data[47:49]]
-        chr_prop.reverse()
-        chr_prop = ''.join('%02x' % b for b in chr_prop)
-    else:
-        chr_prop = None
-
+    chr_prop = None
     desc = ''
-    if int(data[49]) == 11:
-        d_length = int(data[50])
-        for i in data[51:51+d_length]:
-            desc += str(i).encode("utf-8").decode("utf-8")
-        print('\t\t\tdesc len ', d_length, desc)
+    format = ''
+    range = None
+    step = None
+    for t in tlv:
+        if t[0] == 0x0A:
+            chr_prop_int = int.from_bytes(t[1], byteorder='little')
+            chr_prop = [int(a) for a in t[1]]
+            chr_prop.reverse()
+            chr_prop = ''.join('%02x' % b for b in chr_prop)
+        if t[0] == 0x0B:
+            desc = t[1].decode()
+        if t[0] == 0x11:
+            print('valid values', t[1])
+        if t[0] == 0x12:
+            print('valid values range', t[1])
+        if t[0] == 0x0C:
+            unit_bytes = t[1][2:4]
+            unit_bytes.reverse()
+            format = characteristic_formats.get(int(t[1][0]), 'unknown')
+            unit = characteristic_units.get(int.from_bytes(unit_bytes, byteorder='big'), 'unknown')
+            # print('format data', t[1].hex())
+            # print('\tFormat', characteristic_formats.get(int(t[1][0]), 'unknown'))
+            # print('\tExponent', int(t[1][1]))
+            # print('\tUnit', characteristic_units.get(int.from_bytes(unit_bytes, byteorder='big'), 'unknown'))
+            # print('\tNamespace', int(t[1][4]))
+            # print('\tDescription', t[1][5:].hex())
+        if t[0] == 0x0D:
+            # print('range', t[1])
+            # print(type(t[1]), format)
+            lower = None
+            upper = None
+            if format == 'int32':
+                (lower, upper) = struct.unpack('ii', t[1])
+            if format == 'uint8':
+                (lower, upper) = struct.unpack('BB', t[1])
+            # l = len(t[1])
+            # lower = t[1][:int(l/2)]
+            # upper = t[1][int(l/2):]
+            # print(lower, upper)
+            range = (lower, upper)
+        if t[0] == 0x0E:
+            # print('step', t[1])
+            step = None
+            if format == 'int32':
+                step = struct.unpack('i', t[1])[0]
+            if format == 'uint8':
+                step = struct.unpack('B', t[1])[0]
 
-    print('\t\t\t', 'chr_type', chr_type, 'svc_id', svc_id, 'svc_type', svc_type, 'chr_prop', chr_prop, 'desc >', desc, '<')
+    # print('\t\t\t', 'chr_type', chr_type, 'svc_id', svc_id, 'svc_type', svc_type, 'chr_prop', chr_prop, 'desc >', desc, '<')
 
     perms = []
     if (chr_prop_int & 0x0001) > 0:
@@ -84,8 +128,7 @@ def parse_sig_read_response(data, tid):
     if (chr_prop_int & 0x0100) > 0:
         perms.append('evd')
 
-    return {'desc': desc, 'perms': perms}
-
+    return {'description': desc, 'perms': perms, 'format': format, 'unit': unit, 'range': range, 'step': step}
 
 
 class _CharacteristicsTypes(object):
@@ -504,27 +547,28 @@ ServicesTypes = _ServicesTypes()
 
 class AnyDevice(gatt.gatt_linux.Device):
     def services_resolved(self):
-        print('resolved')
         super().services_resolved()
+        logging.debug('resolved %d services', len(self.services))
         self.manager.stop()
+        logging.debug('stopped manager')
 
-        a_data = {
+        self.a_data = {
             'services': []
         }
         for service in self.services:
-            print('S', service.uuid, ServicesTypes.get_short(service.uuid.upper()))
+            logging.debug('found service with UUID %s (%s)', service.uuid, ServicesTypes.get_short(service.uuid.upper()))
             s_data = {
                 'sid': None,
                 'type': service.uuid.upper(),
                 'characteristics': []
             }
-            a_data['services'].append(s_data)
+            self.a_data['services'].append(s_data)
             for characteristic in service.characteristics:
-                print('\tC', characteristic.uuid, CharacteristicsTypes.get_short(characteristic.uuid.upper()))
+                logging.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid, CharacteristicsTypes.get_short(characteristic.uuid.upper()))
 
                 if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
                     sid = int.from_bytes(characteristic.read_value(), byteorder='little')
-                    print('\t\t', 'V =', 'sid',sid)
+                    logging.debug('\t\tread service id %d', sid)
                     s_data['sid'] = sid
                 else:
                     c_data = {
@@ -538,53 +582,97 @@ class AnyDevice(gatt.gatt_linux.Device):
                         value = descriptor.read_value()
                         if descriptor.uuid == CharacteristicInstanceID:
                             cid = int.from_bytes(value, byteorder='little')
-                            print('\t\t', 'D', 'cid =', cid)
+                            logging.debug('\t\tread characteristic id %d', cid)
                             c_data['cid'] = cid
                         else:
-                            print('\t\t', 'D', descriptor.uuid, value)
+                            # print('\t\t', 'D', descriptor.uuid, value)
+                            pass
 
                     if cid:
                         v = cid.to_bytes(length=2, byteorder='little')
                         tid = 42
                         characteristic.write_value([0x00, 0x01, tid, v[0], v[1]])
                         d = parse_sig_read_response(characteristic.read_value(), tid)
-                        c_data['description'] = d['desc']
-                        c_data['perms'] = d['perms']
+                        for k in d:
+                            c_data[k] = d[k]
 
-        print('-'*80)
-        for service in a_data['services']:
-            s_type = service['type']
-            s_iid = service['sid']
-            print('{iid}: >{stype}<'.format(iid=s_iid, stype=ServicesTypes.get_short(s_type)))
-
-            for characteristic in service['characteristics']:
-                c_iid = characteristic['cid']
-                value = characteristic.get('value', '')
-                c_type = characteristic['type']
-                perms = ','.join(characteristic['perms'])
-                desc = characteristic.get('description', '')
-                c_type = CharacteristicsTypes.get_short(c_type)
-                print('  {aid}.{iid}: {value} ({description}) >{ctype}< [{perms}]'.format(aid=s_iid,
-                                                                                          iid=c_iid,
-                                                                                          value=value,
-                                                                                          ctype=c_type,
-                                                                                          perms=perms,
-                                                                                          description=desc))
+        logging.debug('disconnecting from device')
         self.disconnect()
+        logging.debug('disconnected from device')
         self.manager.stop()
+        logging.debug('manager stopped')
 
 
+if __name__ == '__main__':
+    arg_parser = ArgumentParser(description="GATT Connect Demo")
+    arg_parser.add_argument('mac_address', help="MAC address of device to connect")
+    arg_parser.add_argument('--log', action='store', dest='loglevel')
+    args = arg_parser.parse_args()
 
-arg_parser = ArgumentParser(description="GATT Connect Demo")
-arg_parser.add_argument('mac_address', help="MAC address of device to connect")
-args = arg_parser.parse_args()
+    logging.basicConfig(format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s')
+    if args.loglevel:
+        getattr(logging, args.loglevel.upper())
+        numeric_level = getattr(logging, args.loglevel.upper(), None)
+        if not isinstance(numeric_level, int):
+            raise ValueError('Invalid log level: %s' % args.loglevel)
+        logging.getLogger().setLevel(numeric_level)
 
-manager = gatt.DeviceManager(adapter_name='hci0')
+    manager = gatt.DeviceManager(adapter_name='hci0')
 
-device = AnyDevice(manager=manager, mac_address=args.mac_address)
-device.connect()
+    device = AnyDevice(manager=manager, mac_address=args.mac_address)
+    logging.debug('connecting to device')
+    device.connect()
+    logging.debug('connected to device')
 
-try:
-    manager.run()
-except:
-    device.disconnect()
+    try:
+        logging.debug('start manager')
+        manager.run()
+    except:
+        device.disconnect()
+
+    print('-' * 20, 'human readable', '-' * 20)
+    for service in device.a_data['services']:
+        s_type = service['type']
+        s_iid = service['sid']
+        # print('{iid}: >{stype}<'.format(iid=s_iid, stype=ServicesTypes.get_short(s_type)))
+
+        for characteristic in service['characteristics']:
+            c_iid = characteristic['cid']
+            value = characteristic.get('value', '')
+            c_type = characteristic['type']
+            perms = ','.join(characteristic['perms'])
+            desc = characteristic.get('description', '')
+            c_type = CharacteristicsTypes.get_short(c_type)
+            print('  {aid}.{iid}: {value} ({description}) >{ctype}< [{perms}]'.format(aid=s_iid,
+                                                                                      iid=c_iid,
+                                                                                      value=value,
+                                                                                      ctype=c_type,
+                                                                                      perms=perms,
+                                                                                      description=desc))
+
+    print('-' * 20, 'json', '-' * 20)
+    json_services = []
+    for service in device.a_data['services']:
+        json_characteristics = []
+        json_service = {
+            'type': service['type'],
+            'iid': service['sid'],
+            'characteristics': json_characteristics
+        }
+        for characteristic in service['characteristics']:
+            json_characteristic = {
+                'type': characteristic['type'],
+                'description': characteristic.get('description', ''),
+                'iid': characteristic['cid'],
+                'value': characteristic.get('value', ''),
+                'perms': characteristic['perms'],
+                'format': characteristic['format'],
+                'unit': characteristic['unit'],
+                'range': str(characteristic['range']),
+                'step': str(characteristic['step']),
+            }
+            json_characteristics.append(json_characteristic)
+        json_services.append(json_service)
+    json_data = [{'aid':1,'services': json_services}]
+    print(json.dumps(json_data, indent=4))
+    

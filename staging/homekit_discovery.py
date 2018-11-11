@@ -18,6 +18,8 @@
 import threading
 import subprocess
 import time
+import logging
+from argparse import ArgumentParser
 
 devices = {}
 
@@ -162,12 +164,35 @@ def parseBleMeta(data):
             devices[mac][part_type] = part_data
 
 if __name__ == '__main__':
-    # hcitool = HciTool()
-    # hcitool.start()
-    p0 = subprocess.Popen(['hcitool', 'lescan', '--duplicates'], stdout=subprocess.PIPE)
+    arg_parser = ArgumentParser(description="GATT Connect Demo")
+    arg_parser.add_argument('--adapter', action='store', dest='adapter', default='hci0')
+    arg_parser.add_argument('--log', action='store', dest='loglevel')
+    args = arg_parser.parse_args()
+
+    logging.basicConfig(format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s')
+    if args.loglevel:
+        getattr(logging, args.loglevel.upper())
+        numeric_level = getattr(logging, args.loglevel.upper(), None)
+        if not isinstance(numeric_level, int):
+            raise ValueError('Invalid log level: %s' % args.loglevel)
+        logging.getLogger().setLevel(numeric_level)
+
+    logging.debug('using adapter %s', args.adapter)
+
+    command = ['hciconfig', args.adapter, 'up']
+    logging.debug('Executing \'%s\'', ' '.join(command))
+    p0 = subprocess.Popen(command, stdout=subprocess.PIPE)
+
+    command = ['hcitool', '-i', args.adapter, 'lescan', '--duplicates']
+    logging.debug('Executing \'%s\'', ' '.join(command))
+    p0 = subprocess.Popen(command, stdout=subprocess.PIPE)
     Killer(10, p0).start()
-    p1 = subprocess.Popen(['hcidump', '--raw', '2>&1'], stdout=subprocess.PIPE)
+
+    command = ['hcidump', '-i', args.adapter, '--raw', '2>&1']
+    logging.debug('Executing \'%s\'', ' '.join(command))
+    p1 = subprocess.Popen(command, stdout=subprocess.PIPE)
     Killer(10, p1).start()
+
     data = None
     for line in p1.stdout:
         if line[0] == 62:

@@ -545,6 +545,13 @@ class _ServicesTypes(object):
 ServicesTypes = _ServicesTypes()
 
 
+class AnyManager(gatt.gatt_linux.DeviceManager):
+    def device_discovered(self, device):
+        logging.debug('discovered %s', device.mac_address)
+        if device.mac_address == 'e0:44:6a:b8:05:e0':
+            self.stop()
+
+
 class AnyDevice(gatt.gatt_linux.Device):
     def services_resolved(self):
         super().services_resolved()
@@ -606,6 +613,7 @@ class AnyDevice(gatt.gatt_linux.Device):
 if __name__ == '__main__':
     arg_parser = ArgumentParser(description="GATT Connect Demo")
     arg_parser.add_argument('mac_address', help="MAC address of device to connect")
+    arg_parser.add_argument('--adapter', action='store', dest='adapter', default='hci0')
     arg_parser.add_argument('--log', action='store', dest='loglevel')
     args = arg_parser.parse_args()
 
@@ -617,8 +625,13 @@ if __name__ == '__main__':
             raise ValueError('Invalid log level: %s' % args.loglevel)
         logging.getLogger().setLevel(numeric_level)
 
-    manager = gatt.DeviceManager(adapter_name='hci0')
+    logging.debug('using adapter %s', args.adapter)
+    manager = AnyManager(adapter_name=args.adapter)
+    manager.start_discovery()
+    manager.run()
+    logging.debug('discovered')
 
+    manager = gatt.DeviceManager(adapter_name=args.adapter)
     device = AnyDevice(manager=manager, mac_address=args.mac_address)
     logging.debug('connecting to device')
     device.connect()

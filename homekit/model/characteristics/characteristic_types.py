@@ -88,6 +88,10 @@ class _CharacteristicsTypes(object):
     OCCUPANCY_DETECTED = '71'
     ON = '25'
     OUTLET_IN_USE = '26'
+    PAIR_SETUP = '4C'                                                       # new for BLE, homekit spec page 57
+    PAIR_VERIFY = '4E'                                                      # new for BLE, homekit spec page 57
+    PAIRING_FEATURES = '4F'                                                 # new for BLE, homekit spec page 58
+    PAIRING_PAIRINGS = '50'                                                 # new for BLE, homekit spec page 58
     POSITION_CURRENT = '6D'
     POSITION_HOLD = '6F'
     POSITION_STATE = '72'
@@ -104,6 +108,8 @@ class _CharacteristicsTypes(object):
     SERIAL_NUMBER = '30'
     SERVICE_LABEL_INDEX = 'CB'
     SERVICE_LABEL_NAMESPACE = 'CD'
+    SERVICE_INSTANCE_ID = 'e604e95d-a759-4817-87d3-aa005083a0d1'.upper()    # new for BLE, homekit spec page 127
+    SERVICE_SIGNATURE = 'A5'                                                # new for BLE, homekit spec page 128
     SETUP_ENDPOINTS = '118'
     SLAT_STATE_CURRENT = 'AA'
     SMOKE_DETECTED = '76'
@@ -169,6 +175,12 @@ class _CharacteristicsTypes(object):
             '35': 'public.hap.characteristic.temperature.target',
             '36': 'public.hap.characteristic.temperature.units',
             '37': 'public.hap.characteristic.version',
+            '4C': 'public.hap.characteristic.pairing.pair-setup',               # new for BLE, homekit spec page 57
+            '4E': 'public.hap.characteristic.pairing.pair-verify',              # new for BLE, homekit spec page 57
+            '4F': 'public.hap.characteristic.pairing.features',                 # new for BLE, homekit spec page 58
+            '50': 'public.hap.characteristic.pairing.pairings',                 # new for BLE, homekit spec page 58
+            # new for BLE, homekit spec page 127
+            'e604e95d-a759-4817-87d3-aa005083a0d1'.upper(): 'public.hap.service.protocol.service-id',
             '52': 'public.hap.characteristic.firmware.revision',
             '53': 'public.hap.characteristic.hardware.revision',
             '64': 'public.hap.characteristic.air-particulate.density',
@@ -204,6 +216,7 @@ class _CharacteristicsTypes(object):
             '93': 'public.hap.characteristic.carbon-dioxide.level',
             '94': 'public.hap.characteristic.carbon-dioxide.peak-level',
             '95': 'public.hap.characteristic.air-quality',
+            'A5': 'public.hap.characteristic.service-signature',
             'A6': 'public.hap.characteristic.accessory-properties',
             'A7': 'public.hap.characteristic.lock-physical-controls',
             'A8': 'public.hap.characteristic.air-purifier.state.target',

@@ -28,7 +28,7 @@ from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, UnpairedError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError, FormatError
 from homekit.http_impl.secure_http import SecureHttp
-from homekit.protocol import get_session_keys, perform_pair_setup
+from homekit.protocol import get_session_keys, perform_pair_setup, create_ip_pair_setup_write
 from homekit.protocol.tlv import TLV, TlvParseException
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats
 
@@ -189,7 +189,8 @@ class Controller(object):
             raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
         conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
         try:
-            pairing = perform_pair_setup(conn, pin, str(uuid.uuid4()))
+            write_fun = create_ip_pair_setup_write(conn)
+            pairing = perform_pair_setup(pin, str(uuid.uuid4()), write_fun)
         finally:
             conn.close()
         pairing['AccessoryIP'] = connection_data['ip']

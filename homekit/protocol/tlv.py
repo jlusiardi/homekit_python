@@ -55,6 +55,7 @@ class TLV:
     kTLVType_FragmentLast = 13
     kTLVType_Separator = 255
     kTLVType_Separator_Pair = [255, bytearray(b'')]
+    kTLVType_SessionID = 0x0e   # Table 6-27 page 116
 
     # Errors (see table 4-5 page 60)
     kTLVError_Unknown = bytearray(b'\x01')
@@ -64,6 +65,29 @@ class TLV:
     kTLVError_MaxTries = bytearray(b'\x05')
     kTLVError_Unavailable = bytearray(b'\x06')
     kTLVError_Busy = bytearray(b'\x07')
+
+    # Table 6-27 page 116
+    kTLVMethod_Resume = 0x07
+
+    # Additional Parameter Types for BLE (Table 6-9 page 98)
+    kTLVHAPParamValue = 0x01
+    kTLVHAPParamAdditionalAuthorizationData = 0x02
+    kTLVHAPParamOrigin = 0x03
+    kTLVHAPParamCharacteristicType = 0x04
+    kTLVHAPParamCharacteristicInstanceId = 0x05
+    kTLVHAPParamServiceType = 0x06
+    kTLVHAPParamServiceInstanceId = 0x07
+    kTLVHAPParamTTL = 0x08
+    kTLVHAPParamParamReturnResponse = 0x09
+    kTLVHAPParamHAPCharacteristicPropertiesDescriptor = 0x0a
+    kTLVHAPParamGATTUserDescriptionDescriptor = 0x0b
+    kTLVHAPParamGATTPresentationFormatDescriptor = 0x0c
+    kTLVHAPParamGATTValidRange = 0x0d
+    kTLVHAPParamHAPStepValueDescriptor = 0x0e
+    kTLVHAPParamHAPServiceProperties = 0x0f
+    kTLVHAPParamHAPLinkedServices = 0x10
+    kTLVHAPParamHAPValidValuesDescriptor = 0x11
+    kTLVHAPParamHAPValidValuesRangeDescriptor = 0x12
 
     @staticmethod
     def decode_bytes(bs) -> list:

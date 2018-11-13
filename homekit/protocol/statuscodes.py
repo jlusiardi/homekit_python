@@ -58,4 +58,37 @@ class _HapStatusCodes(object):
         raise KeyError('Item {item} not found'.format(item=item))
 
 
+class _HapBleStatusCodes(object):
+    """
+    This data is taken from Table 6-26 HAP Status Codes on page 116.
+    """
+    SUCCESS = 0x00
+    UNSUPPORTED_PDU = 0x01
+    MAX_PROCEDURES = 0x02
+    INSUFFICIENT_AUTHORIZATION = 0x03
+    INVALID_INSTANCE_ID = 0x04
+    INSUFFICIENT_AUTHENTICATION = 0x05
+    INVALID_REQUEST = 0x06
+
+    def __init__(self):
+        self._codes = {
+            _HapBleStatusCodes.SUCCESS: 'The request was successful.',
+            _HapBleStatusCodes.UNSUPPORTED_PDU: 'The request failed as the HAP PDU was not recognized or supported.',
+            _HapBleStatusCodes.MAX_PROCEDURES: 'The request failed as the accessory has reached the limit on the simultaneous procedures it can handle.',
+            _HapBleStatusCodes.INSUFFICIENT_AUTHORIZATION: 'Characteristic requires additional authorization data.',
+            _HapBleStatusCodes.INVALID_INSTANCE_ID: 'The HAP Request\'s characteristic Instance Id did not match the addressed characteristic\'s instance Id',
+            _HapBleStatusCodes.INSUFFICIENT_AUTHENTICATION: 'Characterisitc access required a secure session to be established.',
+            _HapBleStatusCodes.INVALID_REQUEST: 'Accessory was not able to perform the requested operation',
+        }
+
+        self._categories_rev = {self._codes[k]: k for k in self._codes.keys()}
+
+    def __getitem__(self, item):
+        if item in self._codes:
+            return self._codes[item]
+
+        raise KeyError('Item {item} not found'.format(item=item))
+
+
 HapStatusCodes = _HapStatusCodes()
+HapBleStatusCodes = _HapBleStatusCodes()

@@ -5,17 +5,12 @@ from argparse import ArgumentParser
 import homekit.protocol.tlv
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
+from homekit.protocol.tlv import TLV
+from homekit.protocol.opcodes import HapBleOpCodes
+
 import struct
 import logging
 import json
-
-# OpCodes (table 6-7 page 97)
-HAP_CHAR_SIG_READ = 1
-HAP_CHAR_WRITE = 2
-HAP_CHAR_READ = 3
-HAP_CHAR_TIMED_WRITE = 4
-HAP_CHAR_EXEC_WRITE = 5
-HAP_SERVICES_SIG_READ = 6
 
 
 CharacteristicInstanceID='dc46f0fe-81d2-4616-b5d9-6abdd796939a'
@@ -63,18 +58,18 @@ def parse_sig_read_response(data, tid):
     range = None
     step = None
     for t in tlv:
-        if t[0] == 0x0A:
+        if t[0] == TLV.kTLVHAPParamHAPCharacteristicPropertiesDescriptor:
             chr_prop_int = int.from_bytes(t[1], byteorder='little')
             chr_prop = [int(a) for a in t[1]]
             chr_prop.reverse()
             chr_prop = ''.join('%02x' % b for b in chr_prop)
-        if t[0] == 0x0B:
+        if t[0] == TLV.kTLVHAPParamGATTUserDescriptionDescriptor:
             desc = t[1].decode()
-        if t[0] == 0x11:
+        if t[0] == TLV.kTLVHAPParamHAPValidValuesDescriptor:
             print('valid values', t[1])
-        if t[0] == 0x12:
+        if t[0] == TLV.kTLVHAPParamHAPValidValuesRangeDescriptor:
             print('valid values range', t[1])
-        if t[0] == 0x0C:
+        if t[0] == TLV.kTLVHAPParamGATTPresentationFormatDescriptor:
             unit_bytes = t[1][2:4]
             unit_bytes.reverse()
             format = characteristic_formats.get(int(t[1][0]), 'unknown')
@@ -85,7 +80,7 @@ def parse_sig_read_response(data, tid):
             # print('\tUnit', characteristic_units.get(int.from_bytes(unit_bytes, byteorder='big'), 'unknown'))
             # print('\tNamespace', int(t[1][4]))
             # print('\tDescription', t[1][5:].hex())
-        if t[0] == 0x0D:
+        if t[0] == TLV.kTLVHAPParamGATTValidRange:
             # print('range', t[1])
             # print(type(t[1]), format)
             lower = None
@@ -99,7 +94,7 @@ def parse_sig_read_response(data, tid):
             # upper = t[1][int(l/2):]
             # print(lower, upper)
             range = (lower, upper)
-        if t[0] == 0x0E:
+        if t[0] == TLV.kTLVHAPParamHAPStepValueDescriptor:
             # print('step', t[1])
             step = None
             if format == 'int32':
@@ -280,4 +275,3 @@ if __name__ == '__main__':
         json_services.append(json_service)
     json_data = [{'aid':1,'services': json_services}]
     print(json.dumps(json_data, indent=4))
-    

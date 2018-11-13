@@ -51,11 +51,23 @@ def error_handler(error, stage):
         raise InvalidError(stage)
 
 
-def perform_pair_setup(connection, pin, ios_pairing_id):
+def create_ip_pair_setup_write(connection):
+    def write_http(request):
+        headers = {
+            'Content-Type': 'application/pairing+tlv8'
+        }
+
+        connection.request('POST', '/pair-setup', request, headers)
+        resp = connection.getresponse()
+        response_tlv = TLV.decode_bytes(resp.read())
+        return response_tlv
+    return write_http
+
+
+def perform_pair_setup(pin, ios_pairing_id, write_fun):
     """
     Performs a pair setup operation as described in chapter 4.7 page 39 ff.
 
-    :param connection: the http_impl connection to the target accessory
     :param pin: the setup code from the accessory
     :param ios_pairing_id: the id of the simulated ios device
     :return: a dict with the ios device's part of the pairing information
@@ -66,9 +78,6 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     :raises MaxPeersError: if the device cannot accept an additional pairing
     :raises IllegalData: if the verification of the accessory's data fails
     """
-    headers = {
-        'Content-Type': 'application/pairing+tlv8'
-    }
 
     #
     # Step #1 ios --> accessory (send SRP start Request) (see page 39)
@@ -78,9 +87,10 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
         (TLV.kTLVType_Method, TLV.PairSetup)
     ])
 
-    connection.request('POST', '/pair-setup', request_tlv, headers)
-    resp = connection.getresponse()
-    response_tlv = TLV.decode_bytes(resp.read())
+    # connection.request('POST', '/pair-setup', request_tlv, headers)
+    # resp = connection.getresponse()
+    # response_tlv = TLV.decode_bytes(resp.read())
+    response_tlv = write_fun(request_tlv)
 
     #
     # Step #3 ios --> accessory (send SRP verify request) (see page 41)
@@ -111,9 +121,10 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
         (TLV.kTLVType_Proof, SrpClient.to_byte_array(client_proof)),
     ])
 
-    connection.request('POST', '/pair-setup', response_tlv, headers)
-    resp = connection.getresponse()
-    response_tlv = TLV.decode_bytes(resp.read())
+    # connection.request('POST', '/pair-setup', response_tlv, headers)
+    # resp = connection.getresponse()
+    # response_tlv = TLV.decode_bytes(resp.read())
+    response_tlv = write_fun(response_tlv)
 
     #
     # Step #5 ios --> accessory (Exchange Request) (see page 43)
@@ -172,9 +183,10 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     ]
     body = TLV.encode_list(response_tlv)
 
-    connection.request('POST', '/pair-setup', body, headers)
-    resp = connection.getresponse()
-    response_tlv = TLV.decode_bytes(resp.read())
+    # connection.request('POST', '/pair-setup', body, headers)
+    # resp = connection.getresponse()
+    # response_tlv = TLV.decode_bytes(resp.read())
+    response_tlv = write_fun(body)
 
     #
     # Step #7 ios (Verification) (page 47)

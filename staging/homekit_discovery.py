@@ -20,6 +20,7 @@ import subprocess
 import time
 import logging
 from argparse import ArgumentParser
+import sys
 
 devices = {}
 
@@ -163,6 +164,30 @@ def parseBleMeta(data):
         else:
             devices[mac][part_type] = part_data
 
+
+def which(program):
+    """
+    function to check if an executable is somewhere in the PATH and return it with full path.
+
+    taken from https://stackoverflow.com/a/377028
+    """
+    import os
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
 if __name__ == '__main__':
     arg_parser = ArgumentParser(description="GATT Connect Demo")
     arg_parser.add_argument('--adapter', action='store', dest='adapter', default='hci0')
@@ -179,16 +204,30 @@ if __name__ == '__main__':
 
     logging.debug('using adapter %s', args.adapter)
 
-    command = ['hciconfig', args.adapter, 'up']
+    hciconfig = which('hciconfig')
+    hcitool = which('hcitool')
+    hcidump = which('hcidump')
+    if not hciconfig:
+        print('hciconfig could not be found in the PATH!')
+        sys.exit(-1)
+    if not hcitool:
+        print('hcitool could not be found in the PATH!')
+        sys.exit(-1)
+    if not hcidump:
+        print('hcidump could not be found in the PATH!')
+        sys.exit(-1)
+
+
+    command = [hciconfig, args.adapter, 'up']
     logging.debug('Executing \'%s\'', ' '.join(command))
     p0 = subprocess.Popen(command, stdout=subprocess.PIPE)
 
-    command = ['hcitool', '-i', args.adapter, 'lescan', '--duplicates']
+    command = [hcitool, '-i', args.adapter, 'lescan', '--duplicates']
     logging.debug('Executing \'%s\'', ' '.join(command))
     p0 = subprocess.Popen(command, stdout=subprocess.PIPE)
     Killer(10, p0).start()
 
-    command = ['hcidump', '-i', args.adapter, '--raw', '2>&1']
+    command = [hcidump, '-i', args.adapter, '--raw', '2>&1']
     logging.debug('Executing \'%s\'', ' '.join(command))
     p1 = subprocess.Popen(command, stdout=subprocess.PIPE)
     Killer(10, p1).start()

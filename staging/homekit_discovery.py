@@ -202,6 +202,7 @@ if __name__ == '__main__':
             raise ValueError('Invalid log level: %s' % args.loglevel)
         logging.getLogger().setLevel(numeric_level)
 
+    logging.debug('Running version $Id$')
     logging.debug('using adapter %s', args.adapter)
 
     hciconfig = which('hciconfig')

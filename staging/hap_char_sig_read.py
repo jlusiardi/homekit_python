@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import gatt.gatt_linux
+import gatt.gatt
 from argparse import ArgumentParser
 import homekit.protocol.tlv
 from homekit.model.services.service_types import ServicesTypes
@@ -124,13 +124,16 @@ def parse_sig_read_response(data, tid):
     if (chr_prop_int & 0x0100) > 0:
         perms.append('evd')
 
-    return {'description': desc, 'perms': perms, 'format': format, 'unit': unit, 'range': range, 'step': step}
+    result = {'description': desc, 'perms': perms, 'format': format, 'unit': unit, 'range': range, 'step': step}
+    logging.debug('result: %s', str(result))
+
+    return result
 
 
-class ResolvingManager(gatt.gatt_linux.DeviceManager):
+class ResolvingManager(gatt.gatt.DeviceManager):
     def __init__(self, adapter_name, mac):
         self.mac = mac
-        gatt.gatt_linux.DeviceManager.__init__(self, adapter_name=adapter_name)
+        gatt.gatt.DeviceManager.__init__(self, adapter_name=adapter_name)
 
     def device_discovered(self, device):
         logging.debug('discovered %s', device.mac_address)
@@ -138,7 +141,7 @@ class ResolvingManager(gatt.gatt_linux.DeviceManager):
             self.stop()
 
 
-class AnyDevice(gatt.gatt_linux.Device):
+class AnyDevice(gatt.gatt.Device):
     def services_resolved(self):
         super().services_resolved()
         logging.debug('resolved %d services', len(self.services))
@@ -211,6 +214,7 @@ if __name__ == '__main__':
             raise ValueError('Invalid log level: %s' % args.loglevel)
         logging.getLogger().setLevel(numeric_level)
 
+    logging.debug('Running version $Id$')
     logging.debug('using adapter %s', args.adapter)
     manager = ResolvingManager(adapter_name=args.adapter, mac=args.mac_address)
     manager.start_discovery()
@@ -266,7 +270,7 @@ if __name__ == '__main__':
                 'iid': characteristic['cid'],
                 'value': characteristic.get('value', ''),
                 'perms': characteristic['perms'],
-                'format': characteristic['format'],
+                'format': characteristic.get('format','UNKNWN'),
                 'unit': characteristic['unit'],
                 'range': str(characteristic['range']),
                 'step': str(characteristic['step']),

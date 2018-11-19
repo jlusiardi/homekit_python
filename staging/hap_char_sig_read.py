@@ -214,7 +214,7 @@ if __name__ == '__main__':
             raise ValueError('Invalid log level: %s' % args.loglevel)
         logging.getLogger().setLevel(numeric_level)
 
-    logging.debug('Running version $Id$')
+    logging.debug('Running version 20181119')
     logging.debug('using adapter %s', args.adapter)
     manager = ResolvingManager(adapter_name=args.adapter, mac=args.mac_address)
     manager.start_discovery()

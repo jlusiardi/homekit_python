@@ -162,3 +162,14 @@ class TestTLV(unittest.TestCase):
         self.assertEqual(tmp[0][1], TLV.M3)
         self.assertEqual(tmp[1][0], TLV.kTLVType_Salt)
         self.assertEqual(tmp[1][1], (16 * 'a').encode())
+
+    def test_filter(self):
+        example = bytes(bytearray.fromhex('060103' + '010203'))
+        expected = [
+            [6, bytearray(b'\x03')],
+        #     [9, bytearray(300 * b'a')],
+        #     [1, bytearray(b'hello')]
+        ]
+
+        data = TLV.decode_bytes(example, expected=[6])
+        self.assertListEqual(data, expected)

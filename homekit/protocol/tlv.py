@@ -90,16 +90,18 @@ class TLV:
     kTLVHAPParamHAPValidValuesRangeDescriptor = 0x12
 
     @staticmethod
-    def decode_bytes(bs) -> list:
-        return TLV.decode_bytearray(bytearray(bs))
+    def decode_bytes(bs, expected=None) -> list:
+        return TLV.decode_bytearray(bytearray(bs), expected)
 
     @staticmethod
-    def decode_bytearray(ba: bytearray) -> list:
+    def decode_bytearray(ba: bytearray, expected=None) -> list:
         result = []
         # do not influence caller!
         tail = ba.copy()
         while len(tail) > 0:
             key = tail.pop(0)
+            if expected and key not in expected:
+                break
             length = tail.pop(0)
             value = tail[:length]
             if length != len(value):

@@ -43,20 +43,17 @@ class AnyDevice(gatt.gatt_linux.Device):
 
 
 def create_ble_pair_setup_write(device, characteristic, characteristic_id):
-    def write(request):
+    def write(request, expected):
         logging.debug('entering write function %s', str(TLV.decode_bytes(request)))
         request_tlv = TLV.encode_list([
             (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
             (TLV.kTLVHAPParamValue, request)
         ])
-        transaction_id = random.randrange(0,255)
+        transaction_id = random.randrange(0, 255)
         data = bytearray([0x00, HapBleOpCodes.CHAR_WRITE, transaction_id])
-        for b in characteristic_id.to_bytes(length=2, byteorder='little'):
-            data.append(b)
-        for b in len(request_tlv).to_bytes(length=2, byteorder='little'):
-            data.append(b)
-        for b in request_tlv:
-            data.append(b)
+        data.extend(characteristic_id.to_bytes(length=2, byteorder='little'))
+        data.extend(len(request_tlv).to_bytes(length=2, byteorder='little'))
+        data.extend(request_tlv)
         logging.debug('sent %s', bytes(data).hex())
         characteristic.write_value(value=data)
         data = []
@@ -65,12 +62,25 @@ def create_ble_pair_setup_write(device, characteristic, characteristic_id):
             logging.debug('reading characteristic')
             data = characteristic.read_value()
         resp_data = [b for b in data]
-        logging.debug('control field: {c:x}, tid: {t:x}, status: {s:x}'.format(c=resp_data[0], t=resp_data[1], s=resp_data[2]))
+
+        expected_length = int.from_bytes(bytes(resp_data[3:5]), byteorder='little')
+        logging.debug(
+            'control field: {c:x}, tid: {t:x}, status: {s:x}, length: {l}'.format(c=resp_data[0], t=resp_data[1],
+                                                                                  s=resp_data[2], l=expected_length))
+        while len(resp_data[3:]) < expected_length:
+            time.sleep(1)
+            logging.debug('reading characteristic')
+            data = characteristic.read_value()
+            resp_data.extend([b for b in data])
+            logging.debug('data %s of %s', len(resp_data[3:]), expected_length)
+
         logging.debug('received %s', bytes(resp_data).hex())
-        resp_tlv = TLV.decode_bytes(bytes([int(a) for a in resp_data[5:]]))
-        result = TLV.decode_bytes(resp_tlv[0][1])
+        logging.debug('decode %s', bytes(resp_data[5:]).hex())
+        resp_tlv = TLV.decode_bytes(bytes([int(a) for a in resp_data[5:]]), expected=[TLV.kTLVHAPParamValue])
+        result = TLV.decode_bytes(resp_tlv[0][1], expected)
         logging.debug('leaving write function %s', str(result))
         return result
+
     return write
 
 
@@ -112,15 +122,17 @@ if __name__ == '__main__':
     pair_verify_char = None
     for characteristic in pairing_service.characteristics:
         logging.debug('char: %s %s', characteristic.uuid, CharacteristicsTypes.get_short(characteristic.uuid.upper()))
-        if CharacteristicsTypes.get_short(CharacteristicsTypes.PAIR_SETUP) == CharacteristicsTypes.get_short(characteristic.uuid.upper()):
+        if CharacteristicsTypes.get_short(CharacteristicsTypes.PAIR_SETUP) == CharacteristicsTypes.get_short(
+                characteristic.uuid.upper()):
             pair_setup_char = characteristic
-        if CharacteristicsTypes.get_short(CharacteristicsTypes.PAIR_VERIFY) == CharacteristicsTypes.get_short(characteristic.uuid.upper()):
+        if CharacteristicsTypes.get_short(CharacteristicsTypes.PAIR_VERIFY) == CharacteristicsTypes.get_short(
+                characteristic.uuid.upper()):
             pair_verify_char = characteristic
     logging.debug('setup char: %s %s', pair_setup_char, pair_setup_char.service.device)
     logging.debug('verify char: %s', pair_verify_char)
 
-    char_id = 10 # read manually
-    t_id = 42 # defined
+    char_id = 10  # read manually
+    t_id = 42  # defined
 
     write_fun = create_ble_pair_setup_write(device, pair_setup_char, char_id)
     pairing = perform_pair_setup(args.pin, str(uuid.uuid4()), write_fun)

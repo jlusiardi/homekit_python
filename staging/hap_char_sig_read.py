@@ -5,66 +5,64 @@ from argparse import ArgumentParser
 import homekit.protocol.tlv
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
+from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
+from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
+
 from homekit.protocol.tlv import TLV
 from homekit.protocol.opcodes import HapBleOpCodes
+from homekit.protocol.statuscodes import HapBleStatusCodes
 
 import struct
 import logging
 import json
+import random
+import uuid
+
+# the uuid of the ble descriptors that hold the characteristic instance id as value (see page 128)
+CharacteristicInstanceID = 'dc46f0fe-81d2-4616-b5d9-6abdd796939a'
 
 
-CharacteristicInstanceID='dc46f0fe-81d2-4616-b5d9-6abdd796939a'
-
-
-# https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v4.x.x/doc/html/group___b_l_e___g_a_t_t___c_p_f___f_o_r_m_a_t_s.html
-characteristic_formats = {
-    0x01: 'bool',
-    0x04: 'uint8',
-    0x08: 'uint32',
-    0x10: 'int32',
-    0x19: 'utf-8',
-    0x1b: 'struct'
-}
-
-# https://www.bluetooth.com/specifications/assigned-numbers/units
-characteristic_units = {
-    0x2700: 'none',
-    0x27ad: 'percentage',
-}
-
-
-def parse_sig_read_response(data, tid):
+def parse_sig_read_response(data, expected_tid):
     # parse header and check stuff
     logging.debug('parse sig read response %s', bytes([int(a) for a in data]).hex())
 
+    # handle the header data
+    cf = data[0]
+    logging.debug('control field %d', cf)
+    tid = data[1]
+    logging.debug('transaction id %d (expected was %d)', tid, expected_tid)
+    status = data[2]
+    logging.debug('status code %d (%s)', status, HapBleStatusCodes[status])
+    assert cf == 0x02
+    assert tid == expected_tid
+    assert status == HapBleStatusCodes.SUCCESS
+
     # get body length
     length = int.from_bytes(data[3:5], byteorder='little')
+    logging.debug('expected body length %d (got %d)', length, len(data[5:]))
+
+    # parse tlvs and analyse information
     tlv = homekit.protocol.tlv.TLV.decode_bytes(data[5:])
 
-    # chr type
-    chr_type = [int(a) for a in data[7:23]]
-    chr_type.reverse()
-    chr_type = ''.join('%02x' % b for b in chr_type)
-
-    svc_id = int.from_bytes(data[25:27], byteorder='little')
-
-    svc_type = [int(a) for a in data[29:45]]
-    svc_type.reverse()
-    svc_type = ''.join('%02x' % b for b in svc_type)
-
-    chr_prop = None
-    desc = ''
-    format = ''
-    range = None
-    step = None
+    description = ''
+    characteristic_format = ''
+    characteristic_range = None
+    characteristic_step = None
     for t in tlv:
+        if t[0] == TLV.kTLVHAPParamCharacteristicType:
+            chr_type = [int(a) for a in t[1]]
+            chr_type.reverse()
+            chr_type = str(uuid.UUID(''.join('%02x' % b for b in chr_type)))
+        if t[0] == TLV.kTLVHAPParamServiceInstanceId:
+            svc_id = int.from_bytes(t[1], byteorder='little')
+        if t[0] == TLV.kTLVHAPParamServiceType:
+            svc_type = [int(a) for a in t[1]]
+            svc_type.reverse()
+            svc_type = str(uuid.UUID(''.join('%02x' % b for b in svc_type)))
         if t[0] == TLV.kTLVHAPParamHAPCharacteristicPropertiesDescriptor:
             chr_prop_int = int.from_bytes(t[1], byteorder='little')
-            chr_prop = [int(a) for a in t[1]]
-            chr_prop.reverse()
-            chr_prop = ''.join('%02x' % b for b in chr_prop)
         if t[0] == TLV.kTLVHAPParamGATTUserDescriptionDescriptor:
-            desc = t[1].decode()
+            description = t[1].decode()
         if t[0] == TLV.kTLVHAPParamHAPValidValuesDescriptor:
             print('valid values', t[1])
         if t[0] == TLV.kTLVHAPParamHAPValidValuesRangeDescriptor:
@@ -72,38 +70,30 @@ def parse_sig_read_response(data, tid):
         if t[0] == TLV.kTLVHAPParamGATTPresentationFormatDescriptor:
             unit_bytes = t[1][2:4]
             unit_bytes.reverse()
-            format = characteristic_formats.get(int(t[1][0]), 'unknown')
-            unit = characteristic_units.get(int.from_bytes(unit_bytes, byteorder='big'), 'unknown')
-            # print('format data', t[1].hex())
-            # print('\tFormat', characteristic_formats.get(int(t[1][0]), 'unknown'))
-            # print('\tExponent', int(t[1][1]))
-            # print('\tUnit', characteristic_units.get(int.from_bytes(unit_bytes, byteorder='big'), 'unknown'))
-            # print('\tNamespace', int(t[1][4]))
-            # print('\tDescription', t[1][5:].hex())
+            characteristic_format = BleCharacteristicFormats.get(int(t[1][0]), 'unknown')
+            unit = BleCharacteristicUnits.get(int.from_bytes(unit_bytes, byteorder='big'), 'unknown')
         if t[0] == TLV.kTLVHAPParamGATTValidRange:
-            # print('range', t[1])
-            # print(type(t[1]), format)
+            logging.debug('range: %s', t[1].hex())
             lower = None
             upper = None
-            if format == 'int32':
+            if characteristic_format == 'int32' or characteristic_format == 'int':
                 (lower, upper) = struct.unpack('ii', t[1])
-            if format == 'uint8':
+            if characteristic_format == 'uint8':
                 (lower, upper) = struct.unpack('BB', t[1])
-            # l = len(t[1])
-            # lower = t[1][:int(l/2)]
-            # upper = t[1][int(l/2):]
-            # print(lower, upper)
-            range = (lower, upper)
+            if characteristic_format == 'float':
+                (lower, upper) = struct.unpack('ff', t[1])
+            # TODO include all formats!
+            characteristic_range = (lower, upper)
         if t[0] == TLV.kTLVHAPParamHAPStepValueDescriptor:
-            # print('step', t[1])
-            step = None
-            if format == 'int32':
-                step = struct.unpack('i', t[1])[0]
-            if format == 'uint8':
-                step = struct.unpack('B', t[1])[0]
+            characteristic_step = None
+            if characteristic_format == 'int32':
+                characteristic_step = struct.unpack('i', t[1])[0]
+            if characteristic_format == 'uint8':
+                characteristic_step = struct.unpack('B', t[1])[0]
+            # TODO include all formats!
 
-    # print('\t\t\t', 'chr_type', chr_type, 'svc_id', svc_id, 'svc_type', svc_type, 'chr_prop', chr_prop, 'desc >', desc, '<')
-
+    # parse permissions
+    # TODO refactor!
     perms = []
     if (chr_prop_int & 0x0001) > 0:
         perms.append('r')
@@ -124,7 +114,9 @@ def parse_sig_read_response(data, tid):
     if (chr_prop_int & 0x0100) > 0:
         perms.append('evd')
 
-    result = {'description': desc, 'perms': perms, 'format': format, 'unit': unit, 'range': range, 'step': step}
+    result = {'description': description, 'perms': perms, 'format': characteristic_format, 'unit': unit,
+              'range': characteristic_range, 'step': characteristic_step,
+              'type': chr_type, 'service_id': svc_id, 'service_type': svc_type}
     logging.debug('result: %s', str(result))
 
     return result
@@ -152,15 +144,16 @@ class AnyDevice(gatt.gatt.Device):
             'services': []
         }
         for service in self.services:
-            logging.debug('found service with UUID %s (%s)', service.uuid, ServicesTypes.get_short(service.uuid.upper()))
+            logging.debug('found service with UUID %s (%s)', service.uuid,
+                          ServicesTypes.get_short(service.uuid.upper()))
             s_data = {
                 'sid': None,
                 'type': service.uuid.upper(),
                 'characteristics': []
             }
-            self.a_data['services'].append(s_data)
             for characteristic in service.characteristics:
-                logging.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid, CharacteristicsTypes.get_short(characteristic.uuid.upper()))
+                logging.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid,
+                              CharacteristicsTypes.get_short(characteristic.uuid.upper()))
 
                 if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
                     sid = int.from_bytes(characteristic.read_value(), byteorder='little')
@@ -172,7 +165,6 @@ class AnyDevice(gatt.gatt.Device):
                         'type': characteristic.uuid.upper(),
                         'perms': []
                     }
-                    s_data['characteristics'].append(c_data)
                     cid = None
                     for descriptor in characteristic.descriptors:
                         value = descriptor.read_value()
@@ -186,12 +178,17 @@ class AnyDevice(gatt.gatt.Device):
 
                     if cid:
                         v = cid.to_bytes(length=2, byteorder='little')
-                        tid = 42
-                        characteristic.write_value([0x00, 0x01, tid, v[0], v[1]])
+                        tid = random.randrange(0, 255)
+                        characteristic.write_value([0x00, HapBleOpCodes.CHAR_SIG_READ, tid, v[0], v[1]])
                         d = parse_sig_read_response(characteristic.read_value(), tid)
                         for k in d:
                             c_data[k] = d[k]
+                    if c_data['cid']:
+                        s_data['characteristics'].append(c_data)
+            if s_data['sid']:
+                self.a_data['services'].append(s_data)
 
+        logging.debug('data: %s', self.a_data)
         logging.debug('disconnecting from device')
         self.disconnect()
         logging.debug('disconnected from device')
@@ -206,7 +203,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--log', action='store', dest='loglevel')
     args = arg_parser.parse_args()
 
-    logging.basicConfig(format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s')
+    logging.basicConfig(format='%(asctime)s %(filename)s:%(lineno)04d %(levelname)s %(message)s')
     if args.loglevel:
         getattr(logging, args.loglevel.upper())
         numeric_level = getattr(logging, args.loglevel.upper(), None)
@@ -214,7 +211,7 @@ if __name__ == '__main__':
             raise ValueError('Invalid log level: %s' % args.loglevel)
         logging.getLogger().setLevel(numeric_level)
 
-    logging.debug('Running version 20181119')
+    logging.debug('Running version 20181122')
     logging.debug('using adapter %s', args.adapter)
     manager = ResolvingManager(adapter_name=args.adapter, mac=args.mac_address)
     manager.start_discovery()
@@ -235,15 +232,14 @@ if __name__ == '__main__':
 
     print('-' * 20, 'human readable', '-' * 20)
     for service in device.a_data['services']:
-        s_type = service['type']
+        s_type = service['type'].upper()
         s_iid = service['sid']
-        s_uuid = service['type']
-        print('{iid}: >{stype}< ({uuid})'.format(uuid=s_uuid, iid=s_iid, stype=ServicesTypes.get_short(s_type)))
+        print('{iid}: >{stype}< ({uuid})'.format(uuid=s_type, iid=s_iid, stype=ServicesTypes.get_short(s_type)))
 
         for characteristic in service['characteristics']:
             c_iid = characteristic['cid']
             value = characteristic.get('value', '')
-            c_type = characteristic['type']
+            c_type = characteristic['type'].upper()
             perms = ','.join(characteristic['perms'])
             desc = characteristic.get('description', '')
             c_type = CharacteristicsTypes.get_short(c_type)
@@ -267,15 +263,16 @@ if __name__ == '__main__':
             json_characteristic = {
                 'type': characteristic['type'],
                 'description': characteristic.get('description', ''),
+                'aid': service['sid'],
                 'iid': characteristic['cid'],
                 'value': characteristic.get('value', ''),
                 'perms': characteristic['perms'],
-                'format': characteristic.get('format','UNKNWN'),
-                'unit': characteristic['unit'],
-                'range': str(characteristic['range']),
-                'step': str(characteristic['step']),
+                'format': characteristic.get('format', 'missing'),
+                'unit': characteristic.get('unit', 'missing'),
+                'range': str(characteristic.get('range', 'missing')),
+                'step': str(characteristic.get('step', 'missing')),
             }
             json_characteristics.append(json_characteristic)
         json_services.append(json_service)
-    json_data = [{'aid':1,'services': json_services}]
+    json_data = [{'aid': 1, 'services': json_services}]
     print(json.dumps(json_data, indent=4))

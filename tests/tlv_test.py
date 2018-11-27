@@ -108,6 +108,16 @@ class TestTLV(unittest.TestCase):
         res = TLV.to_string(example)
         self.assertEqual(res, '{\n  1: (5 bytes) hello\n  2: (5 bytes) world\n}\n')
 
+    def test_to_string_for_dict_bytearray(self):
+        example = {1: bytearray([0x42, 0x23])}
+        res = TLV.to_string(example)
+        self.assertEqual(res, '{\n  1: (2 bytes) 0x4223\n}\n')
+
+    def test_to_string_for_list_bytearray(self):
+        example = [[1, bytearray([0x42, 0x23])]]
+        res = TLV.to_string(example)
+        self.assertEqual(res, '[\n  1: (2 bytes) 0x4223\n]\n')
+
     def test_separator_list(self):
         val = [
             [TLV.kTLVType_State, TLV.M3],

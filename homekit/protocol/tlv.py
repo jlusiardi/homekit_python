@@ -164,18 +164,22 @@ class TLV:
 
     @staticmethod
     def to_string(d) -> str:
+        def entry_to_string(entry_key, entry_value) -> str:
+            if isinstance(entry_value, bytearray):
+                return '  {k}: ({l} bytes) 0x{v}\n'.format(k=entry_key, v=entry_value.hex(), l=len(entry_value))
+            return '  {k}: ({l} bytes) {v}\n'.format(k=entry_key, v=entry_value, l=len(entry_value))
+
         if isinstance(d, dict):
             res = '{\n'
             for k in d.keys():
-                res += '  {k}: ({l} bytes) {v}\n'.format(k=k, v=d[k], l=len(d[k]))
+                res += entry_to_string(k, d[k])
             res += '}\n'
         else:
             res = '[\n'
             for k in d:
-                res += '  {k}: ({l} bytes) {v}\n'.format(k=k[0], v=k[1], l=len(k[1]))
+                res += entry_to_string(k[0], k[1])
             res += ']\n'
         return res
-
 
     @staticmethod
     def reorder(tlv_array, preferred_order):

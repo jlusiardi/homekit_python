@@ -22,7 +22,7 @@ from homekit.controller import Controller
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit pairing app')
+    parser = argparse.ArgumentParser(description='HomeKit IP pairing app')
     parser.add_argument('-d', action='store', required=True, dest='device',
                         help='HomeKit Device ID (use discover to get it)')
     parser.add_argument('-p', action='store', required=True, dest='pin', help='HomeKit configuration code')
@@ -48,6 +48,7 @@ if __name__ == '__main__':
     try:
         controller.perform_pairing(args.alias, args.device, args.pin)
         pairing = controller.get_pairings()[args.alias]
+        pairing['Connection'] = 'IP'
         pairing.list_accessories_and_characteristics()
         controller.save_data(args.file)
         print('Pairing for {a} was established.'.format(a=args.alias))

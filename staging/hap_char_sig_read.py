@@ -7,6 +7,7 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
+from staging.version import VERSION
 
 from homekit.protocol.tlv import TLV
 from homekit.protocol.opcodes import HapBleOpCodes
@@ -128,8 +129,8 @@ class ResolvingManager(gatt.gatt.DeviceManager):
         gatt.gatt.DeviceManager.__init__(self, adapter_name=adapter_name)
 
     def device_discovered(self, device):
-        logging.debug('discovered %s', device.mac_address)
-        if device.mac_address == self.mac:
+        logging.debug('discovered %s', device.mac_address.upper())
+        if device.mac_address.upper() == self.mac.upper():
             self.stop()
 
 
@@ -201,6 +202,8 @@ if __name__ == '__main__':
     arg_parser.add_argument('mac_address', help="MAC address of device to connect")
     arg_parser.add_argument('--adapter', action='store', dest='adapter', default='hci0')
     arg_parser.add_argument('--log', action='store', dest='loglevel')
+    arg_parser.add_argument('-o', action='store', dest='output', default='compact', choices=['json', 'compact'],
+                        help='Specify output format')
     args = arg_parser.parse_args()
 
     logging.basicConfig(format='%(asctime)s %(filename)s:%(lineno)04d %(levelname)s %(message)s')
@@ -211,7 +214,7 @@ if __name__ == '__main__':
             raise ValueError('Invalid log level: %s' % args.loglevel)
         logging.getLogger().setLevel(numeric_level)
 
-    logging.debug('Running version 20181122')
+    logging.debug('Running version %s', VERSION)
     logging.debug('using adapter %s', args.adapter)
     manager = ResolvingManager(adapter_name=args.adapter, mac=args.mac_address)
     manager.start_discovery()
@@ -230,49 +233,49 @@ if __name__ == '__main__':
     except:
         device.disconnect()
 
-    print('-' * 20, 'human readable', '-' * 20)
-    for service in device.a_data['services']:
-        s_type = service['type'].upper()
-        s_iid = service['sid']
-        print('{iid}: >{stype}< ({uuid})'.format(uuid=s_type, iid=s_iid, stype=ServicesTypes.get_short(s_type)))
+    if args.output == 'compact':
+        for service in device.a_data['services']:
+            s_type = service['type'].upper()
+            s_iid = service['sid']
+            print('{iid}: >{stype}< ({uuid})'.format(uuid=s_type, iid=s_iid, stype=ServicesTypes.get_short(s_type)))
 
-        for characteristic in service['characteristics']:
-            c_iid = characteristic['cid']
-            value = characteristic.get('value', '')
-            c_type = characteristic['type'].upper()
-            perms = ','.join(characteristic['perms'])
-            desc = characteristic.get('description', '')
-            c_type = CharacteristicsTypes.get_short(c_type)
-            print('  {aid}.{iid}: {value} ({description}) >{ctype}< [{perms}]'.format(aid=s_iid,
-                                                                                      iid=c_iid,
-                                                                                      value=value,
-                                                                                      ctype=c_type,
-                                                                                      perms=perms,
-                                                                                      description=desc))
+            for characteristic in service['characteristics']:
+                c_iid = characteristic['cid']
+                value = characteristic.get('value', '')
+                c_type = characteristic['type'].upper()
+                perms = ','.join(characteristic['perms'])
+                desc = characteristic.get('description', '')
+                c_type = CharacteristicsTypes.get_short(c_type)
+                print('  {aid}.{iid}: {value} ({description}) >{ctype}< [{perms}]'.format(aid=s_iid,
+                                                                                          iid=c_iid,
+                                                                                          value=value,
+                                                                                          ctype=c_type,
+                                                                                          perms=perms,
+                                                                                          description=desc))
 
-    print('-' * 20, 'json', '-' * 20)
-    json_services = []
-    for service in device.a_data['services']:
-        json_characteristics = []
-        json_service = {
-            'type': service['type'],
-            'iid': service['sid'],
-            'characteristics': json_characteristics
-        }
-        for characteristic in service['characteristics']:
-            json_characteristic = {
-                'type': characteristic['type'],
-                'description': characteristic.get('description', ''),
-                'aid': service['sid'],
-                'iid': characteristic['cid'],
-                'value': characteristic.get('value', ''),
-                'perms': characteristic['perms'],
-                'format': characteristic.get('format', 'missing'),
-                'unit': characteristic.get('unit', 'missing'),
-                'range': str(characteristic.get('range', 'missing')),
-                'step': str(characteristic.get('step', 'missing')),
+    if args.output == 'json':
+        json_services = []
+        for service in device.a_data['services']:
+            json_characteristics = []
+            json_service = {
+                'type': service['type'],
+                'iid': service['sid'],
+                'characteristics': json_characteristics
             }
-            json_characteristics.append(json_characteristic)
-        json_services.append(json_service)
-    json_data = [{'aid': 1, 'services': json_services}]
-    print(json.dumps(json_data, indent=4))
+            for characteristic in service['characteristics']:
+                json_characteristic = {
+                    'type': characteristic['type'],
+                    'description': characteristic.get('description', ''),
+                    'aid': service['sid'],
+                    'iid': characteristic['cid'],
+                    'value': characteristic.get('value', ''),
+                    'perms': characteristic['perms'],
+                    'format': characteristic.get('format', 'missing'),
+                    'unit': characteristic.get('unit', 'missing'),
+                    'range': str(characteristic.get('range', 'missing')),
+                    'step': str(characteristic.get('step', 'missing')),
+                }
+                json_characteristics.append(json_characteristic)
+            json_services.append(json_service)
+        json_data = [{'aid': 1, 'services': json_services}]
+        print(json.dumps(json_data, indent=4))

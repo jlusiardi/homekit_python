@@ -529,7 +529,8 @@ class Session(object):
             conn = HomeKitHTTPConnection(accessory_ip, port=accessory_port)
             try:
                 conn.connect()
-                c2a_key, a2c_key = get_session_keys(conn, pairing_data)
+                write_fun = create_ip_pair_verify_write(conn)
+                c2a_key, a2c_key = get_session_keys(conn, pairing_data, write_fun)
                 connected = True
             except Exception as e:
                 connected = False
@@ -543,7 +544,8 @@ class Session(object):
             conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
             pairing_data['AccessoryIP'] = connection_data['ip']
             pairing_data['AccessoryPort'] = connection_data['port']
-            c2a_key, a2c_key = get_session_keys(conn, pairing_data)
+            write_fun = create_ip_pair_verify_write(conn)
+            c2a_key, a2c_key = get_session_keys(conn, pairing_data, write_fun)
 
         self.sock = conn.sock
         self.c2a_key = c2a_key

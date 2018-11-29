@@ -28,7 +28,8 @@ from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, UnpairedError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError, FormatError
 from homekit.http_impl.secure_http import SecureHttp
-from homekit.protocol import get_session_keys, perform_pair_setup, create_ip_pair_setup_write
+from homekit.protocol import get_session_keys, perform_pair_setup, create_ip_pair_setup_write, \
+    create_ip_pair_verify_write
 from homekit.protocol.tlv import TLV, TlvParseException
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats
 

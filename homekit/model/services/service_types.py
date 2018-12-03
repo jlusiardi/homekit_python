@@ -21,6 +21,7 @@ class _ServicesTypes(object):
     """
     INFORMATION_SERVICE = 'A2'  # new for ble, homekit spec page 126
     PAIRING_SERVICE = '55'      # new for ble, homekit spec page 57
+    ACCESSORY_INFORMATION = '3E'
 
     def __init__(self):
         self.baseUUID = '-0000-1000-8000-0026BB765291'

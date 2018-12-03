@@ -21,6 +21,7 @@ import json
 from distutils.util import strtobool
 from json.decoder import JSONDecodeError
 import time
+import logging
 
 from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
@@ -132,7 +133,10 @@ class Controller(object):
             with open(filename, 'r') as input_fp:
                 data = json.load(input_fp)
                 for pairing_id in data:
-                    self.pairings[pairing_id] = Pairing(data[pairing_id])
+                    if data[pairing_id]['Connection'] == 'IP':
+                        self.pairings[pairing_id] = IpPairing(data[pairing_id])
+                    else:
+                        self.pairings[pairing_id] = BlePairing(data[pairing_id])
         except PermissionError as e:
             raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=filename))
         except JSONDecodeError as e:
@@ -160,7 +164,7 @@ class Controller(object):
             raise ConfigSavingError(
                 'Could not write "{f}" because it (or the folder) does not exist'.format(f=filename))
 
-    def perform_pairing(self, alias, accessory_id, pin):
+    def perform_pairing(self, alias, accessory_id, pin, type='IP'):
         """
         This performs a pairing attempt with the accessory identified by its id.
 
@@ -185,18 +189,23 @@ class Controller(object):
         """
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
-        connection_data = find_device_ip_and_port(accessory_id)
-        if connection_data is None:
-            raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
-        conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
-        try:
-            write_fun = create_ip_pair_setup_write(conn)
-            pairing = perform_pair_setup(pin, str(uuid.uuid4()), write_fun)
-        finally:
-            conn.close()
-        pairing['AccessoryIP'] = connection_data['ip']
-        pairing['AccessoryPort'] = connection_data['port']
-        self.pairings[alias] = Pairing(pairing)
+
+        if type == 'IP':
+            connection_data = find_device_ip_and_port(accessory_id)
+            if connection_data is None:
+                raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
+            conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
+            try:
+                write_fun = create_ip_pair_setup_write(conn)
+                pairing = perform_pair_setup(pin, str(uuid.uuid4()), write_fun)
+            finally:
+                conn.close()
+            pairing['AccessoryIP'] = connection_data['ip']
+            pairing['AccessoryPort'] = connection_data['port']
+            pairing['Connection'] = 'IP'
+            self.pairings[alias] = IpPairing(pairing)
+        else:
+            raise Exception('not implemented')
 
     def remove_pairing(self, alias):
         """
@@ -233,9 +242,32 @@ class Controller(object):
                 raise UnknownError('Remove pairing failed: unknown error')
 
 
-class Pairing(object):
+class AbstractPairing(object):
+
+    def _get_pairing_data(self):
+        """
+        This method returns the internal pairing data. DO NOT mess around with it.
+
+        :return: a dict containing the data
+        """
+        return self.pairing_data
+
+
+class BlePairing(AbstractPairing):
+
+    def __init__(self, pairing_data):
+        """
+        Initialize a Pairing by using the data either loaded from file or obtained after calling
+        Controller.perform_pairing().
+
+        :param pairing_data:
+        """
+        self.pairing_data = pairing_data
+
+
+class IpPairing(AbstractPairing):
     """
-    This represents a paired HomeKit accessory.
+    This represents a paired HomeKit IP accessory.
     """
 
     def __init__(self, pairing_data):
@@ -254,14 +286,6 @@ class Pairing(object):
         """
         if self.session:
             self.session.close()
-
-    def _get_pairing_data(self):
-        """
-        This method returns the internal pairing data. DO NOT mess around with it.
-
-        :return: a dict containing the data
-        """
-        return self.pairing_data
 
     def list_accessories_and_characteristics(self):
         """
@@ -522,6 +546,7 @@ class Session(object):
         :param pairing_data:
         :raises AccessoryNotFoundError: if the device can not be found via zeroconf
         """
+        logging.debug('init session')
         connected = False
         if 'AccessoryIP' in pairing_data and 'AccessoryPort' in pairing_data:
             # if it is known, try it
@@ -548,6 +573,7 @@ class Session(object):
             write_fun = create_ip_pair_verify_write(conn)
             c2a_key, a2c_key = get_session_keys(conn, pairing_data, write_fun)
 
+        logging.debug('session established')
         self.sock = conn.sock
         self.c2a_key = c2a_key
         self.a2c_key = a2c_key

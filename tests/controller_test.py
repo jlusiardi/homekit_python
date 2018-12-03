@@ -140,6 +140,7 @@ class TestControllerPaired(unittest.TestCase):
     def setUpClass(cls):
         cls.config_file = tempfile.NamedTemporaryFile()
         cls.config_file.write("""{
+            "Connection": "IP",
             "accessory_ltpk": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
             "accessory_ltsk": "3d99f3e959a1f93af4056966f858074b2a1fdec1c5fd84a51ea96f9fa004156a",
             "accessory_pairing_id": "12:34:56:00:01:0A",
@@ -173,6 +174,7 @@ class TestControllerPaired(unittest.TestCase):
         cls.controller_file = tempfile.NamedTemporaryFile()
         cls.controller_file.write("""{
             "alias": {
+                "Connection": "IP",
                 "iOSDeviceLTPK": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8",
                 "iOSPairingId": "decc6fa3-de3e-41c9-adba-ef7409821bfc",
                 "AccessoryLTPK": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",

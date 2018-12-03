@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-VERSION='20181129'
+VERSION='20181203'

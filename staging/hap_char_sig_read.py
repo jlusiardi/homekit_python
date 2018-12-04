@@ -19,8 +19,7 @@ import json
 import random
 import uuid
 
-# the uuid of the ble descriptors that hold the characteristic instance id as value (see page 128)
-CharacteristicInstanceID = 'dc46f0fe-81d2-4616-b5d9-6abdd796939a'
+from staging.tools import CharacteristicInstanceID, setup_logging, ResolvingManager
 
 
 def parse_sig_read_response(data, expected_tid):
@@ -123,25 +122,18 @@ def parse_sig_read_response(data, expected_tid):
     return result
 
 
-class ResolvingManager(gatt.gatt.DeviceManager):
-    def __init__(self, adapter_name, mac):
-        self.mac = mac
-        gatt.gatt.DeviceManager.__init__(self, adapter_name=adapter_name)
+class ServicesResolvingDevice(gatt.gatt.Device):
+    def __init__(self, mac_address, manager, managed=True):
+        gatt.gatt.Device.__init__(self, mac_address, manager, managed)
+        self.resolved_data = None
 
-    def device_discovered(self, device):
-        logging.debug('discovered %s', device.mac_address.upper())
-        if device.mac_address.upper() == self.mac.upper():
-            self.stop()
-
-
-class AnyDevice(gatt.gatt.Device):
     def services_resolved(self):
         super().services_resolved()
         logging.debug('resolved %d services', len(self.services))
         self.manager.stop()
         logging.debug('stopped manager')
 
-        self.a_data = {
+        self.resolved_data = {
             'services': []
         }
         for service in self.services:
@@ -187,9 +179,9 @@ class AnyDevice(gatt.gatt.Device):
                     if c_data['cid']:
                         s_data['characteristics'].append(c_data)
             if s_data['sid']:
-                self.a_data['services'].append(s_data)
+                self.resolved_data['services'].append(s_data)
 
-        logging.debug('data: %s', self.a_data)
+        logging.debug('data: %s', self.resolved_data)
         logging.debug('disconnecting from device')
         self.disconnect()
         logging.debug('disconnected from device')
@@ -206,13 +198,7 @@ if __name__ == '__main__':
                         help='Specify output format')
     args = arg_parser.parse_args()
 
-    logging.basicConfig(format='%(asctime)s %(filename)s:%(lineno)04d %(levelname)s %(message)s')
-    if args.loglevel:
-        getattr(logging, args.loglevel.upper())
-        numeric_level = getattr(logging, args.loglevel.upper(), None)
-        if not isinstance(numeric_level, int):
-            raise ValueError('Invalid log level: %s' % args.loglevel)
-        logging.getLogger().setLevel(numeric_level)
+    setup_logging(args.loglevel)
 
     logging.debug('Running version %s', VERSION)
     logging.debug('using adapter %s', args.adapter)
@@ -222,7 +208,7 @@ if __name__ == '__main__':
     logging.debug('discovered')
 
     manager = gatt.DeviceManager(adapter_name=args.adapter)
-    device = AnyDevice(manager=manager, mac_address=args.mac_address)
+    device = ServicesResolvingDevice(manager=manager, mac_address=args.mac_address)
     logging.debug('connecting to device')
     device.connect()
     logging.debug('connected to device')
@@ -234,7 +220,7 @@ if __name__ == '__main__':
         device.disconnect()
 
     if args.output == 'compact':
-        for service in device.a_data['services']:
+        for service in device.resolved_data['services']:
             s_type = service['type'].upper()
             s_iid = service['sid']
             print('{iid}: >{stype}< ({uuid})'.format(uuid=s_type, iid=s_iid, stype=ServicesTypes.get_short(s_type)))
@@ -255,7 +241,7 @@ if __name__ == '__main__':
 
     if args.output == 'json':
         json_services = []
-        for service in device.a_data['services']:
+        for service in device.resolved_data['services']:
             json_characteristics = []
             json_service = {
                 'type': service['type'],

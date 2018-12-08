@@ -2,6 +2,8 @@ import logging
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 import gatt.gatt
+from homekit.protocol.statuscodes import HapBleStatusCodes
+from homekit.protocol.tlv import TLV
 
 # the uuid of the ble descriptors that hold the characteristic instance id as value (see page 128)
 CharacteristicInstanceID = 'dc46f0fe-81d2-4616-b5d9-6abdd796939a'
@@ -80,3 +82,35 @@ class LoggingDevice(gatt.gatt.Device):
     def disconnect_succeeded(self):
         super().disconnect_succeeded()
         logging.debug('device disconnected')
+
+    def characteristic_write_value_succeeded(self, characteristic):
+        super().characteristic_write_value_succeeded(characteristic)
+        logging.debug('write successful')
+
+    def characteristic_write_value_failed(self, characteristic, error):
+        super().characteristic_write_value_failed(characteristic, error)
+        logging.debug('write failed: %s', error)
+
+
+def parse_read_response(data, expected_tid):
+    # parse header and check stuff
+    logging.debug('parse sig read response %s', bytes([int(a) for a in data]).hex())
+
+    # handle the header data
+    cf = data[0]
+    logging.debug('control field %d', cf)
+    tid = data[1]
+    logging.debug('transaction id %d (expected was %d)', tid, expected_tid)
+    status = data[2]
+    logging.debug('status code %d (%s)', status, HapBleStatusCodes[status])
+    assert cf == 0x02
+    assert tid == expected_tid
+    assert status == HapBleStatusCodes.SUCCESS
+
+    # get body length
+    length = int.from_bytes(data[3:5], byteorder='little')
+    logging.debug('expected body length %d (got %d)', length, len(data[5:]))
+
+    # parse tlvs and analyse information
+    tlv = TLV.decode_bytes(data[5:])
+    print(TLV.to_string(tlv))

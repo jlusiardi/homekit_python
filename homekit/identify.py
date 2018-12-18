@@ -20,6 +20,7 @@ import sys
 import argparse
 
 from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
@@ -31,6 +32,7 @@ def setup_args_parser():
     group = parser.add_argument_group('Identify paired', 'use this option to identify an PAIRED accessory.')
     group.add_argument('-f', action='store',  dest='file', help='File with the pairing data')
     group.add_argument('-a', action='store', dest='alias', help='alias for the pairing')
+    add_log_arguments(parser)
 
     parsed_args = parser.parse_args()
 
@@ -47,6 +49,8 @@ def setup_args_parser():
 
 if __name__ == '__main__':
     args = setup_args_parser()
+
+    setup_logging(args.loglevel)
 
     controller = Controller()
     if args.device:

@@ -20,6 +20,7 @@ import argparse
 import sys
 
 from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
@@ -29,6 +30,7 @@ def setup_args_parser():
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-c', action='append', required=False, dest='characteristics', nargs=2,
                         help='Use aid.iid value to change the value. Repeat to change multiple characteristics.')
+    add_log_arguments(parser)
 
     args = parser.parse_args()
     if 'characteristics' not in args or not args.characteristics:
@@ -39,6 +41,8 @@ def setup_args_parser():
 
 if __name__ == '__main__':
     args = setup_args_parser()
+
+    setup_logging(args.loglevel)
 
     controller = Controller()
     try:

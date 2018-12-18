@@ -20,6 +20,7 @@ import json
 import argparse
 
 from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
@@ -37,11 +38,14 @@ def setup_args_parser():
                         help='read out the types for the characteristics as well')
     parser.add_argument('-e', action='store_true', required=False, dest='events',
                         help='read out the events for the characteristics as well')
+    add_log_arguments(parser)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
+
+    setup_logging(args.loglevel)
 
     controller = Controller()
     controller.load_data(args.file)

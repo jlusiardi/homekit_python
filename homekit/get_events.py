@@ -18,7 +18,9 @@
 
 import argparse
 import sys
+
 from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
@@ -31,7 +33,7 @@ def setup_args_parser():
                         default=-1, type=int)
     parser.add_argument('-s', action='store', required=False, dest='secondsCount', default=-1, type=int,
                         help='max number of seconds before end')
-
+    add_log_arguments(parser)
     return parser.parse_args()
 
 
@@ -42,6 +44,9 @@ def func(events):
 
 if __name__ == '__main__':
     args = setup_args_parser()
+
+    setup_logging(args.loglevel)
+
     controller = Controller()
     try:
         controller.load_data(args.file)

@@ -19,11 +19,11 @@
 import json
 import sys
 import argparse
-import logging
 
 from homekit.controller import Controller
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.services import ServicesTypes
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
@@ -32,20 +32,14 @@ def setup_args_parser():
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-o', action='store', dest='output', default='compact', choices=['json', 'compact'],
                         help='Specify output format')
-    parser.add_argument('--log', action='store', dest='loglevel')
+    add_log_arguments(parser)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
 
-    logging.basicConfig(format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s')
-    if args.loglevel:
-        getattr(logging, args.loglevel.upper())
-        numeric_level = getattr(logging, args.loglevel.upper(), None)
-        if not isinstance(numeric_level, int):
-            raise ValueError('Invalid log level: %s' % args.loglevel)
-        logging.getLogger().setLevel(numeric_level)
+    setup_logging(args.loglevel)
 
     controller = Controller()
     try:

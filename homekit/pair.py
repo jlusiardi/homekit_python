@@ -18,7 +18,9 @@
 
 import argparse
 import sys
+
 from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
@@ -28,11 +30,14 @@ def setup_args_parser():
     parser.add_argument('-p', action='store', required=True, dest='pin', help='HomeKit configuration code')
     parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
+    add_log_arguments(parser)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
+
+    setup_logging(args.loglevel)
 
     controller = Controller()
     try:
@@ -48,7 +53,6 @@ if __name__ == '__main__':
     try:
         controller.perform_pairing(args.alias, args.device, args.pin)
         pairing = controller.get_pairings()[args.alias]
-        pairing['Connection'] = 'IP'
         pairing.list_accessories_and_characteristics()
         controller.save_data(args.file)
         print('Pairing for {a} was established.'.format(a=args.alias))

@@ -1,7 +1,7 @@
 import logging
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
-import gatt.gatt
+import staging.gatt.gatt
 from homekit.protocol.statuscodes import HapBleStatusCodes
 from homekit.protocol.tlv import TLV
 
@@ -64,7 +64,7 @@ def find_characteristic(device, service_uuid, char_uuid):
     return result_char, result_char_id
 
 
-class ResolvingManager(gatt.gatt.DeviceManager):
+class ResolvingManager(staging.gatt.gatt.DeviceManager):
     """
     DeviceManager implementation that stops running after a given device was discovered.
     """
@@ -78,7 +78,7 @@ class ResolvingManager(gatt.gatt.DeviceManager):
             self.stop()
 
 
-class LoggingDevice(gatt.gatt.Device):
+class LoggingDevice(staging.gatt.gatt.Device):
     def disconnect_succeeded(self):
         super().disconnect_succeeded()
         logging.debug('device disconnected')

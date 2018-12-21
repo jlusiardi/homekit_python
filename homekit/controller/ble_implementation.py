@@ -143,7 +143,7 @@ class BleSession(object):
         # TODO specify adapter by config?
         manager = staging.gatt.DeviceManager(adapter_name='hci0')
 
-        self.device = staging.gatt.Device(manager=manager, mac_address=mac_address)
+        self.device = Device(manager=manager, mac_address=mac_address)
         logging.debug('connecting to device')
         self.device.connect()
         logging.debug('connected to device')
@@ -373,7 +373,28 @@ class ResolvingManager(staging.gatt.DeviceManager):
             self.stop()
 
 
-class ServicesResolvingDevice(staging.gatt.gatt.Device):
+class Device(staging.gatt.gatt.Device):
+
+    def connect(self):
+        super().connect()
+
+        if not self.services:
+            logging.debug('waiting for services to be resolved')
+            for i in range(10):
+                if self.is_services_resolved():
+                    break
+                time.sleep(1)
+            else:
+               raise BleSessionError('Unable to resolve device services + characteristics')
+
+            # This is called automatically when the mainloop is running, but we
+            # want to avoid running it and blocking for an indeterminate amount of time.
+            logging.debug('enumerating resolved services')
+            self.services_resolved()
+
+
+class ServicesResolvingDevice(Device):
+
     def __init__(self, mac_address, manager, managed=True):
         staging.gatt.gatt.Device.__init__(self, mac_address, manager, managed)
         self.resolved_data = None

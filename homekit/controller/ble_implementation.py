@@ -4,6 +4,7 @@ import random
 import sys
 import uuid
 import struct
+import dbus.exceptions
 
 from homekit.controller.tools import AbstractPairing
 from homekit.exceptions import AccessoryNotFoundError
@@ -379,19 +380,22 @@ class Device(staging.gatt.gatt.Device):
     def connect(self):
         super().connect()
 
-        if not self.services:
-            logging.debug('waiting for services to be resolved')
-            for i in range(10):
-                if self.is_services_resolved():
-                    break
-                time.sleep(1)
-            else:
-                raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
+        try:
+            if not self.services:
+                logging.debug('waiting for services to be resolved')
+                for i in range(10):
+                    if self.is_services_resolved():
+                        break
+                    time.sleep(1)
+                else:
+                    raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
 
-            # This is called automatically when the mainloop is running, but we
-            # want to avoid running it and blocking for an indeterminate amount of time.
-            logging.debug('enumerating resolved services')
-            self.services_resolved()
+                # This is called automatically when the mainloop is running, but we
+                # want to avoid running it and blocking for an indeterminate amount of time.
+                logging.debug('enumerating resolved services')
+                self.services_resolved()
+        except dbus.exceptions.DBusException as e:
+            raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
 
 
 class ServicesResolvingDevice(Device):

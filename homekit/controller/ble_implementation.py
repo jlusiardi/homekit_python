@@ -6,6 +6,7 @@ import uuid
 import struct
 
 from homekit.controller.tools import AbstractPairing
+from homekit.exceptions import AccessoryNotFoundError
 from homekit.protocol.tlv import TLV
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.protocol import get_session_keys
@@ -385,7 +386,7 @@ class Device(staging.gatt.gatt.Device):
                     break
                 time.sleep(1)
             else:
-               raise BleSessionError('Unable to resolve device services + characteristics')
+                raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
 
             # This is called automatically when the mainloop is running, but we
             # want to avoid running it and blocking for an indeterminate amount of time.

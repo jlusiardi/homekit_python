@@ -472,7 +472,6 @@ class ServicesResolvingDevice(Device):
                           ServicesTypes.get_short(service.uuid.upper()))
             s_data = {
                 'aid': None,
-#                'type': service.uuid.upper(),
                 'services': [
                         {
                             'characteristics': [
@@ -514,7 +513,7 @@ class ServicesResolvingDevice(Device):
                         d = parse_sig_read_response(characteristic.read_value(), tid)
                         for k in d:
                             if k == 'service_type':
-                                s_data['services'][0]['type'] = d[k]
+                                s_data['services'][0]['type'] = d[k].upper()
                             elif k == 'sid':
                                 s_data['services'][0]['iid'] = d[k]
                             else:
@@ -629,7 +628,7 @@ def parse_sig_read_response(data, expected_tid):
 
     result = {'description': description, 'perms': perms, 'format': characteristic_format, 'unit': unit,
               'range': characteristic_range, 'step': characteristic_step,
-              'type': chr_type, 'sid': svc_id, 'service_type': svc_type}
+              'type': chr_type.upper(), 'sid': svc_id, 'service_type': svc_type}
     logging.debug('result: %s', str(result))
 
     return result

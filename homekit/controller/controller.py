@@ -5,7 +5,8 @@ import logging
 
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.controller.ip_implementation import IpPairing, IpSession
-from homekit.controller.ble_implementation import BlePairing, find_characteristic_by_uuid, create_ble_pair_setup_write
+from homekit.controller.ble_implementation import BlePairing, BleSession, find_characteristic_by_uuid, create_ble_pair_setup_write, \
+    ServicesResolvingDevice
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError
 from homekit.protocol.tlv import TLV
@@ -151,9 +152,9 @@ class Controller(object):
 
     def perform_pairing(self, alias, accessory_id, pin):
         """
-        This performs a pairing attempt with the accessory identified by its id.
+        This performs a pairing attempt with the IP accessory identified by its id.
 
-        Accessories can be found via the discover method. The id field is the accessory's for the second parameter.
+        Accessories can be found via the discover method. The id field is the accessory's id for the second parameter.
 
         The required pin is either printed on the accessory or displayed. Must be a string of the form 'XXX-YY-ZZZ'.
 
@@ -161,7 +162,7 @@ class Controller(object):
             and you have to reset the accessory!
 
         :param alias: the alias for the accessory in the controllers data
-        :param accessory_id: the accessory's id for IP and accessory's mac for BLE TODO make this better...
+        :param accessory_id: the accessory's id
         :param pin: the accessory's pin
         :raises AccessoryNotFoundError: if no accessory with the given id can be found
         :raises AlreadyPairedError: if the alias was already used
@@ -190,7 +191,21 @@ class Controller(object):
         self.pairings[alias] = IpPairing(pairing)
 
     def perform_pairing_ble(self, alias, accessory_mac, pin):
-        # TODO add documentation
+        """
+        This performs a pairing attempt with the Bluetooth LE accessory identified by its mac address.
+
+        Accessories can be found via the discover method. The mac field is the accessory's mac for the second parameter.
+
+        The required pin is either printed on the accessory or displayed. Must be a string of the form 'XXX-YY-ZZZ'.
+
+        Important: no automatic saving of the pairing data is performed. If you don't do this, the information is lost
+            and you have to reset the accessory!
+
+        :param alias: the alias for the accessory in the controllers data
+        :param accessory_mac: the accessory's mac address
+        :param pin: the accessory's pin
+        # TODO add raised exceptions
+        """
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
 
@@ -268,5 +283,33 @@ class Controller(object):
                     raise AuthenticationError('Remove pairing failed: missing authentication')
                 else:
                     raise UnknownError('Remove pairing failed: unknown error')
+        elif connection_type == 'BLE':
+            request_tlv = TLV.encode_list([
+                (TLV.kTLVType_State, TLV.M1),
+                (TLV.kTLVType_Method, TLV.RemovePairing),
+                (TLV.kTLVType_Identifier, pairing_data['iOSPairingId'].encode())
+            ])
+
+            class AnyDevice(staging.gatt.gatt_linux.Device):
+                def services_resolved(self):
+                    super().services_resolved()
+                    logging.debug('resolved %d services', len(self.services))
+                    self.manager.stop()
+
+            manager = staging.gatt.DeviceManager(adapter_name='hci0')
+            device = AnyDevice(manager=manager, mac_address=pairing_data['AccessoryMAC'])
+            device.connect()
+            manager.run()
+            #
+            logging.debug('resolved %d services', len(device.services))
+            pair_remove_char, pair_remove_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
+                                                                                CharacteristicsTypes.PAIRING_PAIRINGS)
+            logging.debug('setup char: %s %s', pair_remove_char, pair_remove_char.service.device)
+
+            session = BleSession(pairing_data)
+            from homekit.protocol.opcodes import HapBleOpCodes
+
+            response = session.request(pair_remove_char, pair_remove_char_id, HapBleOpCodes.CHAR_WRITE, request_tlv)
+            logging.debug('response: %s', response)
         else:
             raise Exception('not implemented')

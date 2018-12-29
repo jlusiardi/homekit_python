@@ -18,6 +18,7 @@
 
 import argparse
 import sys
+import logging
 
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
@@ -64,6 +65,7 @@ if __name__ == '__main__':
         results = pairing.put_characteristics(characteristics, do_conversion=True)
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)
 
     for key, value in results.items():

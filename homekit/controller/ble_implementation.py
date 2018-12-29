@@ -5,6 +5,7 @@ import sys
 import uuid
 import struct
 import dbus.exceptions
+from distutils.util import strtobool
 
 from homekit.controller.tools import AbstractPairing
 from homekit.exceptions import AccessoryNotFoundError
@@ -15,8 +16,9 @@ from homekit.protocol.opcodes import HapBleOpCodes
 from homekit.protocol.statuscodes import HapBleStatusCodes
 from homekit.model.services.service_types import ServicesTypes
 from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt
-from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
+from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats, CharacteristicFormats
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
+from homekit.exceptions import FormatError
 
 import staging.gatt
 
@@ -40,20 +42,10 @@ class BlePairing(AbstractPairing):
         pass
 
     def list_accessories_and_characteristics(self):
-        # manager = ResolvingManager(adapter_name='hci0', mac=self.pairing_data['AccessoryMAC'])
-        # manager.start_discovery()
-        # manager.run()
-        # logging.debug('discovered')
-
         manager = staging.gatt.DeviceManager(adapter_name='hci0')
         device = ServicesResolvingDevice(manager=manager, mac_address=self.pairing_data['AccessoryMAC'])
         device.connect()
-        logging.debug('------> finished <------')
-        # try:
-        #     logging.debug('start manager')
-        #     manager.run()
-        # except:
-        #     device.disconnect()
+        self.pairing_data['accessories'] = device.resolved_data['data']
         return device.resolved_data['data']
 
     def list_pairings(self):
@@ -92,12 +84,74 @@ class BlePairing(AbstractPairing):
 
             response = self.session.request(fc, fc_id, HapBleOpCodes.CHAR_READ)
 
+            value = self._convert_to_python(aid, cid, response[1]) if 1 in response else None
+
             results[(aid, cid)] = {
-                # TODO convert to appropriate type
-                'value': response[1] if 1 in response else None
+                'value': value
             }
 
         return results
+
+    def _convert_from_python(self, aid, cid, value):
+        char_format = None
+        for a in self.pairing_data['accessories']:
+            if a['aid'] != int(aid):
+                continue
+
+            for s in a['services']:
+                for c in s['characteristics']:
+                    if c['iid'] == int(cid):
+                        char_format = c['format']
+                        break
+        logging.debug('value: %s format: %s', value, char_format)
+
+        if char_format == CharacteristicFormats.bool:
+            try:
+                val = strtobool(str(value))
+            except ValueError:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=char_format))
+
+            value = struct.pack('?', val)
+        elif char_format == CharacteristicFormats.int:
+            value = struct.pack('i', int(value))
+        elif char_format == CharacteristicFormats.float:
+            value = struct.pack('f', float(value))
+
+        return value
+
+    def _convert_to_python(self, aid, cid, value):
+        char_format = None
+        for a in self.pairing_data['accessories']:
+            if a['aid'] != int(aid):
+                continue
+
+            for s in a['services']:
+                for c in s['characteristics']:
+                    if c['iid'] == int(cid):
+                        char_format = c['format']
+                        break
+        logging.debug('value: %s format: %s', value.hex(), char_format)
+
+        if char_format == CharacteristicFormats.bool:
+            value = struct.unpack('?', value)[0]
+        elif char_format == CharacteristicFormats.uint8:
+            value = struct.unpack('B', value)[0]
+        elif char_format == CharacteristicFormats.uint16:
+            value = struct.unpack('H', value)[0]
+        elif char_format == CharacteristicFormats.uint32:
+            value = struct.unpack('I', value)[0]
+        elif char_format == CharacteristicFormats.uint64:
+            value = struct.unpack('Q', value)[0]
+        elif char_format == CharacteristicFormats.int:
+            value = struct.unpack('i', value)[0]
+        elif char_format == CharacteristicFormats.float:
+            value = struct.unpack('f', value)[0]
+        elif char_format == CharacteristicFormats.string:
+            value = value.decode('UTF-8')
+        else:
+            value = value.hex()
+
+        return value
 
     def put_characteristics(self, characteristics, do_conversion=False):
         """
@@ -117,7 +171,9 @@ class BlePairing(AbstractPairing):
         for aid, cid, value in characteristics:
             fc, fc_id = find_characteristic_by_aid_iid(self.session.device, aid, cid)
 
-            value = TLV.encode_list([(1, value)])
+            # TODO convert input value into proper representation for type
+            value = TLV.encode_list([(1, self._convert_from_python(aid, cid, value))])
+            # value = TLV.encode_list([(1, value)])
             body = len(value).to_bytes(length=2, byteorder='little') + value
 
             response = self.session.request(
@@ -137,9 +193,6 @@ class BleSession(object):
         self.c2a_key = None
         self.a2c_key = None
         self.device = None
-        self.setup_session()
-
-    def setup_session(self):
         mac_address = self.pairing_data['AccessoryMAC']
 
         # TODO specify adapter by config?
@@ -175,6 +228,7 @@ class BleSession(object):
         data.extend(feature_char_id.to_bytes(length=2, byteorder='little'))
 
         if body:
+            logging.debug('body: %s', body)
             data.extend(body)
 
         cnt_bytes = self.c2a_counter.to_bytes(8, byteorder='little')
@@ -195,12 +249,11 @@ class BleSession(object):
             data = feature_char.read_value()
         resp_data = bytearray([b for b in data])
         logging.debug('read: %s', bytearray(resp_data).hex())
-        print(resp_data)
 
         data = chacha20_aead_decrypt(bytes(), self.a2c_key, self.a2c_counter.to_bytes(8, byteorder='little'),
                                      bytes([0, 0, 0, 0]), resp_data)
 
-        print(data)
+        logging.debug('decrypted: %s', bytearray(data).hex())
 
         if not data:
             return {}
@@ -227,7 +280,7 @@ class BleSession(object):
 
         # parse tlvs and analyse information
         tlv = TLV.decode_bytes(data[5:])
-        print(TLV.to_string(tlv))
+        logging.debug('received TLV: %s', TLV.to_string(tlv))
         return dict(tlv)
 
 
@@ -286,7 +339,8 @@ def find_characteristic_by_aid_iid(device, aid, iid):
         for characteristic in possible_service.characteristics:
             if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
                 sid = int.from_bytes(characteristic.read_value(), byteorder='little')
-                if aid == str(sid):
+                logging.debug('%s == %s -> %s (%s, %s)', sid, aid, sid == aid, type(sid), type(aid))
+                if aid == sid:
                     service_found = possible_service
                     break
         if service_found:
@@ -304,7 +358,7 @@ def find_characteristic_by_aid_iid(device, aid, iid):
         for descriptor in characteristic.descriptors:
             value = descriptor.read_value()
             cid = int.from_bytes(value, byteorder='little')
-            if iid == str(cid):
+            if iid == cid:
                 result_char = characteristic
                 result_char_id = cid
                 break

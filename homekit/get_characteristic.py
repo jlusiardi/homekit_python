@@ -56,7 +56,7 @@ if __name__ == '__main__':
     pairing = controller.get_pairings()[args.alias]
 
     # convert the command line parameters to the required form
-    characteristics = [(c.split('.')) for c in args.characteristics]
+    characteristics = [(int(c.split('.')[0]), int(c.split('.')[1])) for c in args.characteristics]
 
     # get the data
     data = pairing.get_characteristics(characteristics, include_meta=args.meta, include_perms=args.perms,

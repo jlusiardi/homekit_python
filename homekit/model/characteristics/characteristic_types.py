@@ -279,6 +279,7 @@ class _CharacteristicsTypes(object):
         :return: the textual representation
         """
         orig_item = uuid
+        uuid = uuid.upper()
         if uuid.endswith(self.baseUUID):
             uuid = uuid.split('-', 1)[0]
             uuid = uuid.lstrip('0')

@@ -42,6 +42,9 @@ class BlePairing(AbstractPairing):
         pass
 
     def list_accessories_and_characteristics(self):
+        if 'accessories' in self.pairing_data:
+            return self.pairing_data['accessories']
+
         manager = staging.gatt.DeviceManager(adapter_name='hci0')
         device = ServicesResolvingDevice(manager=manager, mac_address=self.pairing_data['AccessoryMAC'])
         device.connect()

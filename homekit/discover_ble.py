@@ -216,6 +216,64 @@ def which(program):
     return None
 
 
+def discover(adapter, timeout=10):
+    hciconfig = which('hciconfig')
+    hcitool = which('hcitool')
+    hcidump = which('hcidump')
+
+    if not hciconfig:
+        print('hciconfig could not be found in the PATH!')
+        sys.exit(-1)
+
+    if not hcitool:
+        print('hcitool could not be found in the PATH!')
+        sys.exit(-1)
+
+    if not hcidump:
+        print('hcidump could not be found in the PATH!')
+        sys.exit(-1)
+
+    command = [hciconfig, adapter, 'up']
+    logging.debug('Executing \'%s\'', ' '.join(command))
+    p0 = subprocess.Popen(command, stdout=subprocess.PIPE)
+
+    command = [hcitool, '-i', adapter, 'lescan', '--duplicates']
+    logging.debug('Executing \'%s\'', ' '.join(command))
+    p0 = subprocess.Popen(command, stdout=subprocess.PIPE)
+    Killer(timeout, p0).start()
+
+    command = [hcidump, '-i', adapter, '--raw', '2>&1']
+    logging.debug('Executing \'%s\'', ' '.join(command))
+    p1 = subprocess.Popen(command, stdout=subprocess.PIPE)
+    Killer(timeout, p1).start()
+
+    data = None
+    # we have to parse the output of hcidump here: it looks like
+    # > 04 3E 2B 02 01 00 01 64 9F ED 22 D1 EB 1F 02 01 06 16 FF 4C
+    #   00 06 31 01 84 BF 32 C2 8F 04 0A 00 02 00 01 02 9E 5D 64 42
+    #   04 08 4B 6F 6F D7
+    # > ...
+    for line in p1.stdout:
+        # lines from hci dump starting with > (ASCII 62) mark a new package
+        if line[0] == 62:
+            # a new packet is started, so we handle the old packet's data now
+            if data:
+                data = data.decode('ascii')
+                data = bytes.fromhex(data.replace(' ', ''))
+                logging.debug('data %s', data.hex())
+                if data[0] == HCI_EVENT and data[1] == LE_META:
+                    parse_ble_meta_data(data[2:])
+            # data of the new packet, but without the starting '> ' and the ending line break
+            data = line[2:-2]
+        elif data is not None:
+            # we already have read at least a packet start and now add the following lines (ignoring space and line
+            # break in the beginning and end.
+            data = (data + line[1:-2])
+            raw = data
+
+    return devices
+
+
 if __name__ == '__main__':
     arg_parser = ArgumentParser(description='HomeKit BLE discover app - '\
                                             'list all HomeKit Bluetooth LE devices in range. *MUST* be running as '\
@@ -247,57 +305,7 @@ if __name__ == '__main__':
         arg_parser.print_help()
         sys.exit(-1)
 
-
-    hciconfig = which('hciconfig')
-    hcitool = which('hcitool')
-    hcidump = which('hcidump')
-    if not hciconfig:
-        print('hciconfig could not be found in the PATH!')
-        sys.exit(-1)
-    if not hcitool:
-        print('hcitool could not be found in the PATH!')
-        sys.exit(-1)
-    if not hcidump:
-        print('hcidump could not be found in the PATH!')
-        sys.exit(-1)
-
-    command = [hciconfig, args.adapter, 'up']
-    logging.debug('Executing \'%s\'', ' '.join(command))
-    p0 = subprocess.Popen(command, stdout=subprocess.PIPE)
-
-    command = [hcitool, '-i', args.adapter, 'lescan', '--duplicates']
-    logging.debug('Executing \'%s\'', ' '.join(command))
-    p0 = subprocess.Popen(command, stdout=subprocess.PIPE)
-    Killer(args.timeout, p0).start()
-
-    command = [hcidump, '-i', args.adapter, '--raw', '2>&1']
-    logging.debug('Executing \'%s\'', ' '.join(command))
-    p1 = subprocess.Popen(command, stdout=subprocess.PIPE)
-    Killer(args.timeout, p1).start()
-
-    data = None
-    # we have to parse the output of hcidump here: it looks like
-    # > 04 3E 2B 02 01 00 01 64 9F ED 22 D1 EB 1F 02 01 06 16 FF 4C
-    #   00 06 31 01 84 BF 32 C2 8F 04 0A 00 02 00 01 02 9E 5D 64 42
-    #   04 08 4B 6F 6F D7
-    # > ...
-    for line in p1.stdout:
-        # lines from hci dump starting with > (ASCII 62) mark a new package
-        if line[0] == 62:
-            # a new packet is started, so we handle the old packet's data now
-            if data:
-                data = data.decode('ascii')
-                data = bytes.fromhex(data.replace(' ', ''))
-                logging.debug('data %s', data.hex())
-                if data[0] == HCI_EVENT and data[1] == LE_META:
-                    parse_ble_meta_data(data[2:])
-            # data of the new packet, but without the starting '> ' and the ending line break
-            data = line[2:-2]
-        elif data is not None:
-            # we already have read at least a packet start and now add the following lines (ignoring space and line
-            # break in the beginning and end.
-            data = (data + line[1:-2])
-            raw = data
+    devices = discover(args.adapter, args.timeout)
 
     print()
     for mac in devices:

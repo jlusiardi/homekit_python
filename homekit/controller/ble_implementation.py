@@ -230,10 +230,10 @@ class BleSession(object):
     def find_characteristic_by_aid_iid(self, aid, cid):
         key = (aid, cid)
         if key in self._char_by_aid_iid:
-            print("Using cached char id")
+            logging.debug("Using cached char id")
             return self._char_by_aid_iid[key]
 
-        print("Finding char id")
+        logging.debug("Finding char id")
         fc, fc_id = find_characteristic_by_aid_iid(self.device, aid, cid)
         self._char_by_aid_iid[(aid, cid)] = (fc, fc_id)
         return (fc, fc_id)

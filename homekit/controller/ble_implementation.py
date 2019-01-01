@@ -85,9 +85,13 @@ class BlePairing(AbstractPairing):
 
         results = {}
         for aid, cid in characteristics:
-            fc, fc_id = self.session.find_characteristic_by_aid_iid(aid, cid)
-
-            response = self.session.request(fc, fc_id, HapBleOpCodes.CHAR_READ)
+            try:
+                fc, fc_id = self.session.find_characteristic_by_aid_iid(aid, cid)
+                response = self.session.request(fc, fc_id, HapBleOpCodes.CHAR_READ)
+            except Exception as e:
+                self.session.close()
+                self.session = None
+                raise e
 
             value = self._convert_to_python(aid, cid, response[1]) if 1 in response else None
 
@@ -174,20 +178,23 @@ class BlePairing(AbstractPairing):
             self.session = BleSession(self.pairing_data)
 
         for aid, cid, value in characteristics:
-            fc, fc_id = find_characteristic_by_aid_iid(self.session.device, aid, cid)
-
             # TODO convert input value into proper representation for type
             value = TLV.encode_list([(1, self._convert_from_python(aid, cid, value))])
             # value = TLV.encode_list([(1, value)])
             body = len(value).to_bytes(length=2, byteorder='little') + value
 
-            response = self.session.request(
-                fc,
-                fc_id,
-                HapBleOpCodes.CHAR_WRITE,
-                body,
-            )
-
+            try:
+                fc, fc_id = self.session.find_characteristic_by_aid_iid(aid, cid)
+                response = self.session.request(
+                    fc,
+                    fc_id,
+                    HapBleOpCodes.CHAR_WRITE,
+                    body,
+                )
+            except Exception as e:
+                self.session.close()
+                self.session = None
+                raise e
 
 class BleSession(object):
 
@@ -228,6 +235,9 @@ class BleSession(object):
 
         self.c2a_counter = 0
         self.a2c_counter = 0
+
+    def close(self):
+        self.device.disconnect()
 
     def find_characteristic_by_aid_iid(self, aid, cid):
         key = (aid, cid)

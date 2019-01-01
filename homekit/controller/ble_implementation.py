@@ -458,8 +458,8 @@ class Device(staging.gatt.gatt.Device):
 
         try:
             if not self.services:
-                for i in range(10):
                 logger.debug('waiting for services to be resolved')
+                for i in range(20):
                     if self.is_services_resolved():
                         break
                     time.sleep(1)

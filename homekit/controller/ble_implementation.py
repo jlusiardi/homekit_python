@@ -25,6 +25,8 @@ import staging.gatt
 # the uuid of the ble descriptors that hold the characteristic instance id as value (see page 128)
 CharacteristicInstanceID = 'dc46f0fe-81d2-4616-b5d9-6abdd796939a'
 
+logger = logging.getLogger('homekit.controller.ble_implementation')
+
 
 class BlePairing(AbstractPairing):
 
@@ -106,7 +108,7 @@ class BlePairing(AbstractPairing):
                     if c['iid'] == int(cid):
                         char_format = c['format']
                         break
-        logging.debug('value: %s format: %s', value, char_format)
+        logger.debug('value: %s format: %s', value, char_format)
 
         if char_format == CharacteristicFormats.bool:
             try:
@@ -133,7 +135,7 @@ class BlePairing(AbstractPairing):
                     if c['iid'] == int(cid):
                         char_format = c['format']
                         break
-        logging.debug('value: %s format: %s', value.hex(), char_format)
+        logger.debug('value: %s format: %s', value.hex(), char_format)
 
         if char_format == CharacteristicFormats.bool:
             value = struct.unpack('?', value)[0]
@@ -205,9 +207,9 @@ class BleSession(object):
         manager = staging.gatt.DeviceManager(adapter_name='hci0')
 
         self.device = Device(manager=manager, mac_address=mac_address)
-        logging.debug('connecting to device')
+        logger.debug('connecting to device')
         self.device.connect()
-        logging.debug('connected to device')
+        logger.debug('connected to device')
 
         pair_verify_char, pair_verify_char_id = find_characteristic_by_uuid(
             self.device,
@@ -222,7 +224,7 @@ class BleSession(object):
 
         write_fun = create_ble_pair_setup_write(pair_verify_char, pair_verify_char_id)
         self.c2a_key, self.a2c_key = get_session_keys(None, self.pairing_data, write_fun)
-        logging.debug('keys: \n\t\tc2a: %s\n\t\ta2c: %s', self.c2a_key.hex(), self.a2c_key.hex())
+        logger.debug('keys: \n\t\tc2a: %s\n\t\ta2c: %s', self.c2a_key.hex(), self.a2c_key.hex())
 
         self.c2a_counter = 0
         self.a2c_counter = 0
@@ -230,10 +232,10 @@ class BleSession(object):
     def find_characteristic_by_aid_iid(self, aid, cid):
         key = (aid, cid)
         if key in self._char_by_aid_iid:
-            logging.debug("Using cached char id")
+            logger.debug("Using cached char id")
             return self._char_by_aid_iid[key]
 
-        logging.debug("Finding char id")
+        logger.debug("Finding char id")
         fc, fc_id = find_characteristic_by_aid_iid(self.device, aid, cid)
         self._char_by_aid_iid[(aid, cid)] = (fc, fc_id)
         return (fc, fc_id)
@@ -245,46 +247,46 @@ class BleSession(object):
         data.extend(feature_char_id.to_bytes(length=2, byteorder='little'))
 
         if body:
-            logging.debug('body: %s', body)
+            logger.debug('body: %s', body)
             data.extend(body)
 
         cnt_bytes = self.c2a_counter.to_bytes(8, byteorder='little')
         cipher_and_mac = chacha20_aead_encrypt(bytes(), self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]), data)
         cipher_and_mac[0].extend(cipher_and_mac[1])
         data = cipher_and_mac[0]
-        logging.debug('cipher and mac %s', cipher_and_mac[0].hex())
+        logger.debug('cipher and mac %s', cipher_and_mac[0].hex())
 
         result = feature_char.write_value(value=data)
-        logging.debug('write resulted in: %s', result)
+        logger.debug('write resulted in: %s', result)
 
         self.c2a_counter += 1
 
         data = []
         while not data or len(data) == 0:
             time.sleep(1)
-            logging.debug('reading characteristic')
+            logger.debug('reading characteristic')
             data = feature_char.read_value()
         resp_data = bytearray([b for b in data])
-        logging.debug('read: %s', bytearray(resp_data).hex())
+        logger.debug('read: %s', bytearray(resp_data).hex())
 
         data = chacha20_aead_decrypt(bytes(), self.a2c_key, self.a2c_counter.to_bytes(8, byteorder='little'),
                                      bytes([0, 0, 0, 0]), resp_data)
 
-        logging.debug('decrypted: %s', bytearray(data).hex())
+        logger.debug('decrypted: %s', bytearray(data).hex())
 
         if not data:
             return {}
 
         # parse header and check stuff
-        logging.debug('parse sig read response %s', bytes([int(a) for a in data]).hex())
+        logger.debug('parse sig read response %s', bytes([int(a) for a in data]).hex())
 
         # handle the header data
         cf = data[0]
-        logging.debug('control field %d', cf)
+        logger.debug('control field %d', cf)
         tid = data[1]
-        logging.debug('transaction id %d (expected was %d)', tid, transaction_id)
+        logger.debug('transaction id %d (expected was %d)', tid, transaction_id)
         status = data[2]
-        logging.debug('status code %d (%s)', status, HapBleStatusCodes[status])
+        logger.debug('status code %d (%s)', status, HapBleStatusCodes[status])
         assert cf == 0x02
         assert tid == transaction_id
         assert status == HapBleStatusCodes.SUCCESS
@@ -293,11 +295,11 @@ class BleSession(object):
 
         # get body length
         length = int.from_bytes(data[3:5], byteorder='little')
-        logging.debug('expected body length %d (got %d)', length, len(data[5:]))
+        logger.debug('expected body length %d (got %d)', length, len(data[5:]))
 
         # parse tlvs and analyse information
         tlv = TLV.decode_bytes(data[5:])
-        logging.debug('received TLV: %s', TLV.to_string(tlv))
+        logger.debug('received TLV: %s', TLV.to_string(tlv))
         return dict(tlv)
 
 
@@ -310,12 +312,12 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
     :return:
     """
     service_found = None
-    logging.debug('services: %s', device.services)
+    logger.debug('services: %s', device.services)
     for possible_service in device.services:
         if ServicesTypes.get_short(service_uuid.upper()) == ServicesTypes.get_short(possible_service.uuid.upper()):
             service_found = possible_service
             break
-    logging.debug('searched service: %s', service_found)
+    logger.debug('searched service: %s', service_found)
 
     if not service_found:
         logging.error('searched service not found.')
@@ -324,7 +326,7 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
     result_char = None
     result_char_id = None
     for characteristic in service_found.characteristics:
-        logging.debug('char: %s %s', characteristic.uuid, CharacteristicsTypes.get_short(characteristic.uuid.upper()))
+        logger.debug('char: %s %s', characteristic.uuid, CharacteristicsTypes.get_short(characteristic.uuid.upper()))
         if CharacteristicsTypes.get_short(char_uuid.upper()) == CharacteristicsTypes.get_short(
                 characteristic.uuid.upper()):
             result_char = characteristic
@@ -338,7 +340,7 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
         logging.error('searched char not found.')
         return None, None
 
-    logging.debug('searched char: %s %s', result_char, result_char_id)
+    logger.debug('searched char: %s %s', result_char, result_char_id)
     return result_char, result_char_id
 
 
@@ -351,18 +353,18 @@ def find_characteristic_by_aid_iid(device, aid, iid):
     :return:
     """
     service_found = None
-    logging.debug('services: %s', device.services)
+    logger.debug('services: %s', device.services)
     for possible_service in device.services:
         for characteristic in possible_service.characteristics:
             if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
                 sid = int.from_bytes(characteristic.read_value(), byteorder='little')
-                logging.debug('%s == %s -> %s (%s, %s)', sid, aid, sid == aid, type(sid), type(aid))
+                logger.debug('%s == %s -> %s (%s, %s)', sid, aid, sid == aid, type(sid), type(aid))
                 if aid == sid:
                     service_found = possible_service
                     break
         if service_found:
             break
-    logging.debug('searched service: %s', service_found)
+    logger.debug('searched service: %s', service_found)
 
     if not service_found:
         logging.error('searched service not found.')
@@ -371,7 +373,7 @@ def find_characteristic_by_aid_iid(device, aid, iid):
     result_char = None
     result_char_id = None
     for characteristic in service_found.characteristics:
-        logging.debug('char: %s %s', characteristic.uuid, CharacteristicsTypes.get_short(characteristic.uuid.upper()))
+        logger.debug('char: %s %s', characteristic.uuid, CharacteristicsTypes.get_short(characteristic.uuid.upper()))
         for descriptor in characteristic.descriptors:
             value = descriptor.read_value()
             cid = int.from_bytes(value, byteorder='little')
@@ -386,13 +388,13 @@ def find_characteristic_by_aid_iid(device, aid, iid):
         logging.error('searched char not found.')
         return None, None
 
-    logging.debug('searched char: %s %s', result_char, result_char_id)
+    logger.debug('searched char: %s %s', result_char, result_char_id)
     return result_char, result_char_id
 
 
 def create_ble_pair_setup_write(characteristic, characteristic_id):
     def write(request, expected):
-        logging.debug('entering write function %s', TLV.to_string(TLV.decode_bytes(request)))
+        logger.debug('entering write function %s', TLV.to_string(TLV.decode_bytes(request)))
         request_tlv = TLV.encode_list([
             (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
             (TLV.kTLVHAPParamValue, request)
@@ -402,31 +404,31 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
         data.extend(characteristic_id.to_bytes(length=2, byteorder='little'))
         data.extend(len(request_tlv).to_bytes(length=2, byteorder='little'))
         data.extend(request_tlv)
-        logging.debug('sent %s', bytes(data).hex())
+        logger.debug('sent %s', bytes(data).hex())
         characteristic.write_value(value=data)
         data = []
         while len(data) == 0:
             time.sleep(1)
-            logging.debug('reading characteristic')
+            logger.debug('reading characteristic')
             data = characteristic.read_value()
         resp_data = [b for b in data]
 
         expected_length = int.from_bytes(bytes(resp_data[3:5]), byteorder='little')
-        logging.debug(
+        logger.debug(
             'control field: {c:x}, tid: {t:x}, status: {s:x}, length: {l}'.format(c=resp_data[0], t=resp_data[1],
                                                                                   s=resp_data[2], l=expected_length))
         while len(resp_data[3:]) < expected_length:
             time.sleep(1)
-            logging.debug('reading characteristic')
+            logger.debug('reading characteristic')
             data = characteristic.read_value()
             resp_data.extend([b for b in data])
-            logging.debug('data %s of %s', len(resp_data[3:]), expected_length)
+            logger.debug('data %s of %s', len(resp_data[3:]), expected_length)
 
-        logging.debug('received %s', bytes(resp_data).hex())
-        logging.debug('decode %s', bytes(resp_data[5:]).hex())
+        logger.debug('received %s', bytes(resp_data).hex())
+        logger.debug('decode %s', bytes(resp_data[5:]).hex())
         resp_tlv = TLV.decode_bytes(bytes([int(a) for a in resp_data[5:]]), expected=[TLV.kTLVHAPParamValue])
         result = TLV.decode_bytes(resp_tlv[0][1], expected)
-        logging.debug('leaving write function %s', TLV.to_string(result))
+        logger.debug('leaving write function %s', TLV.to_string(result))
         return result
 
     return write
@@ -441,7 +443,7 @@ class ResolvingManager(staging.gatt.DeviceManager):
         staging.gatt.DeviceManager.__init__(self, adapter_name=adapter_name)
 
     def device_discovered(self, device):
-        logging.debug('discovered %s', device.mac_address.upper())
+        logger.debug('discovered %s', device.mac_address.upper())
         if device.mac_address.upper() == self.mac.upper():
             self.stop()
 
@@ -453,8 +455,8 @@ class Device(staging.gatt.gatt.Device):
 
         try:
             if not self.services:
-                logging.debug('waiting for services to be resolved')
                 for i in range(10):
+                logger.debug('waiting for services to be resolved')
                     if self.is_services_resolved():
                         break
                     time.sleep(1)
@@ -463,7 +465,7 @@ class Device(staging.gatt.gatt.Device):
 
                 # This is called automatically when the mainloop is running, but we
                 # want to avoid running it and blocking for an indeterminate amount of time.
-                logging.debug('enumerating resolved services')
+                logger.debug('enumerating resolved services')
                 self.services_resolved()
         except dbus.exceptions.DBusException as e:
             raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
@@ -477,15 +479,15 @@ class ServicesResolvingDevice(Device):
 
     def services_resolved(self):
         super().services_resolved()
-        logging.debug('resolved %d services', len(self.services))
+        logger.debug('resolved %d services', len(self.services))
         self.manager.stop()
-        logging.debug('stopped manager')
+        logger.debug('stopped manager')
 
         self.resolved_data = {
             'data': []
         }
         for service in self.services:
-            logging.debug('found service with UUID %s (%s)', service.uuid,
+            logger.debug('found service with UUID %s (%s)', service.uuid,
                           ServicesTypes.get_short(service.uuid.upper()))
             s_data = {
                 'aid': None,
@@ -499,12 +501,12 @@ class ServicesResolvingDevice(Device):
             }
             
             for characteristic in service.characteristics:
-                logging.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid,
+                logger.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid,
                               CharacteristicsTypes.get_short(characteristic.uuid.upper()))
 
                 if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
                     aid = int.from_bytes(characteristic.read_value(), byteorder='little')
-                    logging.debug('\t\tread service id %d', aid)
+                    logger.debug('\t\tread service id %d', aid)
                     s_data['aid'] = aid
                 else:
                     c_data = {
@@ -517,7 +519,7 @@ class ServicesResolvingDevice(Device):
                         value = descriptor.read_value()
                         if descriptor.uuid == CharacteristicInstanceID:
                             iid = int.from_bytes(value, byteorder='little')
-                            logging.debug('\t\tread characteristic id %d', iid)
+                            logger.debug('\t\tread characteristic id %d', iid)
                             c_data['iid'] = iid
                         else:
                             # print('\t\t', 'D', descriptor.uuid, value)
@@ -543,32 +545,32 @@ class ServicesResolvingDevice(Device):
             if s_data['aid']:
                 self.resolved_data['data'].append(s_data)
 
-        logging.debug('data: %s', self.resolved_data)
-        logging.debug('disconnecting from device')
+        logger.debug('data: %s', self.resolved_data)
+        logger.debug('disconnecting from device')
         self.disconnect()
-        logging.debug('disconnected from device')
+        logger.debug('disconnected from device')
         self.manager.stop()
-        logging.debug('manager stopped')
+        logger.debug('manager stopped')
 
 
 def parse_sig_read_response(data, expected_tid):
     # parse header and check stuff
-    logging.debug('parse sig read response %s', bytes([int(a) for a in data]).hex())
+    logger.debug('parse sig read response %s', bytes([int(a) for a in data]).hex())
 
     # handle the header data
     cf = data[0]
-    logging.debug('control field %d', cf)
+    logger.debug('control field %d', cf)
     tid = data[1]
-    logging.debug('transaction id %d (expected was %d)', tid, expected_tid)
+    logger.debug('transaction id %d (expected was %d)', tid, expected_tid)
     status = data[2]
-    logging.debug('status code %d (%s)', status, HapBleStatusCodes[status])
+    logger.debug('status code %d (%s)', status, HapBleStatusCodes[status])
     assert cf == 0x02
     assert tid == expected_tid
     assert status == HapBleStatusCodes.SUCCESS
 
     # get body length
     length = int.from_bytes(data[3:5], byteorder='little')
-    logging.debug('expected body length %d (got %d)', length, len(data[5:]))
+    logger.debug('expected body length %d (got %d)', length, len(data[5:]))
 
     # parse tlvs and analyse information
     tlv = TLV.decode_bytes(data[5:])
@@ -602,7 +604,7 @@ def parse_sig_read_response(data, expected_tid):
             characteristic_format = BleCharacteristicFormats.get(int(t[1][0]), 'unknown')
             unit = BleCharacteristicUnits.get(int.from_bytes(unit_bytes, byteorder='big'), 'unknown')
         if t[0] == TLV.kTLVHAPParamGATTValidRange:
-            logging.debug('range: %s', t[1].hex())
+            logger.debug('range: %s', t[1].hex())
             lower = None
             upper = None
             if characteristic_format == 'int32' or characteristic_format == 'int':
@@ -646,6 +648,6 @@ def parse_sig_read_response(data, expected_tid):
     result = {'description': description, 'perms': perms, 'format': characteristic_format, 'unit': unit,
               'range': characteristic_range, 'step': characteristic_step,
               'type': chr_type.upper(), 'sid': svc_id, 'service_type': svc_type}
-    logging.debug('result: %s', str(result))
+    logger.debug('result: %s', str(result))
 
     return result

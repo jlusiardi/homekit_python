@@ -266,6 +266,9 @@ class BleSession(object):
             time.sleep(1)
             logger.debug('reading characteristic')
             data = feature_char.read_value()
+            if not data and not self.device.is_connected():
+                raise RuntimeError('Read failed')
+
         resp_data = bytearray([b for b in data])
         logger.debug('read: %s', bytearray(resp_data).hex())
 

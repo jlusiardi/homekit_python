@@ -42,6 +42,9 @@ class BlePairing(AbstractPairing):
         pass
 
     def list_accessories_and_characteristics(self):
+        if 'accessories' in self.pairing_data:
+            return self.pairing_data['accessories']
+
         manager = staging.gatt.DeviceManager(adapter_name='hci0')
         device = ServicesResolvingDevice(manager=manager, mac_address=self.pairing_data['AccessoryMAC'])
         device.connect()
@@ -80,7 +83,7 @@ class BlePairing(AbstractPairing):
 
         results = {}
         for aid, cid in characteristics:
-            fc, fc_id = find_characteristic_by_aid_iid(self.session.device, aid, cid)
+            fc, fc_id = self.session.find_characteristic_by_aid_iid(aid, cid)
 
             response = self.session.request(fc, fc_id, HapBleOpCodes.CHAR_READ)
 
@@ -195,6 +198,9 @@ class BleSession(object):
         self.device = None
         mac_address = self.pairing_data['AccessoryMAC']
 
+        # Cache for characteristic lookups
+        self._char_by_aid_iid = {}
+
         # TODO specify adapter by config?
         manager = staging.gatt.DeviceManager(adapter_name='hci0')
 
@@ -220,6 +226,17 @@ class BleSession(object):
 
         self.c2a_counter = 0
         self.a2c_counter = 0
+
+    def find_characteristic_by_aid_iid(self, aid, cid):
+        key = (aid, cid)
+        if key in self._char_by_aid_iid:
+            logging.debug("Using cached char id")
+            return self._char_by_aid_iid[key]
+
+        logging.debug("Finding char id")
+        fc, fc_id = find_characteristic_by_aid_iid(self.device, aid, cid)
+        self._char_by_aid_iid[(aid, cid)] = (fc, fc_id)
+        return (fc, fc_id)
 
     def request(self, feature_char, feature_char_id, op, body=None):
         transaction_id = random.randrange(0, 255)

@@ -70,7 +70,7 @@ class ResolvingManager(staging.gatt.gatt.DeviceManager):
     """
     def __init__(self, adapter_name, mac):
         self.mac = mac
-        gatt.gatt.DeviceManager.__init__(self, adapter_name=adapter_name)
+        staging.gatt.gatt.DeviceManager.__init__(self, adapter_name=adapter_name)
 
     def device_discovered(self, device):
         logging.debug('discovered %s', device.mac_address.upper())

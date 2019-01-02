@@ -559,9 +559,9 @@ class ServicesResolvingDevice(Device):
                 self.resolved_data['data'].append(s_data)
 
         logger.debug('data: %s', self.resolved_data)
-        logger.debug('disconnecting from device')
-        self.disconnect()
-        logger.debug('disconnected from device')
+        #logger.debug('disconnecting from device')
+        #self.disconnect()
+        #logger.debug('disconnected from device')
         self.manager.stop()
         logger.debug('manager stopped')
 

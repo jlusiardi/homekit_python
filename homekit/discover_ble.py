@@ -111,11 +111,19 @@ class Device(gatt.Device):
 
 class DeviceManager(gatt.DeviceManager):
 
+    discover_callback = None
+
     def make_device(self, mac_address):
         device = Device(mac_address=mac_address, manager=self)
         if not device.homekit_discovery_data:
             return
         self._manage_device(device)
+        if self.discover_callback:
+            self.discover_callback(device)
+
+    def start_discovery(self, callback=None):
+        self.discover_callback = callback
+        return gatt.DeviceManager.start_discovery(self)
 
 
 def discover(adapter, timeout=10):

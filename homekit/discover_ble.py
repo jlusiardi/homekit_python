@@ -93,20 +93,35 @@ class Device(gatt.Device):
         gatt.Device.__init__(self, *args, **kwargs, managed=False)
 
         self.name = self._properties.Get('org.bluez.Device1', 'Alias')
+        self.homekit_discovery_data = self.get_homekit_discovery_data()
 
-        mfr_data = self._properties.Get('org.bluez.Device1', 'ManufacturerData')
+    def get_homekit_discovery_data(self):
+        import dbus
+
+        try:
+            mfr_data = self._properties.Get('org.bluez.Device1', 'ManufacturerData')
+        except dbus.exceptions.DBusException as e:
+            if e.get_dbus_name() == 'org.freedesktop.DBus.Error.InvalidArgs':
+                return {}
+            raise
+
         mfr_data = dict((int(k), bytes(bytearray(v))) for (k, v) in mfr_data.items())
 
         if 76 not in mfr_data:
-            return
+            return {}
 
         parsed = parse_manufacturer_specific(mfr_data[76])
 
         if parsed['type'] != 'HomeKit':
             return
 
-        self.homekit_discovery_data = parsed
+        return parsed
 
+    #def advertised(self):
+    #    print(self.get_homekit_discovery_data())
+
+    def __repr__(self):
+        return 'BleDevice[mac_address="{}", name="{}"]'.format(self.mac_address, self.name)
  
 
 class DeviceManager(gatt.DeviceManager):

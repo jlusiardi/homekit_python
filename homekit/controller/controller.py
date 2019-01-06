@@ -17,9 +17,6 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
 
-# TODO remove this soon
-import staging.gatt
-
 
 class Controller(object):
     """
@@ -49,7 +46,7 @@ class Controller(object):
          * pv: the protocol version
          * s#: the current state number (required)
          * sf: the status flag (see table 5-9 page 70)
-         * ci/category: the category identifier in numerical and human readable form. For more information see table
+         * ci / category: the category identifier in numerical and human readable form. For more information see table
                         12-3 page 254 or homekit.Categories (required)
 
         IMPORTANT:
@@ -238,32 +235,13 @@ class Controller(object):
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
 
-        class AnyDevice(staging.gatt.gatt_linux.Device):
-            def services_resolved(self):
-                super().services_resolved()
-                logging.debug('resolved %d services', len(self.services))
-                self.manager.stop()
+        from .ble_impl.device import DeviceManager
+        manager = DeviceManager(adapter_name='hci0')
+        device = manager.make_device(mac_address=accessory_mac)
 
-            def characteristic_read_value_failed(self, characteristic, error):
-                logging.debug('read failed: %s %s', characteristic, error)
-                self.manager.stop()
-
-            def characteristic_write_value_succeeded(self, characteristic):
-                logging.debug('write success: %s', characteristic)
-                self.manager.stop()
-
-            def characteristic_write_value_failed(self, characteristic, error):
-                logging.debug('write failed: %s %s', characteristic, error)
-
-        manager = ResolvingManager(adapter_name='hci0', mac=accessory_mac)
-        manager.start_discovery()
-        manager.run()
-        manager = staging.gatt.DeviceManager(adapter_name='hci0')
-        device = AnyDevice(manager=manager, mac_address=accessory_mac)
         logging.debug('connecting to device')
         device.connect()
         logging.debug('connected to device')
-        manager.run()
 
         pair_setup_char, pair_setup_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
                                                                           CharacteristicsTypes.PAIR_SETUP)
@@ -316,19 +294,11 @@ class Controller(object):
 
             body = len(inner).to_bytes(length=2, byteorder='little') + inner
 
-            class AnyDevice(staging.gatt.gatt_linux.Device):
-                def services_resolved(self):
-                    super().services_resolved()
-                    logging.debug('resolved %d services', len(self.services))
-                    self.manager.stop()
-
-            manager = staging.gatt.DeviceManager(adapter_name='hci0')
-            device = AnyDevice(manager=manager, mac_address=pairing_data['AccessoryMAC'])
-            logging.debug('connecting to device')
+            from .ble_impl.device import DeviceManager
+            manager = DeviceManager(adapter_name='hci0')
+            device =  manager.make_device(pairing_data['AccessoryMAC'])
             device.connect()
-            logging.debug('connected to device')
-            manager.run()
-
+            #
             logging.debug('resolved %d services', len(device.services))
             pair_remove_char, pair_remove_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
                                                                                 CharacteristicsTypes.PAIRING_PAIRINGS)

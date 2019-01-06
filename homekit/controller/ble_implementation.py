@@ -20,7 +20,8 @@ from homekit.model.characteristics.characteristic_formats import BleCharacterist
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
 from homekit.exceptions import FormatError, RequestRejected
 
-import staging.gatt
+from .ble_impl.device import DeviceManager, Device
+
 
 # the uuid of the ble descriptors that hold the characteristic instance id as value (see page 128)
 CharacteristicInstanceID = 'dc46f0fe-81d2-4616-b5d9-6abdd796939a'
@@ -47,7 +48,7 @@ class BlePairing(AbstractPairing):
         if 'accessories' in self.pairing_data:
             return self.pairing_data['accessories']
 
-        manager = staging.gatt.DeviceManager(adapter_name='hci0')
+        manager = DeviceManager(adapter_name='hci0')
         device = ServicesResolvingDevice(manager=manager, mac_address=self.pairing_data['AccessoryMAC'])
         device.connect()
         self.pairing_data['accessories'] = device.resolved_data['data']
@@ -262,7 +263,7 @@ class BleSession(object):
         mac_address = self.pairing_data['AccessoryMAC']
 
         # TODO specify adapter by config?
-        manager = staging.gatt.DeviceManager(adapter_name='hci0')
+        manager = DeviceManager(adapter_name='hci0')
 
         self.device = Device(manager=manager, mac_address=mac_address)
         logger.debug('connecting to device')
@@ -478,14 +479,14 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
     return write
 
 
-class ResolvingManager(staging.gatt.DeviceManager):
+class ResolvingManager(DeviceManager):
     """
     DeviceManager implementation that stops running after a given device was discovered.
     """
 
     def __init__(self, adapter_name, mac):
         self.mac = mac
-        staging.gatt.DeviceManager.__init__(self, adapter_name=adapter_name)
+        DeviceManager.__init__(self, adapter_name=adapter_name)
 
     def device_discovered(self, device):
         logger.debug('discovered %s', device.mac_address.upper())
@@ -495,44 +496,17 @@ class ResolvingManager(staging.gatt.DeviceManager):
             self.stop_discovery()
 
 
-class Device(staging.gatt.gatt.Device):
-    # TODO document me
-
-    def connect(self):
-        # TODO document me
-        super().connect()
-
-        try:
-            if not self.services:
-                logger.debug('waiting for services to be resolved')
-                for i in range(20):
-                    if self.is_services_resolved():
-                        break
-                    time.sleep(1)
-                else:
-                    raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
-
-                # This is called automatically when the mainloop is running, but we
-                # want to avoid running it and blocking for an indeterminate amount of time.
-                logger.debug('enumerating resolved services')
-                self.services_resolved()
-        except dbus.exceptions.DBusException as e:
-            raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
-
-
 class ServicesResolvingDevice(Device):
     # TODO document me
 
     def __init__(self, mac_address, manager, managed=True):
-        staging.gatt.gatt.Device.__init__(self, mac_address, manager, managed)
+        Device.__init__(self, mac_address, manager)
         self.resolved_data = None
 
     def services_resolved(self):
         # TODO document me
         super().services_resolved()
         logger.debug('resolved %d services', len(self.services))
-        self.manager.stop()
-        logger.debug('stopped manager')
 
         a_data = {
             'aid': 1,
@@ -600,11 +574,6 @@ class ServicesResolvingDevice(Device):
                 a_data['services'].append(s_data)
 
         logger.debug('data: %s', self.resolved_data)
-        # logger.debug('disconnecting from device')
-        # self.disconnect()
-        # logger.debug('disconnected from device')
-        self.manager.stop()
-        logger.debug('manager stopped')
 
 
 def parse_sig_read_response(data, expected_tid):

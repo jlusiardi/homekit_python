@@ -1,1 +1,0 @@
-Taken from https://github.com/getsenic/gatt-python under MIT License.

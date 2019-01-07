@@ -19,7 +19,6 @@ import threading
 import time
 import logging
 from argparse import ArgumentParser
-import sys
 import os
 from homekit.model import Categories
 
@@ -122,7 +121,7 @@ class Device(gatt.Device):
 
     def __repr__(self):
         return 'BleDevice[mac_address="{}", name="{}"]'.format(self.mac_address, self.name)
- 
+
 
 class DeviceManager(gatt.DeviceManager):
 

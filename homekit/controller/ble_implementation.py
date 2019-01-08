@@ -18,7 +18,7 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats, CharacteristicFormats
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
-from homekit.exceptions import FormatError
+from homekit.exceptions import FormatError, RequestRejected
 
 import staging.gatt
 
@@ -177,6 +177,8 @@ class BlePairing(AbstractPairing):
         if not self.session:
             self.session = BleSession(self.pairing_data)
 
+        results = {}
+
         for aid, cid, value in characteristics:
             # TODO convert input value into proper representation for type
             value = TLV.encode_list([(1, self._convert_from_python(aid, cid, value))])
@@ -191,10 +193,18 @@ class BlePairing(AbstractPairing):
                     HapBleOpCodes.CHAR_WRITE,
                     body,
                 )
+            except RequestRejected as e:
+                results[(aic, cid)] = {
+                    'status': e.status,
+                    'description': e.message,
+                }
             except Exception as e:
                 self.session.close()
                 self.session = None
                 raise e
+
+        return results
+
 
 class BleSession(object):
 
@@ -302,7 +312,9 @@ class BleSession(object):
         logger.debug('status code %d (%s)', status, HapBleStatusCodes[status])
         assert cf == 0x02
         assert tid == transaction_id
-        assert status == HapBleStatusCodes.SUCCESS
+
+        if status != HapBleStatusCodes.SUCCESS:
+            raise RequestRejected(status, HapBleStatusCodes[status])
 
         self.a2c_counter += 1
 

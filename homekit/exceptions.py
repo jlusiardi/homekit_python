@@ -198,3 +198,13 @@ class AlreadyPairedError(HomeKitException):
     """
     def __init__(self, message):
         Exception.__init__(self, message)
+
+
+class RequestRejected(HomeKitException):
+    """
+    Raised when a request fails with a HAP error code
+    """
+    def __init__(self, message, error_code):
+        self.error_code = error_code
+        self.message = message
+        Exception.__init__(message)

@@ -319,6 +319,8 @@ class _CharacteristicsTypes(object):
         full and short UUID consult chapter 5.6.1 page 72 of the specification. It also supports to pass through full
         HomeKit UUIDs.
 
+        Shorted UUID means also leading zeros are stripped.
+
         :param item_name: either the type name (e.g. "public.hap.characteristic.position.current") or the short UUID or
                           a HomeKit specific full UUID.
         :return: the full UUID (e.g. "0000006D-0000-1000-8000-0026BB765291")

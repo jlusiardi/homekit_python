@@ -1,0 +1,13 @@
+[run]
+omit =
+    */.local/*
+    /usr/*
+    staging/*
+    tests/*
+
+[report]
+omit =
+    */.local/*
+    /usr/*
+    staging/*
+    tests/*

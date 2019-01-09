@@ -73,7 +73,8 @@ if __name__ == '__main__':
         iid = key[1]
         status = value['status']
         desc = value['description']
-        if status < 0:
+        # used to be < 0 but bluetooth le errors are > 0 and only success (= 0) needs to be checked
+        if status != 0:
             print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.format(aid=aid, iid=iid,
                                                                                                 reason=desc,
                                                                                                 code=status))

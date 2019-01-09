@@ -54,12 +54,15 @@ class BlePairing(AbstractPairing):
         return device.resolved_data['data']
 
     def list_pairings(self):
+        # TODO implementation still missing
         pass
 
     def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
+        # TODO implementation still missing
         pass
 
     def identify(self):
+        # TODO implementation still missing
         pass
 
     def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,
@@ -87,6 +90,12 @@ class BlePairing(AbstractPairing):
         for aid, cid in characteristics:
             try:
                 fc, fc_id = self.session.find_characteristic_by_aid_iid(aid, cid)
+                if not fc or not fc_id:
+                    results[(aid, cid)] = {
+                        'status': HapBleStatusCodes.INVALID_REQUEST,
+                        'description': HapBleStatusCodes[HapBleStatusCodes.INVALID_REQUEST]
+                    }
+                    continue
                 response = self.session.request(fc, fc_id, HapBleOpCodes.CHAR_READ)
             except Exception as e:
                 self.session.close()
@@ -102,23 +111,18 @@ class BlePairing(AbstractPairing):
         return results
 
     def _convert_from_python(self, aid, cid, value):
+        # TODO document me
         char_format = None
-        for a in self.pairing_data['accessories']:
-            if a['aid'] != int(aid):
-                continue
-
-            for s in a['services']:
-                for c in s['characteristics']:
-                    if c['iid'] == int(cid):
-                        char_format = c['format']
-                        break
+        characteristic = self._find_characteristic_in_pairing_data(aid, cid)
+        if characteristic:
+            char_format = characteristic['format']
         logger.debug('value: %s format: %s', value, char_format)
 
         if char_format == CharacteristicFormats.bool:
             try:
                 val = strtobool(str(value))
             except ValueError:
-                raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=char_format))
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
 
             value = struct.pack('?', val)
         elif char_format == CharacteristicFormats.int:
@@ -129,16 +133,11 @@ class BlePairing(AbstractPairing):
         return value
 
     def _convert_to_python(self, aid, cid, value):
+        # TODO document me
         char_format = None
-        for a in self.pairing_data['accessories']:
-            if a['aid'] != int(aid):
-                continue
-
-            for s in a['services']:
-                for c in s['characteristics']:
-                    if c['iid'] == int(cid):
-                        char_format = c['format']
-                        break
+        characteristic = self._find_characteristic_in_pairing_data(aid, cid)
+        if characteristic:
+            char_format = characteristic['format']
         logger.debug('value: %s format: %s', value.hex(), char_format)
 
         if char_format == CharacteristicFormats.bool:
@@ -162,6 +161,22 @@ class BlePairing(AbstractPairing):
 
         return value
 
+    def _find_characteristic_in_pairing_data(self, aid, cid):
+        """
+        # TODO document me
+
+        :param aid:
+        :param cid:
+        :return:
+        """
+        for a in self.pairing_data['accessories']:
+            if a['aid'] == int(aid):
+                for s in a['services']:
+                    for c in s['characteristics']:
+                        if c['iid'] == int(cid):
+                            return c
+        return None
+
     def put_characteristics(self, characteristics, do_conversion=False):
         """
         Update the values of writable characteristics. The characteristics have to be identified by accessory id (aid),
@@ -180,9 +195,15 @@ class BlePairing(AbstractPairing):
         results = {}
 
         for aid, cid, value in characteristics:
-            # TODO convert input value into proper representation for type
+            # reply with an error if the characteristic does not exist
+            if not self._find_characteristic_in_pairing_data(aid, cid):
+                results[(aid, cid)] = {
+                    'status': HapBleStatusCodes.INVALID_REQUEST,
+                    'description': HapBleStatusCodes[HapBleStatusCodes.INVALID_REQUEST]
+                }
+                continue
+
             value = TLV.encode_list([(1, self._convert_from_python(aid, cid, value))])
-            # value = TLV.encode_list([(1, value)])
             body = len(value).to_bytes(length=2, byteorder='little') + value
 
             try:
@@ -193,8 +214,9 @@ class BlePairing(AbstractPairing):
                     HapBleOpCodes.CHAR_WRITE,
                     body,
                 )
+                # TODO does the response contain useful information here?
             except RequestRejected as e:
-                results[(aic, cid)] = {
+                results[(aid, cid)] = {
                     'status': e.status,
                     'description': e.message,
                 }
@@ -258,7 +280,7 @@ class BleSession(object):
         logger.debug("Finding char id")
         fc, fc_id = find_characteristic_by_aid_iid(self.device, aid, cid)
         self._char_by_aid_iid[(aid, cid)] = (fc, fc_id)
-        return (fc, fc_id)
+        return fc, fc_id
 
     def request(self, feature_char, feature_char_id, op, body=None):
         transaction_id = random.randrange(0, 255)
@@ -330,6 +352,7 @@ class BleSession(object):
 
 def find_characteristic_by_uuid(device, service_uuid, char_uuid):
     """
+    # TODO document me
 
     :param device:
     :param service_uuid:
@@ -371,11 +394,12 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
 
 def find_characteristic_by_aid_iid(device, aid, iid):
     """
+    # TODO document me
 
     :param device:
     :param aid: accessory id
     :param iid: instance id
-    :return:
+    :return:  ... or (None, None) if the given tupel of accessory id and instance could not be found
     """
     service_found = None
     logger.debug('services: %s', device.services)
@@ -419,6 +443,7 @@ def find_characteristic_by_aid_iid(device, aid, iid):
 
 def create_ble_pair_setup_write(characteristic, characteristic_id):
     def write(request, expected):
+        # TODO document me
         logger.debug('entering write function %s', TLV.to_string(TLV.decode_bytes(request)))
         request_tlv = TLV.encode_list([
             (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
@@ -474,8 +499,10 @@ class ResolvingManager(staging.gatt.DeviceManager):
 
 
 class Device(staging.gatt.gatt.Device):
+    # TODO document me
 
     def connect(self):
+        # TODO document me
         super().connect()
 
         try:
@@ -497,12 +524,14 @@ class Device(staging.gatt.gatt.Device):
 
 
 class ServicesResolvingDevice(Device):
+    # TODO document me
 
     def __init__(self, mac_address, manager, managed=True):
         staging.gatt.gatt.Device.__init__(self, mac_address, manager, managed)
         self.resolved_data = None
 
     def services_resolved(self):
+        # TODO document me
         super().services_resolved()
         logger.debug('resolved %d services', len(self.services))
         self.manager.stop()
@@ -579,6 +608,7 @@ class ServicesResolvingDevice(Device):
 
 
 def parse_sig_read_response(data, expected_tid):
+    # TODO document me
     # parse header and check stuff
     logger.debug('parse sig read response %s', bytes([int(a) for a in data]).hex())
 

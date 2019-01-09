@@ -1,6 +1,7 @@
 [run]
 omit =
     */.local/*
+    */virtualenv/*
     /usr/*
     staging/*
     tests/*
@@ -8,6 +9,7 @@ omit =
 [report]
 omit =
     */.local/*
+    */virtualenv/*
     /usr/*
     staging/*
     tests/*

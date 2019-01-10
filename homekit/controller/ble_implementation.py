@@ -110,14 +110,14 @@ class BlePairing(AbstractPairing):
         results = {}
         for aid, cid in characteristics:
             try:
-                fc, fc_id = self.session.find_characteristic_by_iid(cid)
-                if not fc or not fc_id:
+                fc, fc_info = self.session.find_characteristic_by_iid(cid)
+                if not fc or not fc_info:
                     results[(aid, cid)] = {
                         'status': HapBleStatusCodes.INVALID_REQUEST,
                         'description': HapBleStatusCodes[HapBleStatusCodes.INVALID_REQUEST]
                     }
                     continue
-                response = self.session.request(fc, fc_id, HapBleOpCodes.CHAR_READ)
+                response = self.session.request(fc, cid, HapBleOpCodes.CHAR_READ)
             except Exception as e:
                 self.session.close()
                 self.session = None
@@ -228,10 +228,10 @@ class BlePairing(AbstractPairing):
             body = len(value).to_bytes(length=2, byteorder='little') + value
 
             try:
-                fc, fc_id = self.session.find_characteristic_by_iid(cid)
+                fc, fc_info = self.session.find_characteristic_by_iid(cid)
                 response = self.session.request(
                     fc,
-                    fc_id,
+                    cid,
                     HapBleOpCodes.CHAR_WRITE,
                     body,
                 )
@@ -261,9 +261,6 @@ class BleSession(object):
         self.device = None
         mac_address = self.pairing_data['AccessoryMAC']
 
-        # Cache for characteristic lookups
-        self._char_by_iid = {}
-
         # TODO specify adapter by config?
         manager = staging.gatt.DeviceManager(adapter_name='hci0')
 
@@ -272,10 +269,36 @@ class BleSession(object):
         self.device.connect()
         logger.debug('connected to device')
 
-        pair_verify_char, pair_verify_char_id = find_characteristic_by_uuid(
-            self.device,
-            ServicesTypes.PAIRING_SERVICE,
-            CharacteristicsTypes.PAIR_VERIFY
+        uuid_map = {}
+        for s in self.device.services:
+            for c in s.characteristics:
+                uuid_map[(s.uuid.upper(), c.uuid.upper())] = c
+
+        self.uuid_map = {}
+        self.iid_map = {}
+        self.short_map = {}
+        for a in pairing_data['accessories']:
+            for s in a['services']:
+                s_short = None
+                if s['type'].endswith(ServicesTypes.baseUUID):
+                    s_short = s['type'].split('-', 1)[0].lstrip('0')
+
+                for c in s['characteristics']:
+                     char = uuid_map.get((s['type'], c['type']), None)
+                     if not char:
+                         continue
+                     self.iid_map[c['iid']] = (char, c)
+                     self.uuid_map[(s['type'], c['type'])] = (char, c)
+
+                     if s_short and c['type'].endswith(CharacteristicsTypes.baseUUID):
+                         c_short = c['type'].split('-', 1)[0].lstrip('0')
+                         self.short_map[(s_short, c_short)] = (char, c)
+
+                     self.short_map[ServicesTypes.get_short(s['type']), CharacteristicsTypes.get_short(c['type'])] = (char, c)
+
+        pair_verify_char, pair_verify_char_info = self.short_map.get(
+            (ServicesTypes.PAIRING_SERVICE, CharacteristicsTypes.PAIR_VERIFY),
+            (None, None)
         )
 
         if not pair_verify_char:
@@ -283,7 +306,7 @@ class BleSession(object):
             # TODO Have exception here
             sys.exit(-1)
 
-        write_fun = create_ble_pair_setup_write(pair_verify_char, pair_verify_char_id)
+        write_fun = create_ble_pair_setup_write(pair_verify_char, pair_verify_char_info['iid'])
         self.c2a_key, self.a2c_key = get_session_keys(None, self.pairing_data, write_fun)
         logger.debug('keys: \n\t\tc2a: %s\n\t\ta2c: %s', self.c2a_key.hex(), self.a2c_key.hex())
 
@@ -298,14 +321,7 @@ class BleSession(object):
         self.device.disconnect()
 
     def find_characteristic_by_iid(self, cid):
-        if cid in self._char_by_iid:
-            logger.debug("Using cached char id")
-            return self._char_by_iid[cid]
-
-        logger.debug("Finding char id")
-        fc, fc_id = find_characteristic_by_iid(self.device, cid)
-        self._char_by_iid[cid] = (fc, fc_id)
-        return (fc, fc_id)
+        return self.iid_map.get(cid, (None, None))
 
     def request(self, feature_char, feature_char_id, op, body=None):
         transaction_id = random.randrange(0, 255)
@@ -417,32 +433,6 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
 
     logger.debug('searched char: %s %s', result_char, result_char_id)
     return result_char, result_char_id
-
-
-def find_characteristic_by_iid(device, iid):
-    """
-    # TODO document me
-
-    :param device:
-    :param iid: instance id
-    :return:  ... or (None, None) if the given tupel of accessory id and instance could not be found
-    """
-    service_found = None
-    for service in device.services:
-        logger.debug('Searching service: %s', service.uuid)
-        for characteristic in service.characteristics:
-            logger.debug('Searching characteristic: %s', characteristic.uuid)
-            for descriptor in characteristic.descriptors:
-                if descriptor.uuid == CharacteristicInstanceID:
-                    logging.debug('Reading CharacteristicInstanceID')
-                    value = descriptor.read_value()
-                    cid = int.from_bytes(value, byteorder='little')
-                    if iid == cid:
-                        logging.debug('iid %d -> uuid %s', iid, characteristic.uuid)
-                        return (characteristic, cid)
-
-    logging.error('Service with instance id %d not found', iid)
-    return None, None
 
 
 def create_ble_pair_setup_write(characteristic, characteristic_id):

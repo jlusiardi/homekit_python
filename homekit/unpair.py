@@ -43,4 +43,4 @@ if __name__ == '__main__':
 
     controller.remove_pairing(args.alias)
     controller.save_data(args.file)
-    print('Pairing for {a} was removed.'.format(a=args.alias))
+    print('Pairing for "{a}" was removed.'.format(a=args.alias))

@@ -57,7 +57,7 @@ if __name__ == '__main__':
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()
         controller.save_data(args.file)
-        print('Pairing for {a} was established.'.format(a=args.alias))
+        print('Pairing for "{a}" was established.'.format(a=args.alias))
     except Exception as e:
         print(e)
         sys.exit(-1)

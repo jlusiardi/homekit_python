@@ -15,6 +15,7 @@ from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.protocol import perform_pair_setup, create_ip_pair_setup_write
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
+from homekit.protocol.opcodes import HapBleOpCodes
 
 # TODO remove this soon
 import staging.gatt
@@ -277,31 +278,28 @@ class Controller(object):
         # package visibility like in java would be nice here
         pairing_data = self.pairings[alias]._get_pairing_data()
         connection_type = pairing_data['Connection']
+
+        # Prepare the common (for IP and BLE) request data
+        request_tlv = TLV.encode_list([
+            (TLV.kTLVType_State, TLV.M1),
+            (TLV.kTLVType_Method, TLV.RemovePairing),
+            (TLV.kTLVType_Identifier, pairing_data['iOSPairingId'].encode())
+        ])
+
         if connection_type == 'IP':
-            request_tlv = TLV.encode_list([
-                (TLV.kTLVType_State, TLV.M1),
-                (TLV.kTLVType_Method, TLV.RemovePairing),
-                (TLV.kTLVType_Identifier, pairing_data['iOSPairingId'].encode())
-            ]).decode()  # decode is required because post needs a string representation
             session = IpSession(pairing_data)
-            response = session.post('/pairings', request_tlv)
+            # decode is required because post needs a string representation
+            response = session.post('/pairings', request_tlv.decode())
             session.close()
             data = response.read()
             data = TLV.decode_bytes(data)
-            # handle the result, spec says, if it has only one entry with state == M2 we unpaired, else its an error.
-            if len(data) == 1 and data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2:
-                del self.pairings[alias]
-            else:
-                if data[TLV.kTLVType_Error] == TLV.kTLVError_Authentication:
-                    raise AuthenticationError('Remove pairing failed: missing authentication')
-                else:
-                    raise UnknownError('Remove pairing failed: unknown error')
         elif connection_type == 'BLE':
-            request_tlv = TLV.encode_list([
-                (TLV.kTLVType_State, TLV.M1),
-                (TLV.kTLVType_Method, TLV.RemovePairing),
-                (TLV.kTLVType_Identifier, pairing_data['iOSPairingId'].encode())
+            inner = TLV.encode_list([
+                (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
+                (TLV.kTLVHAPParamValue, request_tlv)
             ])
+
+            body = len(inner).to_bytes(length=2, byteorder='little') + inner
 
             class AnyDevice(staging.gatt.gatt_linux.Device):
                 def services_resolved(self):
@@ -312,17 +310,26 @@ class Controller(object):
             manager = staging.gatt.DeviceManager(adapter_name='hci0')
             device = AnyDevice(manager=manager, mac_address=pairing_data['AccessoryMAC'])
             device.connect()
-            manager.run()
-            #
+
             logging.debug('resolved %d services', len(device.services))
             pair_remove_char, pair_remove_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
                                                                                 CharacteristicsTypes.PAIRING_PAIRINGS)
             logging.debug('setup char: %s %s', pair_remove_char, pair_remove_char.service.device)
 
             session = BleSession(pairing_data)
-            from homekit.protocol.opcodes import HapBleOpCodes
-
-            response = session.request(pair_remove_char, pair_remove_char_id, HapBleOpCodes.CHAR_WRITE, request_tlv)
-            logging.debug('response: %s', response)
+            response = session.request(pair_remove_char, pair_remove_char_id, HapBleOpCodes.CHAR_WRITE, body)
+            data = TLV.decode_bytes(response[1])
         else:
-            raise Exception('not implemented')
+            raise Exception('not implemented (neither IP nor BLE)')
+
+        # act upon the response (the same is returned for IP and BLE accessories)
+        # handle the result, spec says, if it has only one entry with state == M2 we unpaired, else its an error.
+        logging.debug('reponse data: %s', data)
+        if len(data) == 1 and data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2:
+            del self.pairings[alias]
+        else:
+            if data[1][0] == TLV.kTLVType_Error and data[1][1] == TLV.kTLVError_Authentication:
+                #data[TLV.kTLVType_Error] == TLV.kTLVError_Authentication:
+                raise AuthenticationError('Remove pairing failed: missing authentication')
+            else:
+                raise UnknownError('Remove pairing failed: unknown error')

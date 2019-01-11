@@ -396,6 +396,35 @@ class TestController(unittest.TestCase):
         controller_file.flush()
         self.controller.load_data(controller_file.name)
         self.assertIsInstance(self.controller.get_pairings()['alias_ip'], IpPairing)
+        self.assertEquals(self.controller.get_pairings()['alias_ip'].pairing_data['Connection'], 'IP')
+        self.assertIsInstance(self.controller.get_pairings()['alias_ble'], BlePairing)
+        controller_file.close()
+
+    def test_load_pairings_missing_type(self):
+        controller_file = tempfile.NamedTemporaryFile()
+        controller_file.write("""{
+            "alias_ip": {
+                "iOSDeviceLTPK": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8",
+                "iOSPairingId": "decc6fa3-de3e-41c9-adba-ef7409821bfc",
+                "AccessoryLTPK": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
+                "AccessoryPairingID": "12:34:56:00:01:0A",
+                "AccessoryPort": 51842,
+                "AccessoryIP": "127.0.0.1",
+                "iOSDeviceLTSK": "fa45f082ef87efc6c8c8d043d74084a3ea923a2253e323a7eb9917b4090c2fcc"
+            },
+            "alias_ble": {
+                "Connection": "BLE",
+                "iOSDeviceLTPK": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8",
+                "iOSPairingId": "decc6fa3-de3e-41c9-adba-ef7409821bfc",
+                "AccessoryLTPK": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
+                "AccessoryPairingID": "12:34:56:00:01:0A",
+                "AccessoryMAC": "FD:3C:D4:13:02:59",
+                "iOSDeviceLTSK": "fa45f082ef87efc6c8c8d043d74084a3ea923a2253e323a7eb9917b4090c2fcc"
+            }
+        }""".encode())
+        controller_file.flush()
+        self.controller.load_data(controller_file.name)
+        self.assertIsInstance(self.controller.get_pairings()['alias_ip'], IpPairing)
         self.assertIsInstance(self.controller.get_pairings()['alias_ble'], BlePairing)
         controller_file.close()
 

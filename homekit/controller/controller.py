@@ -119,13 +119,23 @@ class Controller(object):
             with open(filename, 'r') as input_fp:
                 data = json.load(input_fp)
                 for pairing_id in data:
+
+                    if 'Connection' not in data[pairing_id]:
+                        # This is a pre BLE entry in the file with the pairing data, hence it is for an IP based
+                        # accessory. So we set the connection type (in case save data is used everything will be fine)
+                        # and also issue a warning
+                        data[pairing_id]['Connection'] = 'IP'
+                        self.logger.warning(
+                            'Loaded pairing for %s with missing connection type. Assume this is IP based.', pairing_id)
+
                     if data[pairing_id]['Connection'] == 'IP':
                         self.pairings[pairing_id] = IpPairing(data[pairing_id])
                     elif data[pairing_id]['Connection'] == 'BLE':
                         self.pairings[pairing_id] = BlePairing(data[pairing_id])
                     else:
                         # ignore anything else, issue warning
-                        self.logger.warning('could not load pairing of type "%s"', data[pairing_id]['Connection'])
+                        self.logger.warning('could not load pairing %s of type "%s"', pairing_id,
+                                            data[pairing_id]['Connection'])
         except PermissionError as e:
             raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=filename))
         except JSONDecodeError as e:

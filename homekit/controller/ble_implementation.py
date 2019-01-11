@@ -62,7 +62,7 @@ class BlePairing(AbstractPairing):
         pass
 
     def identify(self):
-        # TODO implementation still missing
+        # TODO implementation still missing (https://github.com/jlusiardi/homekit_python/issues/74)
         pass
 
     def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,

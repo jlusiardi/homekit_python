@@ -5,8 +5,8 @@ import logging
 
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.controller.ip_implementation import IpPairing, IpSession
-from homekit.controller.ble_implementation import BlePairing, BleSession, find_characteristic_by_uuid, create_ble_pair_setup_write, \
-    ServicesResolvingDevice
+from homekit.controller.ble_implementation import BlePairing, BleSession, find_characteristic_by_uuid, \
+    create_ble_pair_setup_write, ResolvingManager
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError
 from homekit.protocol.tlv import TLV
@@ -18,7 +18,6 @@ from homekit.model.characteristics.characteristic_types import CharacteristicsTy
 
 # TODO remove this soon
 import staging.gatt
-from staging.tools import ResolvingManager
 
 
 class Controller(object):
@@ -31,6 +30,7 @@ class Controller(object):
         Initialize an empty controller. Use 'load_data()' to load the pairing data.
         """
         self.pairings = {}
+        self.logger = logging.getLogger('homekit.controller.Controller')
 
     @staticmethod
     def discover(max_seconds=10):
@@ -121,8 +121,11 @@ class Controller(object):
                 for pairing_id in data:
                     if data[pairing_id]['Connection'] == 'IP':
                         self.pairings[pairing_id] = IpPairing(data[pairing_id])
-                    else:
+                    elif data[pairing_id]['Connection'] == 'BLE':
                         self.pairings[pairing_id] = BlePairing(data[pairing_id])
+                    else:
+                        # ignore anything else, issue warning
+                        self.logger.warning('could not load pairing of type "%s"', data[pairing_id]['Connection'])
         except PermissionError as e:
             raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=filename))
         except JSONDecodeError as e:

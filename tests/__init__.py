@@ -22,5 +22,7 @@ from tests.http_response_test import TestHttpResponse
 from tests.httpStatusCodes_test import TestHttpStatusCodes
 from tests.characteristicsTypes_test import TestCharacteristicsTypes
 from tests.zeroconf_test import TestZeroconf
-from tests.controller_test import TestControllerPaired, TestControllerUnpaired
-
+from tests.controller_test import TestControllerIpPaired, TestControllerIpUnpaired, TestController
+from tests.bleCharacteristicFormats_test import BleCharacteristicFormatsTest
+from tests.bleCharacteristicUnits_test import BleCharacteristicUnitsTest
+from tests.characteristicTypes_test import CharacteristicTypesTest

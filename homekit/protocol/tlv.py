@@ -13,13 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import logging
+
+logger = logging.getLogger('homekit.protocol.tlv')
 
 
 class TLV:
     """
     as described in Appendix 12 (page 251)
     """
-    DEBUG = False
 
     # Steps
     M1 = bytearray(b'\x01')
@@ -112,8 +114,7 @@ class TLV:
                 result[-1][1] += value
             else:
                 result.append([key, value])
-        if TLV.DEBUG:
-            print('receiving ' + TLV.to_string(result))
+        logger.debug('receiving %s', TLV.to_string(result))
         return result
 
     @staticmethod
@@ -130,8 +131,7 @@ class TLV:
 
     @staticmethod
     def encode_list(d: list) -> bytearray:
-        if TLV.DEBUG:
-            print('sending ' + TLV.to_string(d))
+        logger.debug('sending %s', TLV.to_string(d))
         result = bytearray()
         for p in d:
             (key, value) = p

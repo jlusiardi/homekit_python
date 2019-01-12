@@ -51,6 +51,7 @@ class BlePairing(AbstractPairing):
         device = ServicesResolvingDevice(manager=manager, mac_address=self.pairing_data['AccessoryMAC'])
         device.connect()
         self.pairing_data['accessories'] = device.resolved_data['data']
+        device.disconnect()
         return device.resolved_data['data']
 
     def list_pairings(self):
@@ -62,8 +63,28 @@ class BlePairing(AbstractPairing):
         pass
 
     def identify(self):
-        # TODO implementation still missing (https://github.com/jlusiardi/homekit_python/issues/74)
-        pass
+        """
+        This call can be used to trigger the identification of a paired accessory. A successful call should
+        cause the accessory to perform some specific action by which it can be distinguished from the others (blink a
+        LED for example).
+
+        It uses the identify characteristic as described on page 152 of the spec.
+
+        :return True, if the identification was run, False otherwise
+        """
+        if not self.session:
+            self.session = BleSession(self.pairing_data)
+        cid = -1
+        aid = -1
+        for a in self.pairing_data['accessories']:
+            for s in a['services']:
+                for c in s['characteristics']:
+                    if CharacteristicsTypes.get_short_uuid(c['type'].upper()) == CharacteristicsTypes.IDENTIFY:
+                        aid = s['iid']
+                        cid = c['iid']
+        self.put_characteristics([(aid, cid, True)])
+        # TODO check for errors
+        return True
 
     def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,
                             include_events=False):
@@ -214,6 +235,7 @@ class BlePairing(AbstractPairing):
                     HapBleOpCodes.CHAR_WRITE,
                     body,
                 )
+                logger.debug('response %s', response)
                 # TODO does the response contain useful information here?
             except RequestRejected as e:
                 results[(aid, cid)] = {
@@ -268,7 +290,11 @@ class BleSession(object):
         self.c2a_counter = 0
         self.a2c_counter = 0
 
+    def __del__(self):
+        self.close()
+
     def close(self):
+        logger.debug('closing session')
         self.device.disconnect()
 
     def find_characteristic_by_aid_iid(self, aid, cid):
@@ -291,6 +317,8 @@ class BleSession(object):
         if body:
             logger.debug('body: %s', body)
             data.extend(body)
+
+        logger.debug('data: %s', data)
 
         cnt_bytes = self.c2a_counter.to_bytes(8, byteorder='little')
         cipher_and_mac = chacha20_aead_encrypt(bytes(), self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]), data)
@@ -488,6 +516,7 @@ class ResolvingManager(staging.gatt.DeviceManager):
     """
     DeviceManager implementation that stops running after a given device was discovered.
     """
+
     def __init__(self, adapter_name, mac):
         self.mac = mac
         staging.gatt.DeviceManager.__init__(self, adapter_name=adapter_name)
@@ -496,6 +525,8 @@ class ResolvingManager(staging.gatt.DeviceManager):
         logger.debug('discovered %s', device.mac_address.upper())
         if device.mac_address.upper() == self.mac.upper():
             self.stop()
+            # the searched device was found, so we can stop discovery here
+            self.stop_discovery()
 
 
 class Device(staging.gatt.gatt.Device):
@@ -542,21 +573,21 @@ class ServicesResolvingDevice(Device):
         }
         for service in self.services:
             logger.debug('found service with UUID %s (%s)', service.uuid,
-                          ServicesTypes.get_short(service.uuid.upper()))
+                         ServicesTypes.get_short(service.uuid.upper()))
             s_data = {
                 'aid': None,
                 'services': [
-                        {
-                            'characteristics': [
-                            ],
-                            'iid': None
-                        }
+                    {
+                        'characteristics': [
+                        ],
+                        'iid': None
+                    }
                 ]
             }
-            
+
             for characteristic in service.characteristics:
                 logger.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid,
-                              CharacteristicsTypes.get_short(characteristic.uuid.upper()))
+                             CharacteristicsTypes.get_short(characteristic.uuid.upper()))
 
                 if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
                     aid = int.from_bytes(characteristic.read_value(), byteorder='little')
@@ -600,9 +631,9 @@ class ServicesResolvingDevice(Device):
                 self.resolved_data['data'].append(s_data)
 
         logger.debug('data: %s', self.resolved_data)
-        #logger.debug('disconnecting from device')
-        #self.disconnect()
-        #logger.debug('disconnected from device')
+        # logger.debug('disconnecting from device')
+        # self.disconnect()
+        # logger.debug('disconnected from device')
         self.manager.stop()
         logger.debug('manager stopped')
 

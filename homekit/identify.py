@@ -26,8 +26,11 @@ from homekit.log_support import setup_logging, add_log_arguments
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit identify app - performs identify on given HomeKit device')
 
-    group = parser.add_argument_group('Identify unpaired', 'use this option to identify an UNPAIRED accessory.')
+    group = parser.add_argument_group('Identify unpaired IP', 'use this option to identify an UNPAIRED IP accessory.')
     group.add_argument('-d', action='store',  dest='device', help='accessory pairing id')
+
+    group = parser.add_argument_group('Identify unpaired BLE', 'use this option to identify an UNPAIRED BLE accessory.')
+    group.add_argument('-m', action='store',  dest='mac', help='accessory mac address')
 
     group = parser.add_argument_group('Identify paired', 'use this option to identify an PAIRED accessory.')
     group.add_argument('-f', action='store',  dest='file', help='File with the pairing data')
@@ -36,10 +39,13 @@ def setup_args_parser():
 
     parsed_args = parser.parse_args()
 
-    if parsed_args.device and parsed_args.file is None and parsed_args.alias is None:
-        # unpaired
+    if parsed_args.device and parsed_args.mac is None and parsed_args.file is None and parsed_args.alias is None:
+        # unpaired IP
         return parsed_args
-    elif parsed_args.device is None and parsed_args.file and parsed_args.alias:
+    if parsed_args.mac and parsed_args.device is None and parsed_args.file is None and parsed_args.alias is None:
+        # unpaired BLE
+        return parsed_args
+    elif parsed_args.device is None and parsed_args.mac is None and parsed_args.file and parsed_args.alias:
         # paired
         return parsed_args
     else:
@@ -55,6 +61,8 @@ if __name__ == '__main__':
     controller = Controller()
     if args.device:
         controller.identify(args.device)
+    elif args.mac:
+        controller.identify_ble(args.mac)
     else:
         controller.load_data(args.file)
         if args.alias not in controller.get_pairings():

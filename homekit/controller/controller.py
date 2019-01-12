@@ -94,6 +94,21 @@ class Controller(object):
                                                                      code=code))
         conn.close()
 
+    @staticmethod
+    def identify_ble(accessory_mac):
+        """
+        This call can be used to trigger the identification of an accessory, that was not yet paired. A successful call
+        should cause the accessory to perform some specific action by which it can be distinguished from others (blink a
+        LED for example).
+
+        It uses the /identify url as described on page 88 of the spec.
+
+        :param accessory_mac: the accessory's mac address (e.g. retrieved via discover)
+        :raises AccessoryNotFoundError: if the accessory could not be looked up via Bonjour
+        :raises AlreadyPairedError: if the accessory is already paired
+        """
+        pass
+
     def shutdown(self):
         """
         Shuts down the controller by closing all connections that might be held open by the pairings of the controller.
@@ -309,7 +324,10 @@ class Controller(object):
 
             manager = staging.gatt.DeviceManager(adapter_name='hci0')
             device = AnyDevice(manager=manager, mac_address=pairing_data['AccessoryMAC'])
+            logging.debug('connecting to device')
             device.connect()
+            logging.debug('connected to device')
+            manager.run()
 
             logging.debug('resolved %d services', len(device.services))
             pair_remove_char, pair_remove_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
@@ -324,12 +342,11 @@ class Controller(object):
 
         # act upon the response (the same is returned for IP and BLE accessories)
         # handle the result, spec says, if it has only one entry with state == M2 we unpaired, else its an error.
-        logging.debug('reponse data: %s', data)
+        logging.debug('response data: %s', data)
         if len(data) == 1 and data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2:
             del self.pairings[alias]
         else:
             if data[1][0] == TLV.kTLVType_Error and data[1][1] == TLV.kTLVError_Authentication:
-                #data[TLV.kTLVType_Error] == TLV.kTLVError_Authentication:
                 raise AuthenticationError('Remove pairing failed: missing authentication')
             else:
                 raise UnknownError('Remove pairing failed: unknown error')

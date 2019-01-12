@@ -49,11 +49,11 @@ class BlePairing(AbstractPairing):
             return self.pairing_data['accessories']
 
         manager = DeviceManager(adapter_name='hci0')
-        device = ServicesResolvingDevice(manager=manager, mac_address=self.pairing_data['AccessoryMAC'])
+        device = manager.make_device(self.pairing_data['AccessoryMAC'])
         device.connect()
-        self.pairing_data['accessories'] = device.resolved_data['data']
-        device.disconnect()
-        return device.resolved_data['data']
+        resolved_data = read_characteristics(device)
+        self.pairing_data['accessories'] = resolved_data['data']
+        return resolved_data['data']
 
     def list_pairings(self):
         # TODO implementation still missing
@@ -496,84 +496,79 @@ class ResolvingManager(DeviceManager):
             self.stop_discovery()
 
 
-class ServicesResolvingDevice(Device):
+def read_characteristics(device):
     # TODO document me
+    # FIXME: This only works on non secure sessions
+    logger.debug('resolved %d services', len(device.services))
 
-    def __init__(self, mac_address, manager, managed=True):
-        Device.__init__(self, mac_address, manager)
-        self.resolved_data = None
+    a_data = {
+        'aid': 1,
+        'services': []
+    }
 
-    def services_resolved(self):
-        # TODO document me
-        super().services_resolved()
-        logger.debug('resolved %d services', len(self.services))
+    resolved_data = {
+        'data': [a_data],
+    }
 
-        a_data = {
-            'aid': 1,
-            'services': []
+    for service in device.services:
+        logger.debug('found service with UUID %s (%s)', service.uuid,
+                      ServicesTypes.get_short(service.uuid.upper()))
+
+        s_data = {
+            'characteristics': [
+            ],
+            'iid': None
         }
 
-        self.resolved_data = {
-            'data': [a_data],
-        }
+        for characteristic in service.characteristics:
+            logger.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid,
+                          CharacteristicsTypes.get_short(characteristic.uuid.upper()))
 
-        for service in self.services:
-            logger.debug('found service with UUID %s (%s)', service.uuid,
-                         ServicesTypes.get_short(service.uuid.upper()))
+            if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
+                sid = int.from_bytes(characteristic.read_value(), byteorder='little')
+                logger.debug('\t\tread service id %d', sid)
+                s_data['iid'] = sid
+            else:
+                c_data = {
+                    'iid': None,
+                    'type': characteristic.uuid.upper(),
+                    'perms': []
+                }
+                iid = None
+                for descriptor in characteristic.descriptors:
+                    value = descriptor.read_value()
+                    if descriptor.uuid == CharacteristicInstanceID:
+                        iid = int.from_bytes(value, byteorder='little')
+                        logger.debug('\t\tread characteristic id %d', iid)
+                        c_data['iid'] = iid
+                    else:
+                        # print('\t\t', 'D', descriptor.uuid, value)
+                        pass
 
-            s_data = {
-                'characteristics': [
-                ],
-                'iid': None
-            }
-
-            for characteristic in service.characteristics:
-                logger.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid,
-                             CharacteristicsTypes.get_short(characteristic.uuid.upper()))
-
-                if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
-                    sid = int.from_bytes(characteristic.read_value(), byteorder='little')
-                    logger.debug('\t\tread service id %d', sid)
-                    s_data['iid'] = sid
-                else:
-                    c_data = {
-                        'iid': None,
-                        'type': characteristic.uuid.upper(),
-                        'perms': []
-                    }
-                    iid = None
-                    for descriptor in characteristic.descriptors:
-                        value = descriptor.read_value()
-                        if descriptor.uuid == CharacteristicInstanceID:
-                            iid = int.from_bytes(value, byteorder='little')
-                            logger.debug('\t\tread characteristic id %d', iid)
-                            c_data['iid'] = iid
+                if iid:
+                    v = iid.to_bytes(length=2, byteorder='little')
+                    tid = random.randrange(0, 255)
+                    characteristic.write_value([0x00, HapBleOpCodes.CHAR_SIG_READ, tid, v[0], v[1]])
+                    d = parse_sig_read_response(characteristic.read_value(), tid)
+                    for k in d:
+                        if k == 'service_type':
+                            s_data['type'] = d[k].upper()
+                        elif k == 'sid':
+                            s_data['iid'] = d[k]
                         else:
-                            # print('\t\t', 'D', descriptor.uuid, value)
-                            pass
+                            c_data[k] = d[k]
 
-                    if iid:
-                        v = iid.to_bytes(length=2, byteorder='little')
-                        tid = random.randrange(0, 255)
-                        characteristic.write_value([0x00, HapBleOpCodes.CHAR_SIG_READ, tid, v[0], v[1]])
-                        d = parse_sig_read_response(characteristic.read_value(), tid)
-                        for k in d:
-                            if k == 'service_type':
-                                s_data['type'] = d[k].upper()
-                            elif k == 'sid':
-                                s_data['iid'] = d[k]
-                            else:
-                                c_data[k] = d[k]
-
-                    if c_data['iid']:
-                        s_data['characteristics'].append(c_data)
+                if c_data['iid']:
+                    s_data['characteristics'].append(c_data)
 
             #
 
-            if s_data['iid']:
-                a_data['services'].append(s_data)
+        if s_data['iid']:
+            a_data['services'].append(s_data)
 
-        logger.debug('data: %s', self.resolved_data)
+    logger.debug('data: %s', resolved_data)
+
+    return resolved_data
 
 
 def parse_sig_read_response(data, expected_tid):

@@ -18,6 +18,7 @@ from distutils.util import strtobool
 import base64
 import binascii
 from decimal import Decimal
+import struct
 
 from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions
@@ -120,6 +121,28 @@ class AbstractCharacteristic(ToDictMixin):
         if self._set_value_callback:
             self._set_value_callback(new_val)
 
+    def set_value_from_ble(self, value):
+        if self.format == CharacteristicFormats.bool:
+            value = struct.unpack('?', value)[0]
+        elif self.format == CharacteristicFormats.uint8:
+            value = struct.unpack('B', value)[0]
+        elif self.format == CharacteristicFormats.uint16:
+            value = struct.unpack('H', value)[0]
+        elif self.format == CharacteristicFormats.uint32:
+            value = struct.unpack('I', value)[0]
+        elif self.format == CharacteristicFormats.uint64:
+            value = struct.unpack('Q', value)[0]
+        elif self.format == CharacteristicFormats.int:
+            value = struct.unpack('i', value)[0]
+        elif self.format == CharacteristicFormats.float:
+            value = struct.unpack('f', value)[0]
+        elif self.format == CharacteristicFormats.string:
+            value = value.decode('UTF-8')
+        else:
+            value = value.hex()
+
+        self.set_value(value)
+
     def get_value(self):
         """
         This method returns the value of this characteristic. Permissions are checked first, then either the callback
@@ -133,6 +156,25 @@ class AbstractCharacteristic(ToDictMixin):
         if self._get_value_callback:
             return self._get_value_callback()
         return self.value
+
+    def get_value_for_ble(self):
+        value = self.get_value()
+
+        if self.format == CharacteristicFormats.bool:
+            try:
+                val = strtobool(str(value))
+            except ValueError:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=self.format))
+
+            value = struct.pack('?', val)
+        elif self.format == CharacteristicFormats.int:
+            value = struct.pack('i', int(value))
+        elif self.format == CharacteristicFormats.float:
+            value = struct.pack('f', float(value))
+        elif self.format == CharacteristicFormats.string:
+            value = value.encode()
+
+        return value
 
     def get_meta(self):
         """

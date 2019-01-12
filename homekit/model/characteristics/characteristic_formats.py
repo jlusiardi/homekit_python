@@ -49,8 +49,13 @@ class _BleCharacteristicFormats(object):
             0x1b: 'data'
         }
 
+        self._formats_rev = {v: k for (k, v) in self._formats.items()}
+
     def get(self, key, default):
         return self._formats.get(key, default)
+
+    def get_reverse(self, key, default):
+        return self._formats_rev.get(key, default)
 
 
 #

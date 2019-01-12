@@ -265,7 +265,7 @@ class BleSession(object):
         # TODO specify adapter by config?
         manager = DeviceManager(adapter_name='hci0')
 
-        self.device = Device(manager=manager, mac_address=mac_address)
+        self.device = manager.make_device(mac_address)
         logger.debug('connecting to device')
         self.device.connect()
         logger.debug('connected to device')

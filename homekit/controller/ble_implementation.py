@@ -80,7 +80,7 @@ class BlePairing(AbstractPairing):
             for s in a['services']:
                 for c in s['characteristics']:
                     if CharacteristicsTypes.get_short_uuid(c['type'].upper()) == CharacteristicsTypes.IDENTIFY:
-                        aid = s['iid']
+                        aid = a['aid']
                         cid = c['iid']
         self.put_characteristics([(aid, cid, True)])
         # TODO check for errors

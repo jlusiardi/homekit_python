@@ -2,6 +2,7 @@ import json
 from json.decoder import JSONDecodeError
 import uuid
 import logging
+import random
 
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.controller.ip_implementation import IpPairing, IpSession
@@ -103,7 +104,46 @@ class Controller(object):
         :raises AccessoryNotFoundError: if the accessory could not be looked up via Bonjour
         :raises AlreadyPairedError: if the accessory is already paired
         """
-        pass
+        from .ble_impl.device import DeviceManager
+        manager = DeviceManager('hci0')
+        device = manager.make_device(accessory_mac)
+        device.connect()
+
+        disco_info =  device.get_homekit_discovery_data()
+        if disco_info.get('sf', 'unknown') == 'paired':
+            raise AlreadyPairedError(
+                'identify of {mac_address} failed not allowed as device already paired'.format(mac_address=accessory_mac),
+            )
+
+        identify, identify_iid = find_characteristic_by_uuid(
+            device,
+            ServicesTypes.ACCESSORY_INFORMATION_SERVICE,
+            CharacteristicsTypes.IDENTIFY,
+        )
+
+        if not identify:
+            raise AccessoryNotFoundError(
+                'Device with address {mac_address} exists but did not find IDENTIFY characteristic'.format(mac_address=accessory_mac)
+            )
+
+        value = TLV.encode_list([
+            (1, b'\x01')
+        ])
+        body = len(value).to_bytes(length=2, byteorder='little') + value
+
+        tid = random.randrange(0, 255)
+
+        request = bytearray([0x00, HapBleOpCodes.CHAR_WRITE, tid])
+        request.extend(identify_iid.to_bytes(length=2, byteorder='little'))
+        request.extend(body)
+
+        identify.write_value(request)
+        response = bytearray(identify.read_value())
+
+        if not response or not response[2] == 0x00:
+            raise UnknownError('Unpaired identify failed')
+
+        return True
 
     def shutdown(self):
         """

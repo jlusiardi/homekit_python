@@ -20,6 +20,8 @@ from homekit import accessoryserver
 from homekit.protocol.opcodes import HapBleOpCodes
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
 from homekit.model import mixin as model_mixin
+from homekit import exceptions
+
 
 class DeviceManager:
 
@@ -75,6 +77,16 @@ class Device:
         if pairing_id.decode() not in self.peers:
             return
         return bytes.fromhex(self.peers[pairing_id.decode()]['key'])
+
+    def get_homekit_discovery_data(self):
+        data = {}
+
+        if len(self.peers) > 0:
+            data['sf'] = 'paired'
+        else:
+            data['sf'] = 'unpaired'
+
+        return data
 
     def connect(self):
         self.connected = True
@@ -437,6 +449,52 @@ class Descriptor:
 
 
 class TestBLEController(unittest.TestCase):
+
+    def test_unpaired_identify(self):
+        model_mixin.id_counter = 0
+
+        c = Controller()
+
+        a = Accessory(
+            'test-dev-123',
+            'TestCo',
+            'Test Dev Pro',
+            '00000',
+            1
+        )
+        a.add_service(LightBulbService())
+
+        manager = DeviceManager()
+        manager.devices['00:00:00:00:00'] = Device(a)
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            m.return_value = manager
+            assert a.services[0].characteristics[0].value == None
+            assert c.identify_ble('00:00:00:00:00') == True
+            assert a.services[0].characteristics[0].value == True
+
+    def test_unpaired_identify_already_paired(self):
+        model_mixin.id_counter = 0
+
+        c = Controller()
+
+        a = Accessory(
+            'test-dev-123',
+            'TestCo',
+            'Test Dev Pro',
+            '00000',
+            1
+        )
+        a.add_service(LightBulbService())
+
+        manager = DeviceManager()
+        manager.devices['00:00:00:00:00'] = Device(a)
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            m.return_value = manager
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+            assert a.services[0].characteristics[0].value == None
+            self.assertRaises(exceptions.AlreadyPairedError, c.identify_ble, '00:00:00:00:00')
 
     def test_pair_success(self):
         model_mixin.id_counter = 0

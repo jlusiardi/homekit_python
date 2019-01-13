@@ -89,7 +89,7 @@ class Controller(object):
         DelayedExecution(manager.stop, max_seconds).start()
         manager.run()
         result = []
-        for discovered_device in manager.devices():
+        for discovered_device in manager.get_devices():
             data = discovered_device.homekit_discovery_data
             r = {
                 'name': discovered_device.name,

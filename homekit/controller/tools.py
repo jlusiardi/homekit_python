@@ -308,3 +308,9 @@ class HomekitDiscoveryDeviceManager(gatt.DeviceManager):
             return
         self._manage_device(homekit_device)
         return homekit_device
+
+    def get_devices(self):
+        """
+        Returns all known Bluetooth devices with explicit update.
+        """
+        return self._devices.values()

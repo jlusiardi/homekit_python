@@ -16,55 +16,39 @@
 #
 
 import logging
-from argparse import ArgumentParser
+import argparse
 
-from homekit.controller.ble_impl.discovery import DiscoveryDeviceManager
+from homekit.log_support import setup_logging, add_log_arguments
+from homekit.controller import Controller
 
 
-def discover(adapter, timeout=10):
-    manager = DiscoveryDeviceManager(adapter)
-    manager.start_discovery()
-    manager.set_timeout(timeout * 1000)
-    manager.run()
-
-    return manager._devices.values()
+def setup_args_parser():
+    parser = argparse.ArgumentParser(description='HomeKit BLE discover app - ' \
+                                                 'list all HomeKit Bluetooth LE devices in range')
+    parser.add_argument('-t', action='store', required=False, dest='timeout', type=int, default=10,
+                        help='Number of seconds to wait (defaults to 10)')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
+    add_log_arguments(parser)
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
-    arg_parser = ArgumentParser(description='HomeKit BLE discover app - '\
-                                            'list all HomeKit Bluetooth LE devices in range. *MUST* be running as '\
-                                            'root because we need to use hciconfig, hcitool and hci dump in order to '\
-                                            'activate the adapter, start scanning and dump the responses. Sorry about '\
-                                            'that.')
-    arg_parser.add_argument('-t', action='store', required=False, dest='timeout', type=int, default=10,
-                            help='Number of seconds to wait')
-    arg_parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
-                            help='the bluetooth adapter to be used (defaults to hci0)')
-    arg_parser.add_argument('--log', action='store', dest='loglevel', help='set to DEBUG to see the logs')
-    args = arg_parser.parse_args()
+    args = setup_args_parser()
+    setup_logging(args.loglevel)
 
-    logging.basicConfig(format='%(asctime)s %(filename)s:%(lineno)04d %(levelname)s %(message)s')
-    if args.loglevel:
-        getattr(logging, args.loglevel.upper())
-        numeric_level = getattr(logging, args.loglevel.upper(), None)
-        if not isinstance(numeric_level, int):
-            raise ValueError('Invalid log level: %s' % args.loglevel)
-        logging.getLogger().setLevel(numeric_level)
-
-    logging.debug('using adapter %s', args.adapter)
-
-    devices = discover(args.adapter, args.timeout)
+    # TODO adapter unused
+    devices = Controller.discover_ble(args.timeout)
 
     print()
     for device in devices:
-        data = device.homekit_discovery_data
-        print('Name: {name}'.format(name=device.name))
-        print('MAC: {mac}'.format(mac=device.mac_address))
-        print('Configuration number (c#): {conf}'.format(conf=data['cn']))
-        print('Device ID (id): {id}'.format(id=data['deviceId']))
-        print('Compatible Version (cv): {cv}'.format(cv=data['cv']))
-        print('State Number (s#): {sn}'.format(sn=data['gsn']))
-        print('Status Flags (sf): {sf}'.format(sf=data['sf']))
-        print('Category Identifier (ci): {c} (Id: {ci})'.format(c=data['category'],
-                                                                ci=data['acid']))
+        print('Name: {name}'.format(name=device['name']))
+        print('MAC: {mac}'.format(mac=device['mac']))
+        print('Configuration number (cn): {conf}'.format(conf=device['cn']))
+        print('Device ID (id): {id}'.format(id=device['device_id']))
+        print('Compatible Version (cv): {cv}'.format(cv=device['cv']))
+        print('Global State Number (s#): {sn}'.format(sn=device['gsn']))
+        print('Status Flags (sf): {sf} (Flag: {flags})'.format(sf=device['flags'], flags=device['sf']))
+        print('Category Identifier (ci): {c} (Id: {ci})'.format(c=device['category'], ci=device['acid']))
         print()
+

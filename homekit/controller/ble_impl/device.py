@@ -56,12 +56,12 @@ class Device(gatt.Device):
         mfr_data = dict((int(k), bytes(bytearray(v))) for (k, v) in mfr_data.items())
 
         if COID_APPLE not in mfr_data:
-            return
+            return {}
 
         parsed = parse_manufacturer_specific(mfr_data[COID_APPLE])
 
         if parsed['type'] != 'HomeKit':
-            return
+            return {}
 
         return parsed
 

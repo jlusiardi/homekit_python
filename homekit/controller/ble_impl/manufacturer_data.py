@@ -30,11 +30,11 @@ def parse_manufacturer_specific(input_data):
 
         sf = input_data[0]
         if sf == 0:
-            sf = 'paired'
+            flags = 'paired'
         elif sf == 1:
-            sf = 'unpaired'
+            flags = 'unpaired'
         else:
-            sf = 'error'
+            flags = 'error'
         input_data = input_data[1:]
 
         device_id = (':'.join(input_data[:6].hex()[0 + i:2 + i] for i in range(0, 12, 2))).upper()
@@ -53,7 +53,7 @@ def parse_manufacturer_specific(input_data):
         input_data = input_data[1:]
         if len(input_data) > 0:
             logging.debug('remaining data: %s', input_data.hex())
-        return {'manufacturer': 'apple', 'type': ty, 'sf': sf, 'deviceId': device_id, 'acid': acid,
+        return {'manufacturer': 'apple', 'type': ty, 'sf': sf, 'flags': flags, 'device_id': device_id, 'acid': acid,
                 'gsn': gsn, 'cn': cn, 'cv': cv, 'category': Categories[int(acid)]}
 
     return {'manufacturer': 'apple', 'type': ty}

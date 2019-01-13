@@ -32,3 +32,8 @@ class DiscoveryDeviceManager(DeviceManager):
         """
         self.discover_callback = callback
         return super().start_discovery()
+
+    def devices(self):
+        # The standard implementation of devices causes a fresh of the dbus
+        # objects which is not what we want at all
+        return self._devices.values()

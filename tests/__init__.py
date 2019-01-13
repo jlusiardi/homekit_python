@@ -26,4 +26,4 @@ from tests.controller_test import TestControllerIpPaired, TestControllerIpUnpair
 from tests.bleCharacteristicFormats_test import BleCharacteristicFormatsTest
 from tests.bleCharacteristicUnits_test import BleCharacteristicUnitsTest
 from tests.characteristicTypes_test import CharacteristicTypesTest
-from tests.ble_controller_test import TestBLEController
+from tests.ble_controller_test import TestBLEController, TestMfrData

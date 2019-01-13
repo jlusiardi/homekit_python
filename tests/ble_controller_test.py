@@ -21,6 +21,7 @@ from homekit.protocol.opcodes import HapBleOpCodes
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
 from homekit.model import mixin as model_mixin
 from homekit import exceptions
+from homekit.controller.ble_impl.manufacturer_data import parse_manufacturer_specific
 
 
 class DeviceManager:
@@ -30,10 +31,22 @@ class DeviceManager:
     """
 
     def __init__(self):
-        self.devices = {}
+        self._devices = {}
 
     def make_device(self, mac_address):
-        return self.devices[mac_address]
+        return self._devices[mac_address]
+
+    def start_discovery(self, callback=None):
+        pass
+
+    def set_timeout(self, timeout):
+        pass
+
+    def run(self):
+        pass
+
+    def devices(self):
+        return self._devices.values()
 
 
 class Device:
@@ -46,6 +59,8 @@ class Device:
 
     def __init__(self, accessory: Accessory):
         self.accessory = accessory
+        self.name = 'Test' #FIXME get from accessory
+        self.mac_address = '00:00:00:00:00'
 
         # Data needed by pair-setup and pair-verify
         self.is_paired = False
@@ -79,14 +94,31 @@ class Device:
         return bytes.fromhex(self.peers[pairing_id.decode()]['key'])
 
     def get_homekit_discovery_data(self):
-        data = {}
+        data = {
+            'acid': 9,
+            'category': 'Thermostat',
+            'cn': 2,
+            'cv': 2,
+            'device_id': '99:99:99:99:99:99',
+            'flags': 'paired',
+            'gsn': 3985,
+            'manufacturer': 'apple',
+            'sf': 0,
+            'type': 'HomeKit'
+        }
 
         if len(self.peers) > 0:
-            data['sf'] = 'paired'
+            data['flags'] = 'paired'
+            data['sf'] = 0
         else:
-            data['sf'] = 'unpaired'
+            data['flags'] = 'unpaired'
+            data['sf'] = 1
 
         return data
+
+    @property
+    def homekit_discovery_data(self):
+        return self.get_homekit_discovery_data()
 
     def connect(self):
         self.connected = True
@@ -450,6 +482,39 @@ class Descriptor:
 
 class TestBLEController(unittest.TestCase):
 
+    def test_discovery(self):
+        model_mixin.id_counter = 0
+
+        c = Controller()
+
+        a = Accessory(
+            'test-dev-123',
+            'TestCo',
+            'Test Dev Pro',
+            '00000',
+            1
+        )
+        a.add_service(LightBulbService())
+
+        manager = DeviceManager()
+        manager._devices['00:00:00:00:00'] = Device(a)
+
+        with mock.patch('homekit.controller.controller.DiscoveryDeviceManager') as m:
+            m.return_value = manager
+
+            assert c.discover_ble(0) == [{
+                'acid': 9,
+                'category': 'Thermostat',
+                'cn': 2,
+                'cv': 2,
+                'device_id': '99:99:99:99:99:99',
+                'flags': 'unpaired',
+                'gsn': 3985,
+                'mac': '00:00:00:00:00',
+                'name': 'Test',
+                'sf': 1,
+            }]
+
     def test_unpaired_identify(self):
         model_mixin.id_counter = 0
 
@@ -465,7 +530,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        manager.devices['00:00:00:00:00'] = Device(a)
+        manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             m.return_value = manager
@@ -488,7 +553,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        manager.devices['00:00:00:00:00'] = Device(a)
+        manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             m.return_value = manager
@@ -510,7 +575,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        manager.devices['00:00:00:00:00'] = Device(a)
+        manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             m.return_value = manager
@@ -533,7 +598,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        manager.devices['00:00:00:00:00'] = Device(a)
+        manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             with mock.patch('homekit.controller.ble_implementation.DeviceManager') as m2:
@@ -672,7 +737,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        d = manager.devices['00:00:00:00:00'] = Device(a)
+        d = manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
             with mock.patch('homekit.controller.ble_implementation.DeviceManager') as m2:
@@ -704,7 +769,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        d = manager.devices['00:00:00:00:00'] = Device(a)
+        d = manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
             with mock.patch('homekit.controller.ble_implementation.DeviceManager') as m2:
@@ -739,7 +804,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        d = manager.devices['00:00:00:00:00'] = Device(a)
+        d = manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
             with mock.patch('homekit.controller.ble_implementation.DeviceManager') as m2:
@@ -751,4 +816,52 @@ class TestBLEController(unittest.TestCase):
                 assert a.services[0].characteristics[0].value == None
                 c.pairings['test-pairing'].identify()
                 assert a.services[0].characteristics[0].value == True
+
+
+class TestMfrData(unittest.TestCase):
+
+    def test_1(self):
+        value = b'\x06\xcd\x00\x99\x99\x99\x99\x99\x99\t\x00\x91\x0f\x02\x02'
+        assert parse_manufacturer_specific(value) == {
+            'acid': 9,
+            'category': 'Thermostat',
+            'cn': 2,
+            'cv': 2,
+            'device_id': '99:99:99:99:99:99',
+            'flags': 'paired',
+            'gsn': 3985,
+            'manufacturer': 'apple',
+            'sf': 0,
+            'type': 'HomeKit'
+        }
+
+    def test_2(self):
+        value = b'\x061\x00JM\x00\x00\x00\x00\n\x00\x0b\x00\x02\x02RfY\xf8'
+        assert parse_manufacturer_specific(value) == {
+            'acid': 10,
+            'category': 'Sensor',
+            'cn': 2,
+            'cv': 2,
+            'device_id': '4A:4D:00:00:00:00',
+            'flags': 'paired',
+            'gsn': 11,
+            'manufacturer': 'apple',
+            'sf': 0,
+            'type': 'HomeKit'
+        }
+
+    def test_3(self):
+        value = b'\x061\x01{\x21\x21\x49\x23<\x07\x00B\x00\x02\x02\xb6f\xe1\x1d'
+        assert parse_manufacturer_specific(value) == {
+            'acid': 7,
+            'category': 'Outlet',
+            'cn': 2,
+            'cv': 2,
+            'device_id': '7B:21:21:49:23:3C',
+            'flags': 'unpaired',
+            'gsn': 66,
+            'manufacturer': 'apple',
+            'sf': 1,
+            'type': 'HomeKit'
+        }
 

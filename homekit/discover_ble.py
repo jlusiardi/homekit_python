@@ -38,7 +38,7 @@ if __name__ == '__main__':
     setup_logging(args.loglevel)
 
     # TODO adapter unused
-    devices = Controller.discover_ble(args.timeout)
+    devices = Controller.discover_ble(args.timeout, args.adapter)
 
     print()
     for device in devices:

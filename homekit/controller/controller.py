@@ -27,11 +27,14 @@ class Controller(object):
     This class represents a HomeKit controller (normally your iPhone or iPad).
     """
 
-    def __init__(self):
+    def __init__(self, ble_adapter='hci0'):
         """
         Initialize an empty controller. Use 'load_data()' to load the pairing data.
+
+        :param ble_adapter: the bluetooth adapter to be used (defaults to hci0)
         """
         self.pairings = {}
+        self.ble_adapter = ble_adapter
         self.logger = logging.getLogger('homekit.controller.Controller')
 
     @staticmethod
@@ -64,7 +67,7 @@ class Controller(object):
         return discover_homekit_devices(max_seconds)
 
     @staticmethod
-    def discover_ble(max_seconds=10):
+    def discover_ble(max_seconds=10, adapter='hci0'):
         """
         Perform a Bluetooth LE discovery for HomeKit accessory. It will listen for Bluetooth LE advertisement events
         for the given amount of seconds. The result will be a list of dicts. The keys of the dicts are:
@@ -82,9 +85,10 @@ class Controller(object):
 
         :param max_seconds: how long should the Bluetooth LE discovery should be performed (default 10s). See sleep for
                             more details
+        :param adapter: the bluetooth adapter to be used (defaults to hci0)
         :return: a list of dicts as described above
         """
-        manager = HomekitDiscoveryDeviceManager('hci0')
+        manager = HomekitDiscoveryDeviceManager(adapter)
         manager.start_discovery()
         DelayedExecution(manager.stop, max_seconds).start()
         manager.run()
@@ -139,7 +143,7 @@ class Controller(object):
         conn.close()
 
     @staticmethod
-    def identify_ble(accessory_mac):
+    def identify_ble(accessory_mac, adapter='hci0'):
         """
         This call can be used to trigger the identification of an accessory, that was not yet paired. A successful call
         should cause the accessory to perform some specific action by which it can be distinguished from others (blink a
@@ -149,6 +153,7 @@ class Controller(object):
 
         :param accessory_mac: the accessory's mac address (e.g. retrieved via discover)
         :raises AccessoryNotFoundError: if the accessory could not be looked up via Bonjour
+        :param adapter: the bluetooth adapter to be used (defaults to hci0)
         :raises AlreadyPairedError: if the accessory is already paired
         """
         # TODO needs to be implemented (https://github.com/jlusiardi/homekit_python/issues/74)
@@ -264,7 +269,7 @@ class Controller(object):
         pairing['Connection'] = 'IP'
         self.pairings[alias] = IpPairing(pairing)
 
-    def perform_pairing_ble(self, alias, accessory_mac, pin):
+    def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0'):
         """
         This performs a pairing attempt with the Bluetooth LE accessory identified by its mac address.
 
@@ -278,6 +283,7 @@ class Controller(object):
         :param alias: the alias for the accessory in the controllers data
         :param accessory_mac: the accessory's mac address
         :param pin: the accessory's pin
+        :param adapter: the bluetooth adapter to be used (defaults to hci0)
         # TODO add raised exceptions
         """
         if alias in self.pairings:
@@ -300,10 +306,10 @@ class Controller(object):
             def characteristic_write_value_failed(self, characteristic, error):
                 logging.debug('write failed: %s %s', characteristic, error)
 
-        manager = ResolvingManager(adapter_name='hci0', mac=accessory_mac)
+        manager = ResolvingManager(adapter_name=adapter, mac=accessory_mac)
         manager.start_discovery()
         manager.run()
-        manager = staging.gatt.DeviceManager(adapter_name='hci0')
+        manager = staging.gatt.DeviceManager(adapter_name=adapter)
         device = AnyDevice(manager=manager, mac_address=accessory_mac)
         logging.debug('connecting to device')
         device.connect()
@@ -367,7 +373,7 @@ class Controller(object):
                     logging.debug('resolved %d services', len(self.services))
                     self.manager.stop()
 
-            manager = staging.gatt.DeviceManager(adapter_name='hci0')
+            manager = staging.gatt.DeviceManager(adapter_name=self.ble_adapter)
             device = AnyDevice(manager=manager, mac_address=pairing_data['AccessoryMAC'])
             logging.debug('connecting to device')
             device.connect()
@@ -379,7 +385,7 @@ class Controller(object):
                                                                                 CharacteristicsTypes.PAIRING_PAIRINGS)
             logging.debug('setup char: %s %s', pair_remove_char, pair_remove_char.service.device)
 
-            session = BleSession(pairing_data)
+            session = BleSession(pairing_data, self.ble_adapter)
             response = session.request(pair_remove_char, pair_remove_char_id, HapBleOpCodes.CHAR_WRITE, body)
             data = TLV.decode_bytes(response[1])
         else:

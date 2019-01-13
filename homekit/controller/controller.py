@@ -16,6 +16,7 @@ from homekit.protocol import perform_pair_setup, create_ip_pair_setup_write
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
+from homekit.controller.tools import DelayedExecution, HomekitDiscoveryDeviceManager
 
 # TODO remove this soon
 import staging.gatt
@@ -49,7 +50,7 @@ class Controller(object):
          * pv: the protocol version
          * s#: the current state number (required)
          * sf: the status flag (see table 5-9 page 70)
-         * ci/category: the category identifier in numerical and human readable form. For more information see table
+         * ci / category: the category identifier in numerical and human readable form. For more information see table
                         12-3 page 254 or homekit.Categories (required)
 
         IMPORTANT:
@@ -61,6 +62,49 @@ class Controller(object):
         :return: a list of dicts as described above
         """
         return discover_homekit_devices(max_seconds)
+
+    @staticmethod
+    def discover_ble(max_seconds=10):
+        """
+        Perform a Bluetooth LE discovery for HomeKit accessory. It will listen for Bluetooth LE advertisement events
+        for the given amount of seconds. The result will be a list of dicts. The keys of the dicts are:
+
+         * name: the model name of the accessory (required)
+         * mac: the MAC address of the accessory (required)
+         * sf / flags: the numerical and human readable version of the status flags (supports pairing or not, see table
+                       6-32 page 125)
+         * device_id: the accessory's device id (required)
+         * acid / category: the category identifier in numerical and human readable form. For more information see table
+                            12-3 page 254 or homekit.Categories (required)
+         * gsn: Global State Number, increment on change of any characteristic, overflows at 65535.
+         * cn: the configuration number (required)
+         * cv: the compatible version
+
+        :param max_seconds: how long should the Bluetooth LE discovery should be performed (default 10s). See sleep for
+                            more details
+        :return: a list of dicts as described above
+        """
+        manager = HomekitDiscoveryDeviceManager('hci0')
+        manager.start_discovery()
+        DelayedExecution(manager.stop, max_seconds).start()
+        manager.run()
+        result = []
+        for discovered_device in manager.devices():
+            data = discovered_device.homekit_discovery_data
+            r = {
+                'name': discovered_device.name,
+                'mac': discovered_device.mac_address,
+                'acid': data['acid'],
+                'category': data['category'],
+                'device_id': data['device_id'],
+                'cv': data['cv'],
+                'cn': data['cn'],
+                'gsn': data['gsn'],
+                'sf': data['sf'],
+                'flags': data['flags']
+            }
+            result.append(r)
+        return result
 
     @staticmethod
     def identify(accessory_id):
@@ -107,6 +151,7 @@ class Controller(object):
         :raises AccessoryNotFoundError: if the accessory could not be looked up via Bonjour
         :raises AlreadyPairedError: if the accessory is already paired
         """
+        # TODO needs to be implemented (https://github.com/jlusiardi/homekit_python/issues/74)
         pass
 
     def shutdown(self):

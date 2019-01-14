@@ -31,6 +31,8 @@ def setup_args_parser():
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-c', action='append', required=False, dest='characteristics', nargs=2,
                         help='Use aid.iid value to change the value. Repeat to change multiple characteristics.')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
     add_log_arguments(parser)
 
     args = parser.parse_args()
@@ -45,11 +47,12 @@ if __name__ == '__main__':
 
     setup_logging(args.loglevel)
 
-    controller = Controller()
+    controller = Controller(args.adapter)
     try:
         controller.load_data(args.file)
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)
 
     if args.alias not in controller.get_pairings():

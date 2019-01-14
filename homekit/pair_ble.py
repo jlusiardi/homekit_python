@@ -31,6 +31,8 @@ def setup_args_parser():
     parser.add_argument('-p', action='store', required=True, dest='pin', help='HomeKit configuration code')
     parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
     add_log_arguments(parser)
     return parser.parse_args()
 
@@ -40,11 +42,14 @@ if __name__ == '__main__':
 
     setup_logging(args.loglevel)
 
-    controller = Controller()
+    logging.debug('Using adapter "%s".', args.adapter)
+
+    controller = Controller(args.adapter)
     try:
         controller.load_data(args.file)
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)
 
     if args.alias in controller.get_pairings():
@@ -53,11 +58,13 @@ if __name__ == '__main__':
 
     try:
         logging.debug('start pairing')
-        controller.perform_pairing_ble(args.alias, args.mac, args.pin)
+        controller.perform_pairing_ble(args.alias, args.mac, args.pin, args.adapter)
         pairing = controller.get_pairings()[args.alias]
+        controller.save_data(args.file+'.tmp')
         pairing.list_accessories_and_characteristics()
         controller.save_data(args.file)
         print('Pairing for "{a}" was established.'.format(a=args.alias))
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)

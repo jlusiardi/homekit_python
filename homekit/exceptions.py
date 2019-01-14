@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-
 class HomeKitException(Exception):
     """Generic HomeKit exception.
     Attributes:
@@ -24,6 +23,10 @@ class HomeKitException(Exception):
     def __init__(self, stage):
         self.stage = stage
 
+    pass
+
+
+class BluetoothAdapterError(HomeKitException):
     pass
 
 

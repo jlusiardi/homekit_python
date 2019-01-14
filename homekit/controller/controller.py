@@ -8,7 +8,7 @@ from homekit.controller.ip_implementation import IpPairing, IpSession
 from homekit.controller.ble_implementation import BlePairing, BleSession, find_characteristic_by_uuid, \
     create_ble_pair_setup_write, ResolvingManager
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
-    AuthenticationError, ConfigSavingError, AlreadyPairedError
+    AuthenticationError, ConfigSavingError, AlreadyPairedError, BluetoothAdapterError
 from homekit.protocol.tlv import TLV
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.protocol.statuscodes import HapStatusCodes
@@ -16,7 +16,8 @@ from homekit.protocol import perform_pair_setup, create_ip_pair_setup_write
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
-from homekit.controller.tools import DelayedExecution, HomekitDiscoveryDeviceManager
+from homekit.controller.tools import DelayedExecution, HomekitDiscoveryDeviceManager, \
+    hci_adapter_exists_and_supports_bluetooth_le
 
 # TODO remove this soon
 import staging.gatt
@@ -88,6 +89,8 @@ class Controller(object):
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
         :return: a list of dicts as described above
         """
+        if not hci_adapter_exists_and_supports_bluetooth_le(adapter):
+            raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=adapter))
         manager = HomekitDiscoveryDeviceManager(adapter)
         manager.start_discovery()
         DelayedExecution(manager.stop, max_seconds).start()
@@ -197,7 +200,7 @@ class Controller(object):
                     if data[pairing_id]['Connection'] == 'IP':
                         self.pairings[pairing_id] = IpPairing(data[pairing_id])
                     elif data[pairing_id]['Connection'] == 'BLE':
-                        self.pairings[pairing_id] = BlePairing(data[pairing_id])
+                        self.pairings[pairing_id] = BlePairing(data[pairing_id], self.ble_adapter)
                     else:
                         # ignore anything else, issue warning
                         self.logger.warning('could not load pairing %s of type "%s"', pairing_id,
@@ -326,7 +329,7 @@ class Controller(object):
         pairing['AccessoryMAC'] = accessory_mac
         pairing['Connection'] = 'BLE'
 
-        self.pairings[alias] = BlePairing(pairing)
+        self.pairings[alias] = BlePairing(pairing, adapter)
 
     def remove_pairing(self, alias):
         """

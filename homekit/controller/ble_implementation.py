@@ -19,6 +19,8 @@ from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats, CharacteristicFormats
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
 from homekit.exceptions import FormatError, RequestRejected
+from homekit.controller.tools import hci_adapter_exists_and_supports_bluetooth_le
+from homekit.exceptions import AccessoryNotFoundError, BluetoothAdapterError
 
 import staging.gatt
 
@@ -47,6 +49,8 @@ class BlePairing(AbstractPairing):
     def list_accessories_and_characteristics(self):
         if 'accessories' in self.pairing_data:
             return self.pairing_data['accessories']
+        if not hci_adapter_exists_and_supports_bluetooth_le(self.adapter):
+            raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=self.adapter))
 
         manager = staging.gatt.DeviceManager(adapter_name=self.adapter)
         device = ServicesResolvingDevice(manager=manager, mac_address=self.pairing_data['AccessoryMAC'])
@@ -74,6 +78,8 @@ class BlePairing(AbstractPairing):
         :return True, if the identification was run, False otherwise
         """
         if not self.session:
+            if not hci_adapter_exists_and_supports_bluetooth_le(self.adapter):
+                raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=self.adapter))
             self.session = BleSession(self.pairing_data, self.adapter)
         cid = -1
         aid = -1
@@ -106,6 +112,8 @@ class BlePairing(AbstractPairing):
                  }
         """
         if not self.session:
+            if not hci_adapter_exists_and_supports_bluetooth_le(self.adapter):
+                raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=self.adapter))
             self.session = BleSession(self.pairing_data, self.adapter)
 
         results = {}
@@ -212,6 +220,8 @@ class BlePairing(AbstractPairing):
                              requested
         """
         if not self.session:
+            if not hci_adapter_exists_and_supports_bluetooth_le(self.adapter):
+                raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=self.adapter))
             self.session = BleSession(self.pairing_data, self.adapter)
 
         results = {}

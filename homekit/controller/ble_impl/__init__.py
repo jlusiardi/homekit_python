@@ -18,7 +18,7 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats, CharacteristicFormats
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
-from homekit.exceptions import FormatError, RequestRejected
+from homekit.exceptions import FormatError, RequestRejected, AccessoryDisconnectedError
 
 from .device import DeviceManager, Device
 
@@ -353,7 +353,7 @@ class BleSession(object):
             logger.debug('reading characteristic')
             data = feature_char.read_value()
             if not data and not self.device.is_connected():
-                raise RuntimeError('Read failed')
+                raise AccessoryDisconnectedError('Characteristic read failed')
 
         resp_data = bytearray([b for b in data])
         logger.debug('read: %s', bytearray(resp_data).hex())

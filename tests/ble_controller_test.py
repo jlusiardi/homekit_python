@@ -130,6 +130,9 @@ class Device:
         #del self.sessions[self.session_id]['controller_to_accessory_key']
         #del self.sessions[self.session_id]['accessory_to_controller_key']
 
+    def is_connected(self):
+        return self.connected
+
 
 class Service:
 
@@ -299,6 +302,8 @@ class Characteristic:
         return self.process_value(self.decrypt_value(value))
 
     def queue_read_response(self, value):
+        if not self.service.device.connected:
+            return
         self.values.append(value)
 
     def read_value(self):
@@ -848,6 +853,42 @@ class TestBLEController(unittest.TestCase):
                 "value": "TestCo",
             }
         }
+
+    def test_get_characteristic_disconnected_read(self):
+        model_mixin.id_counter = 0
+        c = Controller()
+
+        a = Accessory(
+            'test-dev-123',
+            'TestCo',
+            'Test Dev Pro',
+            '00000',
+            1
+        )
+        a.add_service(LightBulbService())
+
+        manager = DeviceManager()
+        d = manager._devices['00:00:00:00:00'] = Device(a)
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                m1.return_value = manager
+                m2.return_value = manager
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c.pairings['test-pairing'].list_accessories_and_characteristics()
+
+                # Establishes a secure session
+                c.pairings['test-pairing'].get_characteristics([(1, 4)])
+
+                # Disconnect from virtual bluetooth device - BleSession doesn't know yet
+                d.disconnect()
+
+                # Further reads should throw an error
+                self.assertRaises(
+                    exceptions.AccessoryDisconnectedError,
+                    c.pairings['test-pairing'].get_characteristics,
+                    [(1, 4)],
+                )
 
     def test_put_characteristic(self):
         model_mixin.id_counter = 0

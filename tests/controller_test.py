@@ -25,7 +25,7 @@ from homekit.exceptions import AccessoryNotFoundError, AlreadyPairedError, Unava
     ConfigLoadingError, ConfigSavingError
 from homekit.model import Accessory
 from homekit.model.services import LightBulbService
-from homekit.controller.ble_implementation import BlePairing
+from homekit.controller.ble_impl import BlePairing
 from homekit.controller.ip_implementation import IpPairing
 from homekit.model import mixin as model_mixin
 

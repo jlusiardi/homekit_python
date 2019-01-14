@@ -13,7 +13,7 @@ from homekit.model import Accessory
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.services import ServicesTypes, AbstractService, LightBulbService
 from homekit.model.characteristics import AbstractCharacteristic
-from homekit.controller.ble_implementation import CharacteristicInstanceID
+from homekit.controller.ble_impl import CharacteristicInstanceID
 from homekit.protocol import TLV
 from homekit.crypto.srp import SrpServer
 from homekit import accessoryserver
@@ -601,7 +601,7 @@ class TestBLEController(unittest.TestCase):
         manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            with mock.patch('homekit.controller.ble_implementation.DeviceManager') as m2:
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
                 m.return_value = manager
                 m2.return_value = manager
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
@@ -740,7 +740,7 @@ class TestBLEController(unittest.TestCase):
         d = manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
-            with mock.patch('homekit.controller.ble_implementation.DeviceManager') as m2:
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
                 m1.return_value = manager
                 m2.return_value = manager
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
@@ -772,7 +772,7 @@ class TestBLEController(unittest.TestCase):
         d = manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
-            with mock.patch('homekit.controller.ble_implementation.DeviceManager') as m2:
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
                 m1.return_value = manager
                 m2.return_value = manager
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
@@ -807,7 +807,7 @@ class TestBLEController(unittest.TestCase):
         d = manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
-            with mock.patch('homekit.controller.ble_implementation.DeviceManager') as m2:
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
                 m1.return_value = manager
                 m2.return_value = manager
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')

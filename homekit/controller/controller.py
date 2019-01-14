@@ -6,7 +6,7 @@ import random
 
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.controller.ip_implementation import IpPairing, IpSession
-from homekit.controller.ble_implementation import BlePairing, BleSession, find_characteristic_by_uuid, create_ble_pair_setup_write
+from homekit.controller.ble_impl import BlePairing, BleSession, find_characteristic_by_uuid, create_ble_pair_setup_write
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError
 from homekit.protocol.tlv import TLV

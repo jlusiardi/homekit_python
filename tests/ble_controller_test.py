@@ -178,6 +178,7 @@ class PairingServiceHandler(Service):
 
         self.characteristics.append(PairingSetupCharacteristicHandler(self))
         self.characteristics.append(PairingVerifyCharacteristicHandler(self))
+        self.characteristics.append(PairingPairingsCharacteristicHandler(self))
 
 
 class Characteristic:
@@ -210,7 +211,7 @@ class Characteristic:
     def uuid(self):
         return self.char.type.upper()
 
-    def write_value(self, value):
+    def decrypt_value(self, value):
         device = self.service.device
         session = device.sessions[device.session_id]
 
@@ -219,6 +220,29 @@ class Characteristic:
             cnt_bytes = session['controller_to_accessory_count'].to_bytes(8, byteorder='little')
             value = chacha20_aead_decrypt(b'', c2a_key, cnt_bytes, bytes([0, 0, 0, 0]), value)
             session['controller_to_accessory_count'] += 1
+
+        return value
+
+    def encrypt_value(self, value):
+        device = self.service.device
+        session = device.sessions[device.session_id]
+        if 'accessory_to_controller_key' in session:
+            a2c_key = session['accessory_to_controller_key']
+            cnt_bytes = session['accessory_to_controller_count'].to_bytes(8, byteorder='little')
+            ciper_and_mac = chacha20_aead_encrypt(b'', a2c_key, cnt_bytes, bytes([0, 0, 0, 0]), value)
+            session['accessory_to_controller_count'] += 1
+            value = ciper_and_mac[0] + ciper_and_mac[1]
+        return value
+
+    def do_char_write(self, tid, value):
+        self.char.set_value_from_ble(value)
+
+        response = bytearray([0x02, tid, 0x00])
+        self.queue_read_response(self.encrypt_value(bytes(response)))
+
+    def process_value(self, value):
+        device = self.service.device
+        session = device.sessions[device.session_id]
 
         assert value[0] == 0
         opcode = value[1]
@@ -229,10 +253,7 @@ class Characteristic:
 
         if opcode == HapBleOpCodes.CHAR_WRITE:
             new_value = dict(TLV.decode_bytes(payload))
-            self.char.set_value_from_ble(new_value[1])
-
-            response = bytearray([0x02, tid, 0x00])
-            self.append_value_secure(bytes(response))
+            self.do_char_write(tid, new_value[1])
 
         elif opcode == HapBleOpCodes.CHAR_READ:
             value = self.char.get_value_for_ble()
@@ -242,7 +263,7 @@ class Characteristic:
             response = bytearray([0x02, tid, 0x00])
             tlv = len(value).to_bytes(2, byteorder='little') + value
             response.extend(tlv)
-            self.append_value_secure(bytes(response))
+            self.queue_read_response(self.encrypt_value(bytes(response)))
 
         elif opcode == HapBleOpCodes.CHAR_SIG_READ:
             response = bytearray([0x02, tid, 0x00])
@@ -270,24 +291,15 @@ class Characteristic:
 
             tlv = TLV.encode_list(data)
             response.extend(len(tlv).to_bytes(2, byteorder='little') + tlv)
-            self.append_value_secure(bytes(response))
+            self.queue_read_response(self.encrypt_value(bytes(response)))
         else:
             raise RuntimeError('Fake does not implement opcode %s' % opcode)
 
-    def append_value(self, value):
+    def write_value(self, value):
+        return self.process_value(self.decrypt_value(value))
+
+    def queue_read_response(self, value):
         self.values.append(value)
-
-    def append_value_secure(self, value):
-        device = self.service.device
-        session = device.sessions[device.session_id]
-        if 'accessory_to_controller_key' in session:
-            a2c_key = session['accessory_to_controller_key']
-            cnt_bytes = session['accessory_to_controller_count'].to_bytes(8, byteorder='little')
-            ciper_and_mac = chacha20_aead_encrypt(b'', a2c_key, cnt_bytes, bytes([0, 0, 0, 0]), value)
-            session['accessory_to_controller_count'] += 1
-            value = ciper_and_mac[0] + ciper_and_mac[1]
-
-        self.append_value(value)
 
     def read_value(self):
         if not self.values:
@@ -404,9 +416,6 @@ class PairingSetupCharacteristicHandler(Characteristic):
 
         self.values = []
 
-    def add_peer(self, *args):
-        pass
-
     def write_value(self, value):
         assert value[0] == 0
         opcode = value[1]
@@ -460,6 +469,53 @@ class PairingVerifyCharacteristicHandler(Characteristic):
             self.values.append(value)
         else:
             super().write_value(value)
+
+
+class PairingPairingsCharacteristicHandler(Characteristic):
+
+    """
+    This is a fake gatt.Characteristic.
+
+    Its to handle the special case of managing pairings on a fake accessory.
+    """
+
+    def __init__(self, service):
+        characteristic = CharacteristicEntry(
+            model_mixin.get_id(),
+            'public.hap.characteristic.pairing.pairings',
+            'data',
+        )
+
+        super().__init__(service, characteristic)
+
+        self.values = []
+
+    def do_char_write(self, tid, value):
+        ''' The value is actually a TLV with a command to perform '''
+
+        request = dict(TLV.decode_bytes(value))
+        print(request)
+
+        assert request[TLV.kTLVType_State] == TLV.M1
+
+        if request[TLV.kTLVType_Method] == TLV.RemovePairing:
+            ident = request[TLV.kTLVType_Identifier].decode()
+            self.service.device.peers.pop(ident, None)
+
+            # If ident == this session then disconnect it
+            # self.service.device.disconnect()
+
+        response = bytearray([0x02, tid, 0x00])
+
+        inner = TLV.encode_list([
+            (TLV.kTLVType_State, TLV.M2),
+        ])
+
+        outer = TLV.encode_list([(TLV.kTLVHAPParamValue, inner)])
+        response.extend(len(outer).to_bytes(length=2, byteorder='little'))
+        response.extend(outer)
+
+        self.queue_read_response(self.encrypt_value(bytes(response)))
 
 
 class Descriptor:
@@ -582,6 +638,35 @@ class TestBLEController(unittest.TestCase):
             c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
 
         assert c.pairings['test-pairing'].pairing_data['Connection'] == 'BLE'
+
+    def test_pair_unpair(self):
+        model_mixin.id_counter = 0
+        c = Controller()
+
+        a = Accessory(
+            'test-dev-123',
+            'TestCo',
+            'Test Dev Pro',
+            '00000',
+            1
+        )
+        a.add_service(LightBulbService())
+
+        manager = DeviceManager()
+        device = manager._devices['00:00:00:00:00'] = Device(a)
+
+        with mock.patch('homekit.controller.ble_impl.DeviceManager') as m1:
+            with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m2:
+                m1.return_value = manager
+                m2.return_value = manager
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c.pairings['test-pairing'].list_accessories_and_characteristics()
+                assert len(device.peers) == 1
+
+                c.remove_pairing('test-pairing')
+
+                assert len(device.peers) == 0
+                assert 'test-pairing' not in c.pairings
 
     def test_list_accessories_and_characteristics(self):
         model_mixin.id_counter = 0
@@ -714,7 +799,16 @@ class TestBLEController(unittest.TestCase):
                                 "unit": "unknown",
                                 "range": None,
                                 "step": None
-                            }
+                            },
+                            {
+                                "description": "",
+                                "format": "data",
+                                "iid": 14,
+                                "perms": [],
+                                "range": None,
+                                "step": None,
+                                "type": "00000050-0000-1000-8000-0026BB765291",
+                                "unit": "unknown"}
                         ],
                         "iid": 11,
                         "type": "00000055-0000-1000-8000-0026BB765291"

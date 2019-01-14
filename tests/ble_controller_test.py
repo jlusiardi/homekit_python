@@ -854,6 +854,40 @@ class TestBLEController(unittest.TestCase):
             }
         }
 
+    def test_get_characteristic_invalid_iid(self):
+        model_mixin.id_counter = 0
+        c = Controller()
+
+        a = Accessory(
+            'test-dev-123',
+            'TestCo',
+            'Test Dev Pro',
+            '00000',
+            1
+        )
+        a.add_service(LightBulbService())
+
+        manager = DeviceManager()
+        d = manager._devices['00:00:00:00:00'] = Device(a)
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                m1.return_value = manager
+                m2.return_value = manager
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c.pairings['test-pairing'].list_accessories_and_characteristics()
+                result = c.pairings['test-pairing'].get_characteristics([
+                    (2, 1),
+                ])
+
+        assert result == {
+            (2, 1): {
+                "status": 6,
+                "description": "Accessory was not able to perform the requested operation",
+            }
+        }
+
+
     def test_get_characteristic_disconnected_read(self):
         model_mixin.id_counter = 0
         c = Controller()

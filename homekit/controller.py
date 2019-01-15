@@ -26,7 +26,7 @@ from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, UnpairedError, \
-    AuthenticationError, ConfigSavingError, AlreadyPairedError, FormatError
+    AuthenticationError, ConfigSavingError, AlreadyPairedError, FormatError, AccessoryDisconnectedError
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, perform_pair_setup
 from homekit.protocol.tlv import TLV, TlvParseException
@@ -270,7 +270,12 @@ class Pairing(object):
         """
         if not self.session:
             self.session = Session(self.pairing_data)
-        response = self.session.get('/accessories')
+        try:
+            response = self.session.get('/accessories')
+        except AccessoryDisconnectedError:
+            self.session.close()
+            self.session = None
+            raise
         tmp = response.read().decode()
         accessories = json.loads(tmp)['accessories']
         self.pairing_data['accessories'] = accessories
@@ -297,8 +302,13 @@ class Pairing(object):
             (TLV.kTLVType_State, TLV.M1),
             (TLV.kTLVType_Method, TLV.ListPairings)
         ])
-        response = self.session.sec_http.post('/pairings', request_tlv.decode())
-        data = response.read()
+        try:
+            response = self.session.sec_http.post('/pairings', request_tlv.decode())
+            data = response.read()
+        except AccessoryDisconnectedError:
+            self.session.close()
+            self.session = None
+            raise
         data = TLV.decode_bytes(data)
 
         if not (data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2):
@@ -361,8 +371,14 @@ class Pairing(object):
         else:
             url += '&ev=0'
 
-        response = self.session.get(url)
-        data = json.loads(response.read().decode())['characteristics']
+        try:
+            response = self.session.get(url)
+            data = json.loads(response.read().decode())['characteristics']
+        except AccessoryDisconnectedError:
+            self.session.close()
+            self.session = None
+            raise
+
         tmp = {}
         for c in data:
             key = (c['aid'], c['iid'])
@@ -412,7 +428,14 @@ class Pairing(object):
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
             data.append({'aid': aid, 'iid': iid, 'value': value})
         data = json.dumps({'characteristics': data})
-        response = self.session.put('/characteristics', data)
+
+        try:
+            response = self.session.put('/characteristics', data)
+        except AccessoryDisconnectedError:
+            self.session.close()
+            self.session = None
+            raise
+
         if response.code != 204:
             data = response.read().decode()
             data = json.loads(data)['characteristics']
@@ -452,7 +475,14 @@ class Pairing(object):
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
             data.append({'aid': aid, 'iid': iid, 'ev': True})
         data = json.dumps({'characteristics': data})
-        response = self.session.put('/characteristics', data)
+
+        try:
+            response = self.session.put('/characteristics', data)
+        except AccessoryDisconnectedError:
+            self.session.close()
+            self.session = None
+            raise
+
         # handle error responses
         if response.code != 204:
             tmp = {}
@@ -470,8 +500,14 @@ class Pairing(object):
         event_count = 0
         s = time.time()
         while (max_events == -1 or event_count < max_events) and (max_seconds == -1 or s + max_seconds >= time.time()):
-            r = self.session.sec_http.handle_event_response()
-            body = r.read().decode()
+            try:
+                r = self.session.sec_http.handle_event_response()
+                body = r.read().decode()
+            except AccessoryDisconnectedError:
+                self.session.close()
+                self.session = None
+                raise
+
             if len(body) > 0:
                 r = json.loads(body)
                 tmp = []
@@ -554,7 +590,12 @@ class Session(object):
         """
         Close the session. This closes the socket.
         """
-        self.sock.close()
+        try:
+            self.sock.close()
+        except OSError:
+            # If we get an OSError its probably because the socket is already closed
+            pass
+        self.sock = None
 
     def get_from_pairing_data(self, key):
         if key not in self.pairing_data:

@@ -163,6 +163,15 @@ class AccessoryNotFoundError(HomeKitException):
         Exception.__init__(self, message)
 
 
+class AccessoryDisconnectedError(HomeKitException):
+    """
+    Used if a HomeKit disconnects part way through an operation or series of operations.
+    It may be possible to reconnect and retry the request.
+    """
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
 class ConfigLoadingError(HomeKitException):
     """
     Used on problems loading some config. This includes but may not be limited to:

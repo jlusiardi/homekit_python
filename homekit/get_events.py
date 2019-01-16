@@ -62,11 +62,12 @@ if __name__ == '__main__':
         pairing = controller.get_pairings()[args.alias]
         characteristics = [(int(c.split('.')[0]), int(c.split('.')[1])) for c in args.characteristics]
         results = pairing.get_events(characteristics, func, max_events=args.eventCount, max_seconds=args.secondsCount)
-    except KeyboardInterrupt as e:
+    except KeyboardInterrupt:
         sys.exit(-1)
     except Exception as e:
         print(e)
         sys.exit(-1)
+
     for key, value in results.items():
         aid = key[0]
         iid = key[1]

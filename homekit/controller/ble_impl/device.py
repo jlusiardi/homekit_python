@@ -1,4 +1,19 @@
-import collections
+#
+# Copyright 2018 Joachim Lusiardi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import logging
 import time
 
@@ -9,7 +24,6 @@ from homekit.exceptions import AccessoryNotFoundError
 from . import gatt
 from .manufacturer_data import parse_manufacturer_specific
 
-
 # 0x004c is the Company Identifier code for Apple Inc. (see Chapter 6.4.2.2 of the spec on page 124)
 COID_APPLE = 0x004c
 
@@ -18,7 +32,6 @@ logger = logging.getLogger(__name__)
 
 
 class Device(gatt.Device):
-
     """
     A subclass of gatt.Device that makes it a little easier to use for
     implementing BLE HAP. This class only contains thin wrappers on top of
@@ -89,12 +102,11 @@ class Device(gatt.Device):
                 # want to avoid running it and blocking for an indeterminate amount of time.
                 logger.debug('enumerating resolved services')
                 self.services_resolved()
-        except dbus.exceptions.DBusException as e:
+        except dbus.exceptions.DBusException:
             raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
 
     def characteristic_read_value_failed(self, characteristic, error):
         logger.debug('read failed: %s %s', characteristic, error)
-        #self.disconnect()
 
     def characteristic_write_value_succeeded(self, characteristic):
         logger.debug('write success: %s', characteristic)

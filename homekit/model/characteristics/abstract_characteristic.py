@@ -62,6 +62,7 @@ class AbstractCharacteristic(ToDictMixin):
     def set_value(self, new_val):
         """
         This function sets the value of this characteristic. Permissions are checked first
+
         :param new_val:
         :raises CharacteristicPermissionError: if the characteristic cannot be written
         """
@@ -148,6 +149,7 @@ class AbstractCharacteristic(ToDictMixin):
         This method returns the value of this characteristic. Permissions are checked first, then either the callback
         for getting the values is executed (execution time may vary) or the value is directly returned if not callback
         is given.
+
         :raises CharacteristicPermissionError: if the characteristic cannot be read
         :return: the value of the characteristic
         """
@@ -180,6 +182,7 @@ class AbstractCharacteristic(ToDictMixin):
         """
         This method returns a dict of meta information for this characteristic. This includes at least the format of
         the characteristic but may contain any other specific attribute.
+
         :return: a dict
         """
         tmp = {'format': self.format}

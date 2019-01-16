@@ -1,11 +1,24 @@
+#
+# Copyright 2018 Joachim Lusiardi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import binascii
-import hashlib
 import unittest
 from unittest import mock
-
-import gmpy2
-import hkdf
-import py25519
+import uuid
+import logging
 
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit import Controller
@@ -15,7 +28,6 @@ from homekit.model.services import ServicesTypes, AbstractService, LightBulbServ
 from homekit.model.characteristics import AbstractCharacteristic
 from homekit.controller.ble_impl import CharacteristicInstanceID
 from homekit.protocol import TLV
-from homekit.crypto.srp import SrpServer
 from homekit import accessoryserver
 from homekit.protocol.opcodes import HapBleOpCodes
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
@@ -59,7 +71,7 @@ class Device:
 
     def __init__(self, accessory: Accessory):
         self.accessory = accessory
-        self.name = 'Test' #FIXME get from accessory
+        self.name = 'Test'  # FIXME get from accessory
         self.mac_address = '00:00:00:00:00'
 
         # Data needed by pair-setup and pair-verify
@@ -126,16 +138,11 @@ class Device:
     def disconnect(self):
         self.connected = False
 
-        #print(self.sessions[self.session_id])
-        #del self.sessions[self.session_id]['controller_to_accessory_key']
-        #del self.sessions[self.session_id]['accessory_to_controller_key']
-
     def is_connected(self):
         return self.connected
 
 
 class Service:
-
     """
     This is a fake version of gatt.Service
     """
@@ -163,7 +170,6 @@ class ServiceEntry(AbstractService):
 
 
 class PairingServiceHandler(Service):
-
     """
     This is a fake version of gatt.Service
 
@@ -244,14 +250,9 @@ class Characteristic:
         self.queue_read_response(self.encrypt_value(bytes(response)))
 
     def process_value(self, value):
-        device = self.service.device
-        session = device.sessions[device.session_id]
-
         assert value[0] == 0
         opcode = value[1]
         tid = value[2]
-        cid = int.from_bytes(value[3:5], byteorder='little')
-        length = int.from_bytes(value[5:7], byteorder='little')
         payload = value[7:]
 
         if opcode == HapBleOpCodes.CHAR_WRITE:
@@ -260,7 +261,6 @@ class Characteristic:
 
         elif opcode == HapBleOpCodes.CHAR_READ:
             value = self.char.get_value_for_ble()
-            #÷÷÷
             value = TLV.encode_list([(TLV.kTLVHAPParamValue, value)])
 
             response = bytearray([0x02, tid, 0x00])
@@ -271,7 +271,6 @@ class Characteristic:
         elif opcode == HapBleOpCodes.CHAR_SIG_READ:
             response = bytearray([0x02, tid, 0x00])
 
-            import uuid
             service_type = list(uuid.UUID(self.service.service.type).bytes)
             service_type.reverse()
             service_type = bytes(bytearray(service_type))
@@ -353,10 +352,10 @@ class AccessoryRequestHandler(accessoryserver.AccessoryRequestHandler):
         pass
 
     def log_message(self, message, *args):
-        print(message % args)
+        logging.debug('%s', message % args)
 
     def log_error(self, message, *args):
-        print(message % args)
+        logging.debug('%s', message % args)
 
     def send_error(self, *args):
         assert False, 'sent error'
@@ -424,9 +423,6 @@ class PairingSetupCharacteristicHandler(Characteristic):
     def write_value(self, value):
         assert value[0] == 0
         opcode = value[1]
-        tid = value[2]
-        cid = int.from_bytes(value[3:5], byteorder='little')
-        length = int.from_bytes(value[5:7], byteorder='little')
 
         if opcode == 2:
             outer = dict(TLV.decode_bytes(value[7:]))
@@ -462,9 +458,6 @@ class PairingVerifyCharacteristicHandler(Characteristic):
     def write_value(self, value):
         assert value[0] == 0
         opcode = value[1]
-        tid = value[2]
-        cid = int.from_bytes(value[3:5], byteorder='little')
-        length = int.from_bytes(value[5:7], byteorder='little')
 
         if opcode == 2:
             outer = dict(TLV.decode_bytes(value[7:]))
@@ -496,10 +489,10 @@ class PairingPairingsCharacteristicHandler(Characteristic):
         self.values = []
 
     def do_char_write(self, tid, value):
-        ''' The value is actually a TLV with a command to perform '''
+        """The value is actually a TLV with a command to perform"""
 
         request = dict(TLV.decode_bytes(value))
-        print(request)
+        logging.debug('%s', request)
 
         assert request[TLV.kTLVType_State] == TLV.M1
 
@@ -563,7 +556,7 @@ class TestBLEController(unittest.TestCase):
         with mock.patch('homekit.controller.controller.DiscoveryDeviceManager') as m:
             m.return_value = manager
 
-            assert c.discover_ble(0) == [{
+            self.assertEqual(c.discover_ble(0), [{
                 'acid': 9,
                 'category': 'Thermostat',
                 'cn': 2,
@@ -574,7 +567,7 @@ class TestBLEController(unittest.TestCase):
                 'mac': '00:00:00:00:00',
                 'name': 'Test',
                 'sf': 1,
-            }]
+            }])
 
     def test_unpaired_identify(self):
         model_mixin.id_counter = 0
@@ -595,9 +588,9 @@ class TestBLEController(unittest.TestCase):
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             m.return_value = manager
-            assert a.services[0].characteristics[0].value == None
-            assert c.identify_ble('00:00:00:00:00') == True
-            assert a.services[0].characteristics[0].value == True
+            self.assertIsNone(a.services[0].characteristics[0].value)
+            self.assertTrue(c.identify_ble('00:00:00:00:00'))
+            self.assertTrue(a.services[0].characteristics[0].value)
 
     def test_unpaired_identify_already_paired(self):
         model_mixin.id_counter = 0
@@ -619,7 +612,7 @@ class TestBLEController(unittest.TestCase):
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             m.return_value = manager
             c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
-            assert a.services[0].characteristics[0].value == None
+            self.assertIsNone(a.services[0].characteristics[0].value)
             self.assertRaises(exceptions.AlreadyPairedError, c.identify_ble, '00:00:00:00:00')
 
     def test_pair_success(self):
@@ -642,7 +635,7 @@ class TestBLEController(unittest.TestCase):
             m.return_value = manager
             c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
 
-        assert c.pairings['test-pairing'].pairing_data['Connection'] == 'BLE'
+        self.assertEqual(c.pairings['test-pairing'].pairing_data['Connection'], 'BLE')
 
     def test_pair_unpair(self):
         model_mixin.id_counter = 0
@@ -666,12 +659,12 @@ class TestBLEController(unittest.TestCase):
                 m2.return_value = manager
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
                 c.pairings['test-pairing'].list_accessories_and_characteristics()
-                assert len(device.peers) == 1
+                self.assertEqual(len(device.peers), 1)
 
                 c.remove_pairing('test-pairing')
 
-                assert len(device.peers) == 0
-                assert 'test-pairing' not in c.pairings
+                self.assertEqual(len(device.peers), 0)
+                self.assertNotIn('test-pairing', c.pairings)
 
     def test_list_accessories_and_characteristics(self):
         model_mixin.id_counter = 0
@@ -697,7 +690,7 @@ class TestBLEController(unittest.TestCase):
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
                 accessories = c.pairings['test-pairing'].list_accessories_and_characteristics()
 
-        assert accessories == [
+        self.assertEqual(accessories, [
             {
                 "aid": 1,
                 "services": [
@@ -820,7 +813,7 @@ class TestBLEController(unittest.TestCase):
                     }
                 ]
             }
-        ]
+        ])
 
     def test_get_characteristic(self):
         model_mixin.id_counter = 0
@@ -836,7 +829,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        d = manager._devices['00:00:00:00:00'] = Device(a)
+        manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
@@ -848,11 +841,11 @@ class TestBLEController(unittest.TestCase):
                     (1, 4),
                 ])
 
-        assert result == {
+        self.assertEqual(result, {
             (1, 4): {
                 "value": "TestCo",
             }
-        }
+        })
 
     def test_get_characteristic_invalid_iid(self):
         model_mixin.id_counter = 0
@@ -868,7 +861,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        d = manager._devices['00:00:00:00:00'] = Device(a)
+        manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
@@ -880,13 +873,12 @@ class TestBLEController(unittest.TestCase):
                     (2, 1),
                 ])
 
-        assert result == {
+        self.assertEqual(result, {
             (2, 1): {
                 "status": 6,
                 "description": "Accessory was not able to perform the requested operation",
             }
-        }
-
+        })
 
     def test_get_characteristic_disconnected_read(self):
         model_mixin.id_counter = 0
@@ -938,7 +930,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        d = manager._devices['00:00:00:00:00'] = Device(a)
+        manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
@@ -950,14 +942,14 @@ class TestBLEController(unittest.TestCase):
                 result = c.pairings['test-pairing'].put_characteristics([
                     (1, 10, True),
                 ])
-                assert result == {}
-                assert a.services[1].characteristics[0].get_value() == True
+                self.assertEqual(result, {})
+                self.assertTrue(a.services[1].characteristics[0].get_value())
 
                 result = c.pairings['test-pairing'].put_characteristics([
                     (1, 10, False),
                 ])
-                assert result == {}
-                assert a.services[1].characteristics[0].get_value() == False
+                self.assertEqual(result, {})
+                self.assertFalse(a.services[1].characteristics[0].get_value())
 
     def test_identify(self):
         model_mixin.id_counter = 0
@@ -973,7 +965,7 @@ class TestBLEController(unittest.TestCase):
         a.add_service(LightBulbService())
 
         manager = DeviceManager()
-        d = manager._devices['00:00:00:00:00'] = Device(a)
+        manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
@@ -982,16 +974,16 @@ class TestBLEController(unittest.TestCase):
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
                 c.pairings['test-pairing'].list_accessories_and_characteristics()
 
-                assert a.services[0].characteristics[0].value == None
+                self.assertIsNone(a.services[0].characteristics[0].value)
                 c.pairings['test-pairing'].identify()
-                assert a.services[0].characteristics[0].value == True
+                self.assertTrue(a.services[0].characteristics[0].value)
 
 
 class TestMfrData(unittest.TestCase):
 
     def test_1(self):
         value = b'\x06\xcd\x00\x99\x99\x99\x99\x99\x99\t\x00\x91\x0f\x02\x02'
-        assert parse_manufacturer_specific(value) == {
+        self.assertEqual(parse_manufacturer_specific(value), {
             'acid': 9,
             'category': 'Thermostat',
             'cn': 2,
@@ -1002,11 +994,11 @@ class TestMfrData(unittest.TestCase):
             'manufacturer': 'apple',
             'sf': 0,
             'type': 'HomeKit'
-        }
+        })
 
     def test_2(self):
         value = b'\x061\x00JM\x00\x00\x00\x00\n\x00\x0b\x00\x02\x02RfY\xf8'
-        assert parse_manufacturer_specific(value) == {
+        self.assertEqual(parse_manufacturer_specific(value), {
             'acid': 10,
             'category': 'Sensor',
             'cn': 2,
@@ -1017,11 +1009,11 @@ class TestMfrData(unittest.TestCase):
             'manufacturer': 'apple',
             'sf': 0,
             'type': 'HomeKit'
-        }
+        })
 
     def test_3(self):
         value = b'\x061\x01{\x21\x21\x49\x23<\x07\x00B\x00\x02\x02\xb6f\xe1\x1d'
-        assert parse_manufacturer_specific(value) == {
+        self.assertEqual(parse_manufacturer_specific(value), {
             'acid': 7,
             'category': 'Outlet',
             'cn': 2,
@@ -1032,5 +1024,4 @@ class TestMfrData(unittest.TestCase):
             'manufacturer': 'apple',
             'sf': 1,
             'type': 'HomeKit'
-        }
-
+        })

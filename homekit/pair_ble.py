@@ -60,4 +60,5 @@ if __name__ == '__main__':
         print('Pairing for "{a}" was established.'.format(a=args.alias))
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)

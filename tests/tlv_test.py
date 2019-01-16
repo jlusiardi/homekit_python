@@ -96,7 +96,7 @@ class TestTLV(unittest.TestCase):
         example = [(1, 'hello',), ]
         res = TLV.to_string(example)
         self.assertEqual(res, '[\n  1: (5 bytes) hello\n]\n')
-        example = [(1, 'hello',),(2, 'world',), ]
+        example = [(1, 'hello',), (2, 'world',), ]
         res = TLV.to_string(example)
         self.assertEqual(res, '[\n  1: (5 bytes) hello\n  2: (5 bytes) world\n]\n')
 
@@ -104,7 +104,7 @@ class TestTLV(unittest.TestCase):
         example = {1: 'hello'}
         res = TLV.to_string(example)
         self.assertEqual(res, '{\n  1: (5 bytes) hello\n}\n')
-        example = {1: 'hello',2: 'world'}
+        example = {1: 'hello', 2: 'world'}
         res = TLV.to_string(example)
         self.assertEqual(res, '{\n  1: (5 bytes) hello\n  2: (5 bytes) world\n}\n')
 
@@ -177,8 +177,6 @@ class TestTLV(unittest.TestCase):
         example = bytes(bytearray.fromhex('060103' + '010203'))
         expected = [
             [6, bytearray(b'\x03')],
-        #     [9, bytearray(300 * b'a')],
-        #     [1, bytearray(b'hello')]
         ]
 
         data = TLV.decode_bytes(example, expected=[6])

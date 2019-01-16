@@ -49,12 +49,12 @@ class Accessory(ToDictMixin):
                         characteristic.set_set_value_callback(tmp)
 
     def to_accessory_and_service_list(self):
-        l = []
+        services_list = []
         for s in self.services:
-            l.append(s.to_accessory_and_service_list())
+            services_list.append(s.to_accessory_and_service_list())
         d = {
             'aid': self.aid,
-            'services': l
+            'services': services_list
         }
         return d
 
@@ -67,8 +67,8 @@ class Accessories(ToDictMixin):
         self.accessories.append(accessory)
 
     def to_accessory_and_service_list(self):
-        l = []
+        accessories_list = []
         for a in self.accessories:
-            l.append(a.to_accessory_and_service_list())
-        d = {'accessories': l}
+            accessories_list.append(a.to_accessory_and_service_list())
+        d = {'accessories': accessories_list}
         return json.dumps(d)

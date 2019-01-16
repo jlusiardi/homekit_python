@@ -25,7 +25,7 @@ from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit put_characteristic app - change values of characteristics ' +
+    parser = argparse.ArgumentParser(description='HomeKit put_characteristic app - change values of characteristics '
                                                  'on paired HomeKit accessories.')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')

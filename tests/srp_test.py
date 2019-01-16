@@ -40,10 +40,9 @@ class TestSrp(unittest.TestCase):
 
         # step M4
         server.set_client_public_key(client_pub_key)
-        server_shared_secret = server.get_shared_secret()
+        server.get_shared_secret()
         self.assertTrue(server.verify_clients_proof(clients_proof))
         servers_proof = server.get_proof(clients_proof)
 
         # step M5
         self.assertTrue(client.verify_servers_proof(servers_proof))
-

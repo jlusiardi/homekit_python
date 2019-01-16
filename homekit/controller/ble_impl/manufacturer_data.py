@@ -1,3 +1,19 @@
+#
+# Copyright 2018 Joachim Lusiardi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import logging
 
 from homekit.model import Categories
@@ -7,6 +23,7 @@ def parse_manufacturer_specific(input_data):
     """
     Parse the manufacturer specific data as returned via Bluez ManufacturerData. This skips the data for LEN, ADT and
     CoID as specified in Chapter 6.4.2.2 of the spec on page 124. Data therefore starts at TY (must be 0x06).
+
     :param input_data: manufacturer specific data as bytes
     :return: a dict containing the type (key 'type', value 'HomeKit'), the status flag (key 'sf'), human readable
              version of the status flag (key 'flags'), the device id (key 'device_id'), the accessory category

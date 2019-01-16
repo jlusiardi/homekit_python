@@ -1,3 +1,19 @@
+#
+# Copyright 2018 Joachim Lusiardi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import json
 from json.decoder import JSONDecodeError
 import uuid
@@ -16,6 +32,7 @@ from homekit.protocol import perform_pair_setup, create_ip_pair_setup_write
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
+
 from .ble_impl.discovery import DiscoveryDeviceManager
 
 
@@ -152,10 +169,11 @@ class Controller(object):
         device = manager.make_device(accessory_mac)
         device.connect()
 
-        disco_info =  device.get_homekit_discovery_data()
+        disco_info = device.get_homekit_discovery_data()
         if disco_info.get('flags', 'unknown') == 'paired':
             raise AlreadyPairedError(
-                'identify of {mac_address} failed not allowed as device already paired'.format(mac_address=accessory_mac),
+                'identify of {mac_address} failed not allowed as device already paired'.format(
+                    mac_address=accessory_mac),
             )
 
         identify, identify_iid = find_characteristic_by_uuid(
@@ -166,7 +184,8 @@ class Controller(object):
 
         if not identify:
             raise AccessoryNotFoundError(
-                'Device with address {mac_address} exists but did not find IDENTIFY characteristic'.format(mac_address=accessory_mac)
+                'Device with address {mac_address} exists but did not find IDENTIFY characteristic'.format(
+                    mac_address=accessory_mac)
             )
 
         value = TLV.encode_list([
@@ -231,11 +250,11 @@ class Controller(object):
                         # ignore anything else, issue warning
                         self.logger.warning('could not load pairing %s of type "%s"', pairing_id,
                                             data[pairing_id]['Connection'])
-        except PermissionError as e:
+        except PermissionError:
             raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=filename))
-        except JSONDecodeError as e:
+        except JSONDecodeError:
             raise ConfigLoadingError('Cannot parse "{f}" as JSON file'.format(f=filename))
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             raise ConfigLoadingError('Could not open "{f}" because it does not exist'.format(f=filename))
 
     def save_data(self, filename):
@@ -252,9 +271,9 @@ class Controller(object):
         try:
             with open(filename, 'w') as output_fp:
                 json.dump(data, output_fp, indent='  ')
-        except PermissionError as e:
+        except PermissionError:
             raise ConfigSavingError('Could not write "{f}" due to missing permissions'.format(f=filename))
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             raise ConfigSavingError(
                 'Could not write "{f}" because it (or the folder) does not exist'.format(f=filename))
 
@@ -378,9 +397,9 @@ class Controller(object):
 
             from .ble_impl.device import DeviceManager
             manager = DeviceManager(adapter_name='hci0')
-            device =  manager.make_device(pairing_data['AccessoryMAC'])
+            device = manager.make_device(pairing_data['AccessoryMAC'])
             device.connect()
-            #
+
             logging.debug('resolved %d services', len(device.services))
             pair_remove_char, pair_remove_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
                                                                                 CharacteristicsTypes.PAIRING_PAIRINGS)

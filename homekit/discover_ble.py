@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 
-import logging
 import argparse
 
 from homekit.log_support import setup_logging, add_log_arguments
@@ -23,7 +22,7 @@ from homekit.controller import Controller
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit BLE discover app - ' \
+    parser = argparse.ArgumentParser(description='HomeKit BLE discover app - '
                                                  'list all HomeKit Bluetooth LE devices in range')
     parser.add_argument('-t', action='store', required=False, dest='timeout', type=int, default=10,
                         help='Number of seconds to wait (defaults to 10)')
@@ -51,4 +50,3 @@ if __name__ == '__main__':
         print('Status Flags (sf): {sf} (Flag: {flags})'.format(sf=device['flags'], flags=device['sf']))
         print('Category Identifier (ci): {c} (Id: {ci})'.format(c=device['category'], ci=device['acid']))
         print()
-

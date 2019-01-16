@@ -28,7 +28,8 @@ class TargetHeatingCoolingStateCharacteristic(AbstractCharacteristic):
     """
 
     def __init__(self, iid):
-        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.HEATING_COOLING_TARGET, CharacteristicFormats.uint8)
+        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.HEATING_COOLING_TARGET,
+                                        CharacteristicFormats.uint8)
         self.perms = [CharacteristicPermissions.paired_write, CharacteristicPermissions.paired_read,
                       CharacteristicPermissions.events]
         self.description = 'Desired mode of operation'

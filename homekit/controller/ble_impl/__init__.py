@@ -1,14 +1,28 @@
+#
+# Copyright 2018 Joachim Lusiardi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import time
 import logging
 import random
 import sys
 import uuid
 import struct
-import dbus.exceptions
 from distutils.util import strtobool
 
 from homekit.controller.tools import AbstractPairing
-from homekit.exceptions import AccessoryNotFoundError
 from homekit.protocol.tlv import TLV
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.protocol import get_session_keys
@@ -21,7 +35,6 @@ from homekit.model.characteristics.characteristic_units import BleCharacteristic
 from homekit.exceptions import FormatError, RequestRejected, AccessoryDisconnectedError
 
 from .device import DeviceManager, Device
-
 
 # the uuid of the ble descriptors that hold the characteristic instance id as value (see page 128)
 CharacteristicInstanceID = 'dc46f0fe-81d2-4616-b5d9-6abdd796939a'
@@ -230,12 +243,7 @@ class BlePairing(AbstractPairing):
 
             try:
                 fc, fc_info = self.session.find_characteristic_by_iid(cid)
-                response = self.session.request(
-                    fc,
-                    cid,
-                    HapBleOpCodes.CHAR_WRITE,
-                    body,
-                )
+                response = self.session.request(fc, cid, HapBleOpCodes.CHAR_WRITE, body)
                 logger.debug('response %s', response)
                 # TODO does the response contain useful information here?
             except RequestRejected as e:
@@ -285,17 +293,19 @@ class BleSession(object):
                     s_short = s['type'].split('-', 1)[0].lstrip('0')
 
                 for c in s['characteristics']:
-                     char = uuid_map.get((s['type'], c['type']), None)
-                     if not char:
-                         continue
-                     self.iid_map[c['iid']] = (char, c)
-                     self.uuid_map[(s['type'], c['type'])] = (char, c)
+                    char = uuid_map.get((s['type'], c['type']), None)
+                    if not char:
+                        continue
+                    self.iid_map[c['iid']] = (char, c)
+                    self.uuid_map[(s['type'], c['type'])] = (char, c)
 
-                     if s_short and c['type'].endswith(CharacteristicsTypes.baseUUID):
-                         c_short = c['type'].split('-', 1)[0].lstrip('0')
-                         self.short_map[(s_short, c_short)] = (char, c)
+                    if s_short and c['type'].endswith(CharacteristicsTypes.baseUUID):
+                        c_short = c['type'].split('-', 1)[0].lstrip('0')
+                        self.short_map[(s_short, c_short)] = (char, c)
 
-                     self.short_map[ServicesTypes.get_short(s['type']), CharacteristicsTypes.get_short(c['type'])] = (char, c)
+                    service_type_short = ServicesTypes.get_short(s['type'])
+                    characteristic_type_short = CharacteristicsTypes.get_short(c['type'])
+                    self.short_map[service_type_short, characteristic_type_short] = (char, c)
 
         pair_verify_char, pair_verify_char_info = self.short_map.get(
             (ServicesTypes.PAIRING_SERVICE, CharacteristicsTypes.PAIR_VERIFY),
@@ -460,8 +470,9 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
 
         expected_length = int.from_bytes(bytes(resp_data[3:5]), byteorder='little')
         logger.debug(
-            'control field: {c:x}, tid: {t:x}, status: {s:x}, length: {l}'.format(c=resp_data[0], t=resp_data[1],
-                                                                                  s=resp_data[2], l=expected_length))
+            'control field: {c:x}, tid: {t:x}, status: {s:x}, length: {length}'.format(c=resp_data[0], t=resp_data[1],
+                                                                                       s=resp_data[2],
+                                                                                       length=expected_length))
         while len(resp_data[3:]) < expected_length:
             time.sleep(1)
             logger.debug('reading characteristic')
@@ -512,7 +523,7 @@ def read_characteristics(device):
 
     for service in device.services:
         logger.debug('found service with UUID %s (%s)', service.uuid,
-                      ServicesTypes.get_short(service.uuid.upper()))
+                     ServicesTypes.get_short(service.uuid.upper()))
 
         s_data = {
             'characteristics': [
@@ -522,7 +533,7 @@ def read_characteristics(device):
 
         for characteristic in service.characteristics:
             logger.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid,
-                          CharacteristicsTypes.get_short(characteristic.uuid.upper()))
+                         CharacteristicsTypes.get_short(characteristic.uuid.upper()))
 
             if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
                 sid = int.from_bytes(characteristic.read_value(), byteorder='little')
@@ -560,8 +571,6 @@ def read_characteristics(device):
 
                 if c_data['iid']:
                     s_data['characteristics'].append(c_data)
-
-            #
 
         if s_data['iid']:
             a_data['services'].append(s_data)

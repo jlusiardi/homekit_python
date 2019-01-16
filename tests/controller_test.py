@@ -25,8 +25,9 @@ from homekit.exceptions import AccessoryNotFoundError, AlreadyPairedError, Unava
     ConfigLoadingError, ConfigSavingError
 from homekit.model import Accessory
 from homekit.model.services import LightBulbService
-from homekit.controller.ble_implementation import BlePairing
+from homekit.controller.ble_impl import BlePairing
 from homekit.controller.ip_implementation import IpPairing
+from homekit.model import mixin as model_mixin
 
 
 class T(threading.Thread):
@@ -73,6 +74,9 @@ class TestControllerIpUnpaired(unittest.TestCase):
               "unsuccessful_tries": 0
             }""".encode())
         cls.config_file.flush()
+
+        # Make sure get_id() numbers are stable between tests
+        model_mixin.id_counter = 0
 
         cls.httpd = AccessoryServer(cls.config_file.name, None)
         cls.httpd.set_identify_callback(identify_callback)
@@ -161,6 +165,9 @@ class TestControllerIpPaired(unittest.TestCase):
             "unsuccessful_tries": 0
         }""".encode())
         cls.config_file.flush()
+
+        # Make sure get_id() numbers are stable between tests
+        model_mixin.id_counter = 0
 
         cls.httpd = AccessoryServer(cls.config_file.name, None)
         cls.httpd.set_identify_callback(identify_callback)

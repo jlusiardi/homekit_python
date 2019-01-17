@@ -16,6 +16,8 @@
 #
 
 import argparse
+import sys
+import logging
 
 from homekit.log_support import setup_logging, add_log_arguments
 from homekit.controller import Controller
@@ -36,8 +38,12 @@ if __name__ == '__main__':
     args = setup_args_parser()
     setup_logging(args.loglevel)
 
-    # TODO adapter unused
-    devices = Controller.discover_ble(args.timeout)
+    try:
+        devices = Controller.discover_ble(args.timeout, args.adapter)
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
+        sys.exit(-1)
 
     print()
     for device in devices:
@@ -50,3 +56,4 @@ if __name__ == '__main__':
         print('Status Flags (sf): {sf} (Flag: {flags})'.format(sf=device['flags'], flags=device['sf']))
         print('Category Identifier (ci): {c} (Id: {ci})'.format(c=device['category'], ci=device['acid']))
         print()
+    sys.exit(0)

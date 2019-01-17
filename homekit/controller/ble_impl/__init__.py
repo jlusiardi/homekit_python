@@ -32,6 +32,9 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats, CharacteristicFormats
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
+from homekit.exceptions import FormatError, RequestRejected
+from homekit.controller.tools import hci_adapter_exists_and_supports_bluetooth_le
+from homekit.exceptions import AccessoryNotFoundError, BluetoothAdapterError
 from homekit.exceptions import FormatError, RequestRejected, AccessoryDisconnectedError
 
 from .device import DeviceManager, Device
@@ -44,13 +47,14 @@ logger = logging.getLogger(__name__)
 
 class BlePairing(AbstractPairing):
 
-    def __init__(self, pairing_data):
+    def __init__(self, pairing_data, adapter='hci0'):
         """
         Initialize a Pairing by using the data either loaded from file or obtained after calling
         Controller.perform_pairing().
 
         :param pairing_data:
         """
+        self.adapter = adapter
         self.pairing_data = pairing_data
         self.session = None
 
@@ -60,8 +64,10 @@ class BlePairing(AbstractPairing):
     def list_accessories_and_characteristics(self):
         if 'accessories' in self.pairing_data:
             return self.pairing_data['accessories']
+        if not hci_adapter_exists_and_supports_bluetooth_le(self.adapter):
+            raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=self.adapter))
 
-        manager = DeviceManager(adapter_name='hci0')
+        manager = DeviceManager(adapter_name=self.adapter)
         device = manager.make_device(self.pairing_data['AccessoryMAC'])
         device.connect()
         resolved_data = read_characteristics(device)
@@ -87,7 +93,9 @@ class BlePairing(AbstractPairing):
         :return True, if the identification was run, False otherwise
         """
         if not self.session:
-            self.session = BleSession(self.pairing_data)
+            if not hci_adapter_exists_and_supports_bluetooth_le(self.adapter):
+                raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=self.adapter))
+            self.session = BleSession(self.pairing_data, self.adapter)
         cid = -1
         aid = -1
         for a in self.pairing_data['accessories']:
@@ -119,7 +127,9 @@ class BlePairing(AbstractPairing):
                  }
         """
         if not self.session:
-            self.session = BleSession(self.pairing_data)
+            if not hci_adapter_exists_and_supports_bluetooth_le(self.adapter):
+                raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=self.adapter))
+            self.session = BleSession(self.pairing_data, self.adapter)
 
         results = {}
         for aid, cid in characteristics:
@@ -225,7 +235,9 @@ class BlePairing(AbstractPairing):
                              requested
         """
         if not self.session:
-            self.session = BleSession(self.pairing_data)
+            if not hci_adapter_exists_and_supports_bluetooth_le(self.adapter):
+                raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=self.adapter))
+            self.session = BleSession(self.pairing_data, self.adapter)
 
         results = {}
 
@@ -261,7 +273,8 @@ class BlePairing(AbstractPairing):
 
 class BleSession(object):
 
-    def __init__(self, pairing_data):
+    def __init__(self, pairing_data, adapter):
+        self.adapter = adapter
         self.pairing_data = pairing_data
         self.c2a_counter = 0
         self.a2c_counter = 0
@@ -271,7 +284,7 @@ class BleSession(object):
         mac_address = self.pairing_data['AccessoryMAC']
 
         # TODO specify adapter by config?
-        manager = DeviceManager(adapter_name='hci0')
+        manager = DeviceManager(adapter_name=self.adapter)
 
         self.device = manager.make_device(mac_address)
         logger.debug('connecting to device')

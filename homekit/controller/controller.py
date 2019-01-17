@@ -24,7 +24,7 @@ from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_p
 from homekit.controller.ip_implementation import IpPairing, IpSession
 from homekit.controller.ble_impl import BlePairing, BleSession, find_characteristic_by_uuid, create_ble_pair_setup_write
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
-    AuthenticationError, ConfigSavingError, AlreadyPairedError
+    AuthenticationError, ConfigSavingError, AlreadyPairedError, BluetoothAdapterError
 from homekit.protocol.tlv import TLV
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.protocol.statuscodes import HapStatusCodes
@@ -32,6 +32,8 @@ from homekit.protocol import perform_pair_setup, create_ip_pair_setup_write
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
+from homekit.controller.tools import DelayedExecution, HomekitDiscoveryDeviceManager, \
+    hci_adapter_exists_and_supports_bluetooth_le
 
 from .ble_impl.discovery import DiscoveryDeviceManager
 
@@ -41,11 +43,14 @@ class Controller(object):
     This class represents a HomeKit controller (normally your iPhone or iPad).
     """
 
-    def __init__(self):
+    def __init__(self, ble_adapter='hci0'):
         """
         Initialize an empty controller. Use 'load_data()' to load the pairing data.
+
+        :param ble_adapter: the bluetooth adapter to be used (defaults to hci0)
         """
         self.pairings = {}
+        self.ble_adapter = ble_adapter
         self.logger = logging.getLogger('homekit.controller.Controller')
 
     @staticmethod
@@ -78,7 +83,7 @@ class Controller(object):
         return discover_homekit_devices(max_seconds)
 
     @staticmethod
-    def discover_ble(max_seconds=10):
+    def discover_ble(max_seconds=10, adapter='hci0'):
         """
         Perform a Bluetooth LE discovery for HomeKit accessory. It will listen for Bluetooth LE advertisement events
         for the given amount of seconds. The result will be a list of dicts. The keys of the dicts are:
@@ -92,11 +97,15 @@ class Controller(object):
          * gsn: Global State Number, increment on change of any characteristic, overflows at 65535.
          * cn: the configuration number (required)
          * cv: the compatible version
+
         :param max_seconds: how long should the Bluetooth LE discovery should be performed (default 10s). See sleep for
                             more details
+        :param adapter: the bluetooth adapter to be used (defaults to hci0)
         :return: a list of dicts as described above
         """
-        manager = DiscoveryDeviceManager('hci0')
+        if not hci_adapter_exists_and_supports_bluetooth_le(adapter):
+            raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=adapter))
+        manager = DiscoveryDeviceManager(adapter)
         manager.start_discovery()
         manager.set_timeout(max_seconds * 1000)
         manager.run()
@@ -120,7 +129,7 @@ class Controller(object):
         return result
 
     @staticmethod
-    def identify(accessory_id):
+    def identify(accessory_id, adapter='hci0'):
         """
         This call can be used to trigger the identification of an accessory, that was not yet paired. A successful call
         should cause the accessory to perform some specific action by which it can be distinguished from others (blink a
@@ -152,7 +161,7 @@ class Controller(object):
         conn.close()
 
     @staticmethod
-    def identify_ble(accessory_mac):
+    def identify_ble(accessory_mac, adapter='hci0'):
         """
         This call can be used to trigger the identification of an accessory, that was not yet paired. A successful call
         should cause the accessory to perform some specific action by which it can be distinguished from others (blink a
@@ -162,10 +171,11 @@ class Controller(object):
 
         :param accessory_mac: the accessory's mac address (e.g. retrieved via discover)
         :raises AccessoryNotFoundError: if the accessory could not be looked up via Bonjour
+        :param adapter: the bluetooth adapter to be used (defaults to hci0)
         :raises AlreadyPairedError: if the accessory is already paired
         """
         from .ble_impl.device import DeviceManager
-        manager = DeviceManager('hci0')
+        manager = DeviceManager(adapter)
         device = manager.make_device(accessory_mac)
         device.connect()
 
@@ -245,7 +255,7 @@ class Controller(object):
                     if data[pairing_id]['Connection'] == 'IP':
                         self.pairings[pairing_id] = IpPairing(data[pairing_id])
                     elif data[pairing_id]['Connection'] == 'BLE':
-                        self.pairings[pairing_id] = BlePairing(data[pairing_id])
+                        self.pairings[pairing_id] = BlePairing(data[pairing_id], self.ble_adapter)
                     else:
                         # ignore anything else, issue warning
                         self.logger.warning('could not load pairing %s of type "%s"', pairing_id,
@@ -317,7 +327,7 @@ class Controller(object):
         pairing['Connection'] = 'IP'
         self.pairings[alias] = IpPairing(pairing)
 
-    def perform_pairing_ble(self, alias, accessory_mac, pin):
+    def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0'):
         """
         This performs a pairing attempt with the Bluetooth LE accessory identified by its mac address.
 
@@ -331,13 +341,14 @@ class Controller(object):
         :param alias: the alias for the accessory in the controllers data
         :param accessory_mac: the accessory's mac address
         :param pin: the accessory's pin
+        :param adapter: the bluetooth adapter to be used (defaults to hci0)
         # TODO add raised exceptions
         """
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
 
         from .ble_impl.device import DeviceManager
-        manager = DeviceManager(adapter_name='hci0')
+        manager = DeviceManager(adapter_name=adapter)
         device = manager.make_device(mac_address=accessory_mac)
 
         logging.debug('connecting to device')
@@ -354,7 +365,7 @@ class Controller(object):
         pairing['AccessoryMAC'] = accessory_mac
         pairing['Connection'] = 'BLE'
 
-        self.pairings[alias] = BlePairing(pairing)
+        self.pairings[alias] = BlePairing(pairing, adapter)
 
     def remove_pairing(self, alias):
         """
@@ -396,7 +407,7 @@ class Controller(object):
             body = len(inner).to_bytes(length=2, byteorder='little') + inner
 
             from .ble_impl.device import DeviceManager
-            manager = DeviceManager(adapter_name='hci0')
+            manager = DeviceManager(adapter_name=self.ble_adapter)
             device = manager.make_device(pairing_data['AccessoryMAC'])
             device.connect()
 
@@ -405,7 +416,7 @@ class Controller(object):
                                                                                 CharacteristicsTypes.PAIRING_PAIRINGS)
             logging.debug('setup char: %s %s', pair_remove_char, pair_remove_char.service.device)
 
-            session = BleSession(pairing_data)
+            session = BleSession(pairing_data, self.ble_adapter)
             response = session.request(pair_remove_char, pair_remove_char_id, HapBleOpCodes.CHAR_WRITE, body)
             data = TLV.decode_bytes(response[1])
         else:

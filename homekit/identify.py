@@ -18,6 +18,7 @@
 
 import sys
 import argparse
+import logging
 
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
@@ -25,6 +26,9 @@ from homekit.log_support import setup_logging, add_log_arguments
 
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit identify app - performs identify on given HomeKit device')
+
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
 
     group = parser.add_argument_group('Identify unpaired IP', 'use this option to identify an UNPAIRED IP accessory.')
     group.add_argument('-d', action='store', dest='device', help='accessory pairing id')
@@ -58,7 +62,7 @@ if __name__ == '__main__':
 
     setup_logging(args.loglevel)
 
-    controller = Controller()
+    controller = Controller(args.adapter)
     if args.device:
         controller.identify(args.device)
     elif args.mac:
@@ -70,4 +74,9 @@ if __name__ == '__main__':
             exit(-1)
 
         pairing = controller.get_pairings()[args.alias]
-        pairing.identify()
+        try:
+            pairing.identify()
+        except Exception as e:
+            print(e)
+            logging.debug(e, exc_info=True)
+            sys.exit(-1)

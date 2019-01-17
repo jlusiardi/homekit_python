@@ -18,6 +18,7 @@
 
 import argparse
 import sys
+import logging
 
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
@@ -44,6 +45,7 @@ if __name__ == '__main__':
         controller.load_data(args.file)
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)
 
     if args.alias in controller.get_pairings():
@@ -58,4 +60,5 @@ if __name__ == '__main__':
         print('Pairing for "{a}" was established.'.format(a=args.alias))
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)

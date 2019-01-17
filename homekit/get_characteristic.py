@@ -18,6 +18,8 @@
 
 import json
 import argparse
+import sys
+import logging
 
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
@@ -38,6 +40,8 @@ def setup_args_parser():
                         help='read out the types for the characteristics as well')
     parser.add_argument('-e', action='store_true', required=False, dest='events',
                         help='read out the events for the characteristics as well')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
     add_log_arguments(parser)
     return parser.parse_args()
 
@@ -47,11 +51,11 @@ if __name__ == '__main__':
 
     setup_logging(args.loglevel)
 
-    controller = Controller()
+    controller = Controller(args.adapter)
     controller.load_data(args.file)
     if args.alias not in controller.get_pairings():
         print('"{a}" is no known alias'.format(a=args.alias))
-        exit(-1)
+        sys.exit(-1)
 
     pairing = controller.get_pairings()[args.alias]
 
@@ -59,8 +63,13 @@ if __name__ == '__main__':
     characteristics = [(int(c.split('.')[0]), int(c.split('.')[1])) for c in args.characteristics]
 
     # get the data
-    data = pairing.get_characteristics(characteristics, include_meta=args.meta, include_perms=args.perms,
-                                       include_type=args.type, include_events=args.events)
+    try:
+        data = pairing.get_characteristics(characteristics, include_meta=args.meta, include_perms=args.perms,
+                                           include_type=args.type, include_events=args.events)
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
+        sys.exit(-1)
 
     # print the data
     tmp = {}

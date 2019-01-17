@@ -1,12 +1,28 @@
+#
+# Copyright 2018 Joachim Lusiardi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import json
 from json.decoder import JSONDecodeError
 import uuid
 import logging
+import random
 
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.controller.ip_implementation import IpPairing, IpSession
-from homekit.controller.ble_implementation import BlePairing, BleSession, find_characteristic_by_uuid, \
-    create_ble_pair_setup_write, ResolvingManager
+from homekit.controller.ble_impl import BlePairing, BleSession, find_characteristic_by_uuid, create_ble_pair_setup_write
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError, BluetoothAdapterError
 from homekit.protocol.tlv import TLV
@@ -19,8 +35,7 @@ from homekit.protocol.opcodes import HapBleOpCodes
 from homekit.controller.tools import DelayedExecution, HomekitDiscoveryDeviceManager, \
     hci_adapter_exists_and_supports_bluetooth_le
 
-# TODO remove this soon
-import staging.gatt
+from .ble_impl.discovery import DiscoveryDeviceManager
 
 
 class Controller(object):
@@ -72,7 +87,6 @@ class Controller(object):
         """
         Perform a Bluetooth LE discovery for HomeKit accessory. It will listen for Bluetooth LE advertisement events
         for the given amount of seconds. The result will be a list of dicts. The keys of the dicts are:
-
          * name: the model name of the accessory (required)
          * mac: the MAC address of the accessory (required)
          * sf / flags: the numerical and human readable version of the status flags (supports pairing or not, see table
@@ -91,12 +105,13 @@ class Controller(object):
         """
         if not hci_adapter_exists_and_supports_bluetooth_le(adapter):
             raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=adapter))
-        manager = HomekitDiscoveryDeviceManager(adapter)
+        manager = DiscoveryDeviceManager(adapter)
         manager.start_discovery()
-        DelayedExecution(manager.stop, max_seconds).start()
+        manager.set_timeout(max_seconds * 1000)
         manager.run()
+
         result = []
-        for discovered_device in manager.get_devices():
+        for discovered_device in manager.devices():
             data = discovered_device.homekit_discovery_data
             r = {
                 'name': discovered_device.name,
@@ -114,7 +129,7 @@ class Controller(object):
         return result
 
     @staticmethod
-    def identify(accessory_id):
+    def identify(accessory_id, adapter='hci0'):
         """
         This call can be used to trigger the identification of an accessory, that was not yet paired. A successful call
         should cause the accessory to perform some specific action by which it can be distinguished from others (blink a
@@ -159,8 +174,48 @@ class Controller(object):
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
         :raises AlreadyPairedError: if the accessory is already paired
         """
-        # TODO needs to be implemented (https://github.com/jlusiardi/homekit_python/issues/74)
-        pass
+        from .ble_impl.device import DeviceManager
+        manager = DeviceManager(adapter)
+        device = manager.make_device(accessory_mac)
+        device.connect()
+
+        disco_info = device.get_homekit_discovery_data()
+        if disco_info.get('flags', 'unknown') == 'paired':
+            raise AlreadyPairedError(
+                'identify of {mac_address} failed not allowed as device already paired'.format(
+                    mac_address=accessory_mac),
+            )
+
+        identify, identify_iid = find_characteristic_by_uuid(
+            device,
+            ServicesTypes.ACCESSORY_INFORMATION_SERVICE,
+            CharacteristicsTypes.IDENTIFY,
+        )
+
+        if not identify:
+            raise AccessoryNotFoundError(
+                'Device with address {mac_address} exists but did not find IDENTIFY characteristic'.format(
+                    mac_address=accessory_mac)
+            )
+
+        value = TLV.encode_list([
+            (1, b'\x01')
+        ])
+        body = len(value).to_bytes(length=2, byteorder='little') + value
+
+        tid = random.randrange(0, 255)
+
+        request = bytearray([0x00, HapBleOpCodes.CHAR_WRITE, tid])
+        request.extend(identify_iid.to_bytes(length=2, byteorder='little'))
+        request.extend(body)
+
+        identify.write_value(request)
+        response = bytearray(identify.read_value())
+
+        if not response or not response[2] == 0x00:
+            raise UnknownError('Unpaired identify failed')
+
+        return True
 
     def shutdown(self):
         """
@@ -205,11 +260,11 @@ class Controller(object):
                         # ignore anything else, issue warning
                         self.logger.warning('could not load pairing %s of type "%s"', pairing_id,
                                             data[pairing_id]['Connection'])
-        except PermissionError as e:
+        except PermissionError:
             raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=filename))
-        except JSONDecodeError as e:
+        except JSONDecodeError:
             raise ConfigLoadingError('Cannot parse "{f}" as JSON file'.format(f=filename))
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             raise ConfigLoadingError('Could not open "{f}" because it does not exist'.format(f=filename))
 
     def save_data(self, filename):
@@ -226,9 +281,9 @@ class Controller(object):
         try:
             with open(filename, 'w') as output_fp:
                 json.dump(data, output_fp, indent='  ')
-        except PermissionError as e:
+        except PermissionError:
             raise ConfigSavingError('Could not write "{f}" due to missing permissions'.format(f=filename))
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             raise ConfigSavingError(
                 'Could not write "{f}" because it (or the folder) does not exist'.format(f=filename))
 
@@ -292,32 +347,13 @@ class Controller(object):
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
 
-        class AnyDevice(staging.gatt.gatt_linux.Device):
-            def services_resolved(self):
-                super().services_resolved()
-                logging.debug('resolved %d services', len(self.services))
-                self.manager.stop()
+        from .ble_impl.device import DeviceManager
+        manager = DeviceManager(adapter_name=adapter)
+        device = manager.make_device(mac_address=accessory_mac)
 
-            def characteristic_read_value_failed(self, characteristic, error):
-                logging.debug('read failed: %s %s', characteristic, error)
-                self.manager.stop()
-
-            def characteristic_write_value_succeeded(self, characteristic):
-                logging.debug('write success: %s', characteristic)
-                self.manager.stop()
-
-            def characteristic_write_value_failed(self, characteristic, error):
-                logging.debug('write failed: %s %s', characteristic, error)
-
-        manager = ResolvingManager(adapter_name=adapter, mac=accessory_mac)
-        manager.start_discovery()
-        manager.run()
-        manager = staging.gatt.DeviceManager(adapter_name=adapter)
-        device = AnyDevice(manager=manager, mac_address=accessory_mac)
         logging.debug('connecting to device')
         device.connect()
         logging.debug('connected to device')
-        manager.run()
 
         pair_setup_char, pair_setup_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
                                                                           CharacteristicsTypes.PAIR_SETUP)
@@ -370,18 +406,10 @@ class Controller(object):
 
             body = len(inner).to_bytes(length=2, byteorder='little') + inner
 
-            class AnyDevice(staging.gatt.gatt_linux.Device):
-                def services_resolved(self):
-                    super().services_resolved()
-                    logging.debug('resolved %d services', len(self.services))
-                    self.manager.stop()
-
-            manager = staging.gatt.DeviceManager(adapter_name=self.ble_adapter)
-            device = AnyDevice(manager=manager, mac_address=pairing_data['AccessoryMAC'])
-            logging.debug('connecting to device')
+            from .ble_impl.device import DeviceManager
+            manager = DeviceManager(adapter_name=self.ble_adapter)
+            device = manager.make_device(pairing_data['AccessoryMAC'])
             device.connect()
-            logging.debug('connected to device')
-            manager.run()
 
             logging.debug('resolved %d services', len(device.services))
             pair_remove_char, pair_remove_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,

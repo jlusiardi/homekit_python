@@ -285,5 +285,3 @@ class SrpServer(Srp):
         hash_instance.update(Srp.to_byte_array(m))
         hash_instance.update(Srp.to_byte_array(self.get_session_key()))
         return gmpy2.mpz(binascii.hexlify(hash_instance.digest()), 16)
-
-

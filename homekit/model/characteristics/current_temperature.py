@@ -24,7 +24,8 @@ class CurrentTemperatureCharacteristic(AbstractCharacteristic):
     """
 
     def __init__(self, iid):
-        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.TEMPERATURE_CURRENT, CharacteristicFormats.float)
+        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.TEMPERATURE_CURRENT,
+                                        CharacteristicFormats.float)
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.events]
         self.description = 'the current temperature'
         self.minValue = 0.0

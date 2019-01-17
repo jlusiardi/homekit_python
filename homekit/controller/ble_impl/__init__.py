@@ -1,14 +1,28 @@
+#
+# Copyright 2018 Joachim Lusiardi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import time
 import logging
 import random
 import sys
 import uuid
 import struct
-import dbus.exceptions
 from distutils.util import strtobool
 
 from homekit.controller.tools import AbstractPairing
-from homekit.exceptions import AccessoryNotFoundError
 from homekit.protocol.tlv import TLV
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.protocol import get_session_keys
@@ -21,13 +35,14 @@ from homekit.model.characteristics.characteristic_units import BleCharacteristic
 from homekit.exceptions import FormatError, RequestRejected
 from homekit.controller.tools import hci_adapter_exists_and_supports_bluetooth_le
 from homekit.exceptions import AccessoryNotFoundError, BluetoothAdapterError
+from homekit.exceptions import FormatError, RequestRejected, AccessoryDisconnectedError
 
-import staging.gatt
+from .device import DeviceManager, Device
 
 # the uuid of the ble descriptors that hold the characteristic instance id as value (see page 128)
 CharacteristicInstanceID = 'dc46f0fe-81d2-4616-b5d9-6abdd796939a'
 
-logger = logging.getLogger('homekit.controller.ble_implementation')
+logger = logging.getLogger(__name__)
 
 
 class BlePairing(AbstractPairing):
@@ -52,12 +67,12 @@ class BlePairing(AbstractPairing):
         if not hci_adapter_exists_and_supports_bluetooth_le(self.adapter):
             raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=self.adapter))
 
-        manager = staging.gatt.DeviceManager(adapter_name=self.adapter)
-        device = ServicesResolvingDevice(manager=manager, mac_address=self.pairing_data['AccessoryMAC'])
+        manager = DeviceManager(adapter_name=self.adapter)
+        device = manager.make_device(self.pairing_data['AccessoryMAC'])
         device.connect()
-        self.pairing_data['accessories'] = device.resolved_data['data']
-        device.disconnect()
-        return device.resolved_data['data']
+        resolved_data = read_characteristics(device)
+        self.pairing_data['accessories'] = resolved_data['data']
+        return resolved_data['data']
 
     def list_pairings(self):
         # TODO implementation still missing
@@ -119,14 +134,14 @@ class BlePairing(AbstractPairing):
         results = {}
         for aid, cid in characteristics:
             try:
-                fc, fc_id = self.session.find_characteristic_by_iid(cid)
-                if not fc or not fc_id:
+                fc, fc_info = self.session.find_characteristic_by_iid(cid)
+                if not fc or not fc_info:
                     results[(aid, cid)] = {
                         'status': HapBleStatusCodes.INVALID_REQUEST,
                         'description': HapBleStatusCodes[HapBleStatusCodes.INVALID_REQUEST]
                     }
                     continue
-                response = self.session.request(fc, fc_id, HapBleOpCodes.CHAR_READ)
+                response = self.session.request(fc, cid, HapBleOpCodes.CHAR_READ)
             except Exception as e:
                 self.session.close()
                 self.session = None
@@ -239,13 +254,8 @@ class BlePairing(AbstractPairing):
             body = len(value).to_bytes(length=2, byteorder='little') + value
 
             try:
-                fc, fc_id = self.session.find_characteristic_by_iid(cid)
-                response = self.session.request(
-                    fc,
-                    fc_id,
-                    HapBleOpCodes.CHAR_WRITE,
-                    body,
-                )
+                fc, fc_info = self.session.find_characteristic_by_iid(cid)
+                response = self.session.request(fc, cid, HapBleOpCodes.CHAR_WRITE, body)
                 logger.debug('response %s', response)
                 # TODO does the response contain useful information here?
             except RequestRejected as e:
@@ -273,21 +283,46 @@ class BleSession(object):
         self.device = None
         mac_address = self.pairing_data['AccessoryMAC']
 
-        # Cache for characteristic lookups
-        self._char_by_iid = {}
-
         # TODO specify adapter by config?
-        manager = staging.gatt.DeviceManager(adapter_name=self.adapter)
+        manager = DeviceManager(adapter_name=self.adapter)
 
-        self.device = Device(manager=manager, mac_address=mac_address)
+        self.device = manager.make_device(mac_address)
         logger.debug('connecting to device')
         self.device.connect()
         logger.debug('connected to device')
 
-        pair_verify_char, pair_verify_char_id = find_characteristic_by_uuid(
-            self.device,
-            ServicesTypes.PAIRING_SERVICE,
-            CharacteristicsTypes.PAIR_VERIFY
+        uuid_map = {}
+        for s in self.device.services:
+            for c in s.characteristics:
+                uuid_map[(s.uuid.upper(), c.uuid.upper())] = c
+
+        self.uuid_map = {}
+        self.iid_map = {}
+        self.short_map = {}
+        for a in pairing_data['accessories']:
+            for s in a['services']:
+                s_short = None
+                if s['type'].endswith(ServicesTypes.baseUUID):
+                    s_short = s['type'].split('-', 1)[0].lstrip('0')
+
+                for c in s['characteristics']:
+                    char = uuid_map.get((s['type'], c['type']), None)
+                    if not char:
+                        continue
+                    self.iid_map[c['iid']] = (char, c)
+                    self.uuid_map[(s['type'], c['type'])] = (char, c)
+
+                    if s_short and c['type'].endswith(CharacteristicsTypes.baseUUID):
+                        c_short = c['type'].split('-', 1)[0].lstrip('0')
+                        self.short_map[(s_short, c_short)] = (char, c)
+
+                    service_type_short = ServicesTypes.get_short(s['type'])
+                    characteristic_type_short = CharacteristicsTypes.get_short(c['type'])
+                    self.short_map[service_type_short, characteristic_type_short] = (char, c)
+
+        pair_verify_char, pair_verify_char_info = self.short_map.get(
+            (ServicesTypes.PAIRING_SERVICE, CharacteristicsTypes.PAIR_VERIFY),
+            (None, None)
         )
 
         if not pair_verify_char:
@@ -295,7 +330,7 @@ class BleSession(object):
             # TODO Have exception here
             sys.exit(-1)
 
-        write_fun = create_ble_pair_setup_write(pair_verify_char, pair_verify_char_id)
+        write_fun = create_ble_pair_setup_write(pair_verify_char, pair_verify_char_info['iid'])
         self.c2a_key, self.a2c_key = get_session_keys(None, self.pairing_data, write_fun)
         logger.debug('keys: \n\t\tc2a: %s\n\t\ta2c: %s', self.c2a_key.hex(), self.a2c_key.hex())
 
@@ -310,14 +345,7 @@ class BleSession(object):
         self.device.disconnect()
 
     def find_characteristic_by_iid(self, cid):
-        if cid in self._char_by_iid:
-            logger.debug("Using cached char id")
-            return self._char_by_iid[cid]
-
-        logger.debug("Finding char id")
-        fc, fc_id = find_characteristic_by_iid(self.device, cid)
-        self._char_by_iid[cid] = (fc, fc_id)
-        return (fc, fc_id)
+        return self.iid_map.get(cid, (None, None))
 
     def request(self, feature_char, feature_char_id, op, body=None):
         transaction_id = random.randrange(0, 255)
@@ -348,7 +376,7 @@ class BleSession(object):
             logger.debug('reading characteristic')
             data = feature_char.read_value()
             if not data and not self.device.is_connected():
-                raise RuntimeError('Read failed')
+                raise AccessoryDisconnectedError('Characteristic read failed')
 
         resp_data = bytearray([b for b in data])
         logger.debug('read: %s', bytearray(resp_data).hex())
@@ -431,32 +459,6 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
     return result_char, result_char_id
 
 
-def find_characteristic_by_iid(device, iid):
-    """
-    # TODO document me
-
-    :param device:
-    :param iid: instance id
-    :return:  ... or (None, None) if the given tupel of accessory id and instance could not be found
-    """
-    service_found = None
-    for service in device.services:
-        logger.debug('Searching service: %s', service.uuid)
-        for characteristic in service.characteristics:
-            logger.debug('Searching characteristic: %s', characteristic.uuid)
-            for descriptor in characteristic.descriptors:
-                if descriptor.uuid == CharacteristicInstanceID:
-                    logging.debug('Reading CharacteristicInstanceID')
-                    value = descriptor.read_value()
-                    cid = int.from_bytes(value, byteorder='little')
-                    if iid == cid:
-                        logging.debug('iid %d -> uuid %s', iid, characteristic.uuid)
-                        return (characteristic, cid)
-
-    logging.error('Service with instance id %d not found', iid)
-    return None, None
-
-
 def create_ble_pair_setup_write(characteristic, characteristic_id):
     def write(request, expected):
         # TODO document me
@@ -481,8 +483,9 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
 
         expected_length = int.from_bytes(bytes(resp_data[3:5]), byteorder='little')
         logger.debug(
-            'control field: {c:x}, tid: {t:x}, status: {s:x}, length: {l}'.format(c=resp_data[0], t=resp_data[1],
-                                                                                  s=resp_data[2], l=expected_length))
+            'control field: {c:x}, tid: {t:x}, status: {s:x}, length: {length}'.format(c=resp_data[0], t=resp_data[1],
+                                                                                       s=resp_data[2],
+                                                                                       length=expected_length))
         while len(resp_data[3:]) < expected_length:
             time.sleep(1)
             logger.debug('reading characteristic')
@@ -500,14 +503,14 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
     return write
 
 
-class ResolvingManager(staging.gatt.DeviceManager):
+class ResolvingManager(DeviceManager):
     """
     DeviceManager implementation that stops running after a given device was discovered.
     """
 
     def __init__(self, adapter_name, mac):
         self.mac = mac
-        staging.gatt.DeviceManager.__init__(self, adapter_name=adapter_name)
+        DeviceManager.__init__(self, adapter_name=adapter_name)
 
     def device_discovered(self, device):
         logger.debug('discovered %s', device.mac_address.upper())
@@ -517,116 +520,77 @@ class ResolvingManager(staging.gatt.DeviceManager):
             self.stop_discovery()
 
 
-class Device(staging.gatt.gatt.Device):
+def read_characteristics(device):
     # TODO document me
+    # FIXME: This only works on non secure sessions
+    logger.debug('resolved %d services', len(device.services))
 
-    def connect(self):
-        # TODO document me
-        super().connect()
+    a_data = {
+        'aid': 1,
+        'services': []
+    }
 
-        try:
-            if not self.services:
-                logger.debug('waiting for services to be resolved')
-                for i in range(20):
-                    if self.is_services_resolved():
-                        break
-                    time.sleep(1)
-                else:
-                    raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
+    resolved_data = {
+        'data': [a_data],
+    }
 
-                # This is called automatically when the mainloop is running, but we
-                # want to avoid running it and blocking for an indeterminate amount of time.
-                logger.debug('enumerating resolved services')
-                self.services_resolved()
-        except dbus.exceptions.DBusException as e:
-            raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
+    for service in device.services:
+        logger.debug('found service with UUID %s (%s)', service.uuid,
+                     ServicesTypes.get_short(service.uuid.upper()))
 
-
-class ServicesResolvingDevice(Device):
-    # TODO document me
-
-    def __init__(self, mac_address, manager, managed=True):
-        staging.gatt.gatt.Device.__init__(self, mac_address, manager, managed)
-        self.resolved_data = None
-
-    def services_resolved(self):
-        # TODO document me
-        super().services_resolved()
-        logger.debug('resolved %d services', len(self.services))
-        self.manager.stop()
-        logger.debug('stopped manager')
-
-        a_data = {
-            'aid': 1,
-            'services': []
+        s_data = {
+            'characteristics': [
+            ],
+            'iid': None
         }
 
-        self.resolved_data = {
-            'data': [a_data],
-        }
+        for characteristic in service.characteristics:
+            logger.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid,
+                         CharacteristicsTypes.get_short(characteristic.uuid.upper()))
 
-        for service in self.services:
-            logger.debug('found service with UUID %s (%s)', service.uuid,
-                         ServicesTypes.get_short(service.uuid.upper()))
+            if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
+                sid = int.from_bytes(characteristic.read_value(), byteorder='little')
+                logger.debug('\t\tread service id %d', sid)
+                s_data['iid'] = sid
+            else:
+                c_data = {
+                    'iid': None,
+                    'type': characteristic.uuid.upper(),
+                    'perms': []
+                }
+                iid = None
+                for descriptor in characteristic.descriptors:
+                    value = descriptor.read_value()
+                    if descriptor.uuid == CharacteristicInstanceID:
+                        iid = int.from_bytes(value, byteorder='little')
+                        logger.debug('\t\tread characteristic id %d', iid)
+                        c_data['iid'] = iid
+                    else:
+                        # print('\t\t', 'D', descriptor.uuid, value)
+                        pass
 
-            s_data = {
-                'characteristics': [
-                ],
-                'iid': None
-            }
-
-            for characteristic in service.characteristics:
-                logger.debug('\tfound characteristic with UUID %s (%s)', characteristic.uuid,
-                             CharacteristicsTypes.get_short(characteristic.uuid.upper()))
-
-                if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
-                    sid = int.from_bytes(characteristic.read_value(), byteorder='little')
-                    logger.debug('\t\tread service id %d', sid)
-                    s_data['iid'] = sid
-                else:
-                    c_data = {
-                        'iid': None,
-                        'type': characteristic.uuid.upper(),
-                        'perms': []
-                    }
-                    iid = None
-                    for descriptor in characteristic.descriptors:
-                        value = descriptor.read_value()
-                        if descriptor.uuid == CharacteristicInstanceID:
-                            iid = int.from_bytes(value, byteorder='little')
-                            logger.debug('\t\tread characteristic id %d', iid)
-                            c_data['iid'] = iid
+                if iid:
+                    v = iid.to_bytes(length=2, byteorder='little')
+                    tid = random.randrange(0, 255)
+                    characteristic.write_value([0x00, HapBleOpCodes.CHAR_SIG_READ, tid, v[0], v[1]])
+                    d = parse_sig_read_response(characteristic.read_value(), tid)
+                    for k in d:
+                        if k == 'service_type':
+                            s_data['type'] = d[k].upper()
+                        elif k == 'sid':
+                            s_data['iid'] = d[k]
                         else:
-                            # print('\t\t', 'D', descriptor.uuid, value)
-                            pass
+                            c_data[k] = d[k]
 
-                    if iid:
-                        v = iid.to_bytes(length=2, byteorder='little')
-                        tid = random.randrange(0, 255)
-                        characteristic.write_value([0x00, HapBleOpCodes.CHAR_SIG_READ, tid, v[0], v[1]])
-                        d = parse_sig_read_response(characteristic.read_value(), tid)
-                        for k in d:
-                            if k == 'service_type':
-                                s_data['type'] = d[k].upper()
-                            elif k == 'sid':
-                                s_data['iid'] = d[k]
-                            else:
-                                c_data[k] = d[k]
+                if c_data['iid']:
+                    s_data['characteristics'].append(c_data)
 
-                    if c_data['iid']:
-                        s_data['characteristics'].append(c_data)
+        if s_data['iid']:
+            a_data['services'].append(s_data)
 
-            #
+    logger.debug('data: %s', resolved_data)
 
-            if s_data['iid']:
-                a_data['services'].append(s_data)
-
-        logger.debug('data: %s', self.resolved_data)
-        # logger.debug('disconnecting from device')
-        # self.disconnect()
-        # logger.debug('disconnected from device')
-        self.manager.stop()
-        logger.debug('manager stopped')
+    return resolved_data
 
 
 def parse_sig_read_response(data, expected_tid):

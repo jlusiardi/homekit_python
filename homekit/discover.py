@@ -23,7 +23,7 @@ from homekit.controller import Controller
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit IP discover app -'\
+    parser = argparse.ArgumentParser(description='HomeKit IP discover app -'
                                                  ' list all HomeKit devices on the same IP network')
     parser.add_argument('-t', action='store', required=False, dest='timeout', type=int, default=10,
                         help='Number of seconds to wait')

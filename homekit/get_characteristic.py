@@ -26,7 +26,7 @@ from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit get_characteristic - retrieve values of characteristics ' +
+    parser = argparse.ArgumentParser(description='HomeKit get_characteristic - retrieve values of characteristics '
                                                  'and other information from paired HomeKit accessories.')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
@@ -78,4 +78,3 @@ if __name__ == '__main__':
         tmp[nk] = data[k]
 
     print(json.dumps(tmp, indent=4))
-

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 import binascii
 import gmpy2
 import hashlib
@@ -104,7 +105,7 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
             desc['sf'] = '0'
 
         self.zeroconf_info = ServiceInfo(self.mdns_type, self.mdns_name, address=socket.inet_aton(self.data.ip),
-                                         port=self.data.port, properties= desc)
+                                         port=self.data.port, properties=desc)
         self.zeroconf.unregister_service(self.zeroconf_info)
         self.zeroconf.register_service(self.zeroconf_info, allow_name_change=True)
 
@@ -130,11 +131,11 @@ class AccessoryServerData:
         try:
             with open(data_file, 'r') as input_file:
                 self.data = json.load(input_file)
-        except PermissionError as e:
+        except PermissionError:
             raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=input_file))
-        except JSONDecodeError as e:
+        except JSONDecodeError:
             raise ConfigLoadingError('Cannot parse "{f}" as JSON file'.format(f=input_file))
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             raise ConfigLoadingError('Could not open "{f}" because it does not exist'.format(f=input_file))
 
         self.check()
@@ -149,9 +150,9 @@ class AccessoryServerData:
         try:
             with open(self.data_file, 'w') as output_file:
                 json.dump(self.data, output_file, indent=2, sort_keys=True)
-        except PermissionError as e:
+        except PermissionError:
             raise ConfigSavingError('Could not write "{f}" due to missing permissions'.format(f=self.data_file))
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             raise ConfigSavingError(
                 'Could not write "{f}" because it (or the folder) does not exist'.format(f=self.data_file))
 
@@ -419,8 +420,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
             len_bytes = len(block).to_bytes(2, byteorder='little')
             a2c_key = self.server.sessions[self.session_id]['accessory_to_controller_key']
-            cnt_bytes = self.server.sessions[self.session_id]['accessory_to_controller_count'].to_bytes(8,
-                                                                                                        byteorder='little')
+            cnt_bytes = self.server.sessions[self.session_id]['accessory_to_controller_count'].\
+                to_bytes(8, byteorder='little')
             ciper_and_mac = chacha20_aead_encrypt(len_bytes, a2c_key, cnt_bytes, bytes([0, 0, 0, 0]), block)
             self.server.sessions[self.session_id]['accessory_to_controller_count'] += 1
             out_data += len_bytes + ciper_and_mac[0] + ciper_and_mac[1]
@@ -501,7 +502,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                             result['characteristics'].append(
                                 {'aid': aid, 'iid': cid, 'status': HapStatusCodes.INVALID_VALUE})
                             errors += 1
-                        except CharacteristicPermissionError as e:
+                        except CharacteristicPermissionError:
                             result['characteristics'].append(
                                 {'aid': aid, 'iid': cid, 'status': HapStatusCodes.CANT_READ_WRITE_ONLY})
                             errors += 1
@@ -667,7 +668,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
             # 3) generate accessory info
             accessory_info = accessory_spk + self.server.data.accessory_pairing_id_bytes + \
-                             ios_device_curve25519_pub_key_bytes
+                ios_device_curve25519_pub_key_bytes
 
             # 4) sign accessory info for accessory signature
             accessory_ltsk = py25519.Key25519(secretkey=self.server.data.accessory_ltsk)
@@ -716,7 +717,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             encrypted = d_req[1][1]
             decrypted = chacha20_aead_decrypt(bytes(), session_key, 'PV-Msg03'.encode(), bytes([0, 0, 0, 0]),
                                               encrypted)
-            if decrypted == False:
+            if decrypted is False:
                 self.send_error_reply(TLV.M4, TLV.kTLVError_Authentication)
                 self.log_error('error in step #4: authtag %s %s', d_res, self.server.sessions)
                 return
@@ -756,7 +757,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             self.server.sessions[self.session_id]['accessory_to_controller_key'] = accessory_to_controller_key
             self.server.sessions[self.session_id]['accessory_to_controller_count'] = 0
 
-            d_res.append((TLV.kTLVType_State, TLV.M4, ))
+            d_res.append((TLV.kTLVType_State, TLV.M4,))
 
             self._send_response_tlv(d_res)
             if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
@@ -777,7 +778,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M1 \
                 and d_req[1][0] == TLV.kTLVType_Method and d_req[1][1] == TLV.AddPairing:
             self.log_message('Step #2 /pairings add pairing')
-            d_res.append((TLV.kTLVType_State, TLV.M2, ))
+            d_res.append((TLV.kTLVType_State, TLV.M2,))
 
             # see page 51
             # 1)
@@ -802,7 +803,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 if registered_controller_LTPK != additional_controller_LTPK:
                     self.log_message('with different key')
                     # 3.a)
-                    d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Unknown, ))
+                    d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Unknown,))
                     self._send_response_tlv(d_res)
                 else:
                     self.log_message('with different permissions')
@@ -838,19 +839,19 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             server_data.remove_peer(d_req[2][1])
             self.server.publish_device()
 
-            d_res.append((TLV.kTLVType_State, TLV.M2, ))
+            d_res.append((TLV.kTLVType_State, TLV.M2,))
             self._send_response_tlv(d_res)
             self.log_message('after step #2\n%s', TLV.to_string(d_res))
 
             # 6) + 7) invalidate HAP session and close connections
             # TODO implement this in more details
-            #            for session_id in self.server.sessions:
-            #                session = self.server.sessions[session_id]
-            #                if session['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
-            #                    session['handler'].close_connection = True
+            # for session_id in self.server.sessions:
+            #    session = self.server.sessions[session_id]
+            #    if session['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
+            #        session['handler'].close_connection = True
             #
-            #            if self.server.sessions[self.session_id]['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
-            #                self.close_connection = True
+            # if self.server.sessions[self.session_id]['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
+            #    self.close_connection = True
             return
 
         if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M1 \
@@ -982,7 +983,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             # 2) verify ios proof
             ios_proof = gmpy2.mpz(binascii.hexlify(d_req[2][1]), 16)
             if not server.verify_clients_proof(ios_proof):
-                d_res.append((TLV.kTLVType_State,  TLV.M4, ))
+                d_res.append((TLV.kTLVType_State, TLV.M4,))
                 d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Authentication,))
 
                 self._send_response_tlv(d_res)
@@ -995,8 +996,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             accessory_proof = server.get_proof(ios_proof)
 
             # 4) create response tlv
-            d_res.append((TLV.kTLVType_State, TLV.M4, ))
-            d_res.append((TLV.kTLVType_Proof, SrpServer.to_byte_array(accessory_proof), ))
+            d_res.append((TLV.kTLVType_State, TLV.M4,))
+            d_res.append((TLV.kTLVType_Proof, SrpServer.to_byte_array(accessory_proof),))
 
             # 5) send response tlv
             self._send_response_tlv(d_res)
@@ -1016,9 +1017,9 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             decrypted_data = chacha20_aead_decrypt(bytes(), self.server.sessions[self.session_id]['session_key'],
                                                    'PS-Msg05'.encode(), bytes([0, 0, 0, 0]),
                                                    encrypted_data)
-            if decrypted_data == False:
-                d_res.append((TLV.kTLVType_State, TLV.M6, ))
-                d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Authentication, ))
+            if decrypted_data is False:
+                d_res.append((TLV.kTLVType_State, TLV.M6,))
+                d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Authentication,))
 
                 self.send_error_reply(TLV.M6, TLV.kTLVError_Authentication)
                 self.log_error('error in step #6 %s %s', d_res, self.server.sessions)
@@ -1091,7 +1092,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             self.server.publish_device()
             d_res = [
                 (TLV.kTLVType_State, TLV.M6,),
-                (TLV.kTLVType_EncryptedData, tmp, )
+                (TLV.kTLVType_EncryptedData, tmp,)
             ]
 
             self._send_response_tlv(d_res)

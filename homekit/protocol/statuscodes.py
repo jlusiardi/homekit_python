@@ -74,10 +74,13 @@ class _HapBleStatusCodes(object):
         self._codes = {
             _HapBleStatusCodes.SUCCESS: 'The request was successful.',
             _HapBleStatusCodes.UNSUPPORTED_PDU: 'The request failed as the HAP PDU was not recognized or supported.',
-            _HapBleStatusCodes.MAX_PROCEDURES: 'The request failed as the accessory has reached the limit on the simultaneous procedures it can handle.',
+            _HapBleStatusCodes.MAX_PROCEDURES: 'The request failed as the accessory has reached the limit on'
+                                               ' the simultaneous procedures it can handle.',
             _HapBleStatusCodes.INSUFFICIENT_AUTHORIZATION: 'Characteristic requires additional authorization data.',
-            _HapBleStatusCodes.INVALID_INSTANCE_ID: 'The HAP Request\'s characteristic Instance Id did not match the addressed characteristic\'s instance Id',
-            _HapBleStatusCodes.INSUFFICIENT_AUTHENTICATION: 'Characterisitc access required a secure session to be established.',
+            _HapBleStatusCodes.INVALID_INSTANCE_ID: 'The HAP Request\'s characteristic Instance Id did not match'
+                                                    ' the addressed characteristic\'s instance Id',
+            _HapBleStatusCodes.INSUFFICIENT_AUTHENTICATION: 'Characterisitc access required a secure session to be'
+                                                            ' established.',
             _HapBleStatusCodes.INVALID_REQUEST: 'Accessory was not able to perform the requested operation',
         }
 

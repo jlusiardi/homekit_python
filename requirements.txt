@@ -5,3 +5,4 @@ hkdf
 ed25519
 dbus-python
 PyGObject
+gatt

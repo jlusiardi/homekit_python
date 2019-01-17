@@ -21,6 +21,7 @@ import logging
 from distutils.util import strtobool
 import threading
 import time
+import gatt
 
 import dbus
 
@@ -28,7 +29,6 @@ from homekit.model import Categories
 from homekit.protocol.tlv import TLV, TlvParseException
 from homekit.exceptions import FormatError
 from homekit.model.characteristics import CharacteristicFormats
-from staging import gatt
 
 
 def hci_adapter_exists_and_supports_bluetooth_le(adapter_name):

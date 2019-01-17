@@ -16,15 +16,15 @@
 
 import json
 from json.decoder import JSONDecodeError
-import uuid
 import logging
 import random
+import uuid
 
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.controller.ip_implementation import IpPairing, IpSession
 from homekit.controller.ble_impl import BlePairing, BleSession, find_characteristic_by_uuid, create_ble_pair_setup_write
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
-    AuthenticationError, ConfigSavingError, AlreadyPairedError, BluetoothAdapterError
+    AuthenticationError, ConfigSavingError, AlreadyPairedError
 from homekit.protocol.tlv import TLV
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.protocol.statuscodes import HapStatusCodes
@@ -32,8 +32,6 @@ from homekit.protocol import perform_pair_setup, create_ip_pair_setup_write
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
-from homekit.controller.tools import DelayedExecution, HomekitDiscoveryDeviceManager, \
-    hci_adapter_exists_and_supports_bluetooth_le
 
 from .ble_impl.discovery import DiscoveryDeviceManager
 
@@ -103,8 +101,6 @@ class Controller(object):
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
         :return: a list of dicts as described above
         """
-        if not hci_adapter_exists_and_supports_bluetooth_le(adapter):
-            raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=adapter))
         manager = DiscoveryDeviceManager(adapter)
         manager.start_discovery()
         manager.set_timeout(max_seconds * 1000)

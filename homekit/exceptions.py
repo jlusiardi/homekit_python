@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+
 class HomeKitException(Exception):
     """Generic HomeKit exception.
     Attributes:

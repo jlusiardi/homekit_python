@@ -32,9 +32,8 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats, CharacteristicFormats
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
-from homekit.exceptions import FormatError, RequestRejected
 from homekit.controller.tools import hci_adapter_exists_and_supports_bluetooth_le
-from homekit.exceptions import AccessoryNotFoundError, BluetoothAdapterError
+from homekit.exceptions import BluetoothAdapterError
 from homekit.exceptions import FormatError, RequestRejected, AccessoryDisconnectedError
 
 from .device import DeviceManager, Device

@@ -373,11 +373,17 @@ class Pairing(object):
 
         try:
             response = self.session.get(url)
-            data = json.loads(response.read().decode())['characteristics']
         except AccessoryDisconnectedError:
             self.session.close()
             self.session = None
             raise
+
+        try:
+            data = json.loads(response.read().decode())['characteristics']
+        except JSONDecodeError:
+            self.session.close()
+            self.session = None
+            raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
 
         tmp = {}
         for c in data:
@@ -438,7 +444,13 @@ class Pairing(object):
 
         if response.code != 204:
             data = response.read().decode()
-            data = json.loads(data)['characteristics']
+            try:
+                data = json.loads(data)['characteristics']
+            except JSONDecodeError:
+                self.session.close()
+                self.session = None
+                raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
+
             data = {(d['aid'], d['iid']): {'status': d['status'], 'description': HapStatusCodes[d['status']]} for d in
                     data}
             return data
@@ -486,7 +498,13 @@ class Pairing(object):
         # handle error responses
         if response.code != 204:
             tmp = {}
-            data = json.loads(response.read().decode())
+            try:
+                data = json.loads(response.read().decode())
+            except JSONDecodeError:
+                self.session.close()
+                self.session = None
+                raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
+
             for characteristic in data['characteristics']:
                 status = characteristic['status']
                 if status == 0:
@@ -509,7 +527,12 @@ class Pairing(object):
                 raise
 
             if len(body) > 0:
-                r = json.loads(body)
+                try:
+                    r = json.loads(body)
+                except JSONDecodeError:
+                    self.session.close()
+                    self.session = None
+                    raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
                 tmp = []
                 for c in r['characteristics']:
                     tmp.append((c['aid'], c['iid'], c['value']))

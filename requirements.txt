@@ -1,5 +1,4 @@
 zeroconf
-gmpy2
 py25519
 hkdf
 ed25519

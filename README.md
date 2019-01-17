@@ -12,11 +12,11 @@ The code presented in this repository was created based on release R1 from 2017-
 
 # Installation
 
-Since the code relies on **gmpy2** for large numbers some development libraries and a compiler is required:
+The code relies on some C libraries so some development packages and a compiler are required:
 
 So for debian:
 ```bash
-apt install libgmp-dev libmpfr-dev libmpc-dev libffi-dev build-essential python3-pip python3-dev
+apt install libffi-dev build-essential python3-pip python3-dev
 ```
 
 After that use **pip3** to install the package:

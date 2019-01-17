@@ -40,7 +40,6 @@ setuptools.setup(
     ],
     install_requires=[
         'zeroconf',
-        'gmpy2',
         'py25519',
         'hkdf',
         'ed25519',

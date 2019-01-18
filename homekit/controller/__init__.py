@@ -14,4 +14,8 @@
 # limitations under the License.
 #
 
+__all__ = [
+    'Controller'
+]
+
 from homekit.controller.controller import Controller

@@ -13,6 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+__all__ = [
+    'CharacteristicsTypes', 'CharacteristicPermissions', 'AbstractCharacteristic', 'BatteryLevelCharacteristic',
+    'BatteryLevelCharacteristicMixin', 'BrightnessCharacteristic', 'BrightnessCharacteristicMixin',
+    'CharacteristicFormats', 'CharacteristicUnits', 'CurrentHeatingCoolingStateCharacteristic',
+    'CurrentHeatingCoolingStateCharacteristicMixin', 'CurrentTemperatureCharacteristic',
+    'CurrentTemperatureCharacteristicMixin', 'FirmwareRevisionCharacteristic', 'HardwareRevisionCharacteristic',
+    'HueCharacteristic', 'HueCharacteristicMixin', 'IdentifyCharacteristic', 'ManufacturerCharacteristic',
+    'ModelCharacteristic', 'NameCharacteristic', 'OnCharacteristic', 'OnCharacteristicMixin',
+    'OutletInUseCharacteristic', 'OutletInUseCharacteristicMixin', 'SaturationCharacteristic',
+    'SaturationCharacteristicMixin', 'SerialNumberCharacteristic', 'TargetHeatingCoolingStateCharacteristic',
+    'TargetHeatingCoolingStateCharacteristicMixin', 'TargetTemperatureCharacteristic',
+    'TargetTemperatureCharacteristicMixin', 'TemperatureDisplayUnitCharacteristic', 'TemperatureDisplayUnitsMixin',
+    'VolumeCharacteristic', 'VolumeCharacteristicMixin'
+]
+
 from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.model.characteristics.characteristic_units import CharacteristicUnits

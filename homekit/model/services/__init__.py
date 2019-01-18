@@ -14,6 +14,11 @@
 # limitations under the License.
 #
 
+__all__ = [
+    'ThermostatService', 'LightBulbService', 'FanService', 'BHSLightBulbService', 'AccessoryInformationService',
+    'OutletService', 'AbstractService', 'ServicesTypes'
+]
+
 from homekit.model.services.service_types import ServicesTypes
 
 from homekit.model.services.abstract_service import AbstractService

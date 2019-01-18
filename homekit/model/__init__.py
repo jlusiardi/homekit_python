@@ -14,6 +14,11 @@
 # limitations under the License.
 #
 
+__all__ = [
+    'AccessoryInformationService', 'BHSLightBulbService', 'FanService', 'LightBulbService', 'ThermostatService',
+    'Categories', 'CharacteristicPermissions', 'CharacteristicFormats', 'FeatureFlags'
+]
+
 import json
 from homekit.model.mixin import ToDictMixin, get_id
 from homekit.model.services import AccessoryInformationService, LightBulbService, FanService, \

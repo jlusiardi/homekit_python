@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+__all__ = [
+    'Device'
+]
+
 import time
 import logging
 import random

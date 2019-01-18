@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+__all__ = [
+    'HomeKitHTTPConnection', 'HttpResponse'
+]
+
 from homekit.http_impl.http_client import HomeKitHTTPConnection
 from homekit.http_impl.response import HttpResponse
 

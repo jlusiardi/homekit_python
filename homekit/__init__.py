@@ -16,4 +16,8 @@
 
 from homekit.controller import Controller
 from homekit.accessoryserver import AccessoryServer
-from homekit.exceptions import *
+from homekit.exceptions import BluetoothAdapterError, AccessoryDisconnectedError, AccessoryNotFoundError, \
+    AlreadyPairedError, AuthenticationError, BackoffError, BusyError, CharacteristicPermissionError, \
+    ConfigLoadingError, ConfigSavingError, ConfigurationError, FormatError, HomeKitException, HttpException, \
+    IncorrectPairingIdError, InvalidAuthTagError, InvalidError, InvalidSignatureError, MaxPeersError, MaxTriesError, \
+    ProtocolError, RequestRejected, UnavailableError, UnknownError, UnpairedError

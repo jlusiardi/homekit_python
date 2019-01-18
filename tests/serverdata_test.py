@@ -15,8 +15,9 @@
 #
 
 import unittest
+import json
 
-from homekit.accessoryserver import *
+from homekit.accessoryserver import AccessoryServerData
 import tempfile
 
 

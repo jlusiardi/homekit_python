@@ -16,7 +16,9 @@
 
 import unittest
 
-from homekit.crypto.chacha20poly1305 import *
+from homekit.crypto.chacha20poly1305 import pad16, chacha20_quarter_round, chacha20_create_initial_state, \
+    chacha20_aead_decrypt, chacha20_aead_verify_tag, chacha20_aead_encrypt, chacha20_block, chacha20_encrypt, calc_s, \
+    calc_r, clamp, poly1305_key_gen, poly1305_mac
 
 
 class TestChacha20poly1305(unittest.TestCase):

@@ -40,9 +40,9 @@ setuptools.setup(
     ],
     install_requires=[
         'zeroconf',
-        'py25519',
         'hkdf',
         'ed25519',
+        'cryptography',
     ],
     license='Apache License 2.0',
     long_description=long_description,

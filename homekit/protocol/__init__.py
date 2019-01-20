@@ -17,8 +17,9 @@
 import hashlib
 import ed25519
 import hkdf
-import py25519
 from binascii import hexlify
+from cryptography.hazmat.primitives.asymmetric import x25519
+
 from homekit.protocol.tlv import TLV
 from homekit.exceptions import IncorrectPairingIdError, InvalidAuthTagError, InvalidSignatureError, UnavailableError, \
     AuthenticationError, InvalidError, BusyError, MaxTriesError, MaxPeersError, BackoffError
@@ -219,7 +220,7 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
         'AccessoryPairingID': response_tlv[0][1].decode(),
         'AccessoryLTPK': hexlify(response_tlv[1][1]).decode(),
         'iOSPairingId': ios_pairing_id,
-        'iOSDeviceLTSK': ios_device_ltsk.to_ascii(encoding='hex').decode(),
+        'iOSDeviceLTSK': ios_device_ltsk.to_ascii(encoding='hex').decode()[:64],
         'iOSDeviceLTPK': hexlify(ios_device_ltpk.to_bytes()).decode()
     }
 
@@ -243,11 +244,12 @@ def get_session_keys(conn, pairing_data):
     #
     # Step #1 ios --> accessory (send verify start Request) (page 47)
     #
-    ios_key = py25519.Key25519()
+    ios_key = x25519.X25519PrivateKey.generate()
+    ios_key_pub = ios_key.public_key().public_bytes()
 
     request_tlv = TLV.encode_list([
         (TLV.kTLVType_State, TLV.M1),
-        (TLV.kTLVType_PublicKey, ios_key.pubkey)
+        (TLV.kTLVType_PublicKey, ios_key_pub)
     ])
 
     conn.request('POST', '/pair-verify', request_tlv, headers)
@@ -263,9 +265,11 @@ def get_session_keys(conn, pairing_data):
     assert response_tlv[2][0] == TLV.kTLVType_EncryptedData, 'get_session_keys: no encrypted data'
 
     # 1) generate shared secret
-    accessorys_session_pub_key_bytes = response_tlv[1][1]
-    shared_secret = ios_key.get_ecdh_key(
-        py25519.Key25519(pubkey=bytes(accessorys_session_pub_key_bytes), verifyingkey=bytes()))
+    accessorys_session_pub_key_bytes = bytes(response_tlv[1][1])
+    accessorys_session_pub_key = x25519.X25519PublicKey.from_public_bytes(
+        accessorys_session_pub_key_bytes
+    )
+    shared_secret = ios_key.exchange(accessorys_session_pub_key)
 
     # 2) derive session key
     hkdf_inst = hkdf.Hkdf('Pair-Verify-Encrypt-Salt'.encode(), shared_secret, hash=hashlib.sha512)
@@ -288,21 +292,24 @@ def get_session_keys(conn, pairing_data):
     if pairing_data['AccessoryPairingID'] != accessory_name:
         raise IncorrectPairingIdError('step 3')
 
-    accessory_ltpk = py25519.Key25519(pubkey=bytes(), verifyingkey=bytes.fromhex(pairing_data['AccessoryLTPK']))
+    accessory_ltpk = ed25519.VerifyingKey(bytes.fromhex(pairing_data['AccessoryLTPK']))
 
     # 6) verify accessory's signature
     accessory_sig = d1[1][1]
     accessory_session_pub_key_bytes = response_tlv[1][1]
-    accessory_info = accessory_session_pub_key_bytes + accessory_name.encode() + ios_key.pubkey
-    if not accessory_ltpk.verify(bytes(accessory_sig), bytes(accessory_info)):
+    accessory_info = accessory_session_pub_key_bytes + accessory_name.encode() + ios_key_pub
+    try:
+        accessory_ltpk.verify(bytes(accessory_sig), bytes(accessory_info))
+    except ed25519.BadSignatureError:
         raise InvalidSignatureError('step 3')
 
     # 7) create iOSDeviceInfo
-    ios_device_info = ios_key.pubkey + pairing_data['iOSPairingId'].encode() + accessorys_session_pub_key_bytes
+    ios_device_info = ios_key_pub + pairing_data['iOSPairingId'].encode() + accessorys_session_pub_key_bytes
 
     # 8) sign iOSDeviceInfo with long term secret key
     ios_device_ltsk_h = pairing_data['iOSDeviceLTSK']
-    ios_device_ltsk = py25519.Key25519(secretkey=bytes.fromhex(ios_device_ltsk_h))
+    ios_device_ltpk_h = pairing_data['iOSDeviceLTPK']
+    ios_device_ltsk = ed25519.SigningKey(bytes.fromhex(ios_device_ltsk_h) + bytes.fromhex(ios_device_ltpk_h))
     ios_device_signature = ios_device_ltsk.sign(ios_device_info)
 
     # 9) construct sub tlv

@@ -1,4 +1,4 @@
 zeroconf
-py25519
 hkdf
 ed25519
+cryptography

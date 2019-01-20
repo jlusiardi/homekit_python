@@ -1,5 +1,4 @@
 zeroconf
-gmpy2
 hkdf
 ed25519
 cryptography

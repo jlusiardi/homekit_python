@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 import binascii
-import gmpy2
 import hashlib
 import io
 import json
@@ -974,7 +973,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             self.log_message('Step #4 /pair-setup')
 
             # 1) use ios pub key to compute shared secret key
-            ios_pub_key = gmpy2.mpz(binascii.hexlify(d_req[1][1]), 16)
+            ios_pub_key = int.from_bytes(d_req[1][1], "big")
             server = self.server.sessions[self.session_id]['srp']
             server.set_client_public_key(ios_pub_key)
 
@@ -984,7 +983,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             self.server.sessions[self.session_id]['session_key'] = session_key
 
             # 2) verify ios proof
-            ios_proof = gmpy2.mpz(binascii.hexlify(d_req[2][1]), 16)
+            ios_proof = int.from_bytes(d_req[2][1], "big")
             if not server.verify_clients_proof(ios_proof):
                 d_res.append((TLV.kTLVType_State,  TLV.M4, ))
                 d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Authentication,))

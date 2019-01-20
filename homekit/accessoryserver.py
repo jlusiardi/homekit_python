@@ -201,8 +201,12 @@ class AccessoryServerData:
         del self.data['peers'][pairing_id.decode()]
         self._save_data()
 
-    def add_peer(self, pairing_id: bytes, ltpk: bytes):
-        admin = (len(self.data['peers']) == 0)
+    def set_peer_permissions(self, pairing_id: bytes, admin: bool):
+        peer = self.data['peers'][pairing_id.decode()]
+        peer['admin'] = admin
+        self._save_data()
+
+    def add_peer(self, pairing_id: bytes, ltpk: bytes, admin: bool):
         self.data['peers'][pairing_id.decode()] = {'key': binascii.hexlify(ltpk).decode(), 'admin': admin}
         self._save_data()
 
@@ -1047,7 +1051,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 return
 
             # 6) save ios_device_pairing_id and ios_device_ltpk
-            self.server.data.add_peer(ios_device_pairing_id, ios_device_ltpk)
+            self.server.data.add_peer(ios_device_pairing_id, ios_device_ltpk, True)
 
             # Response Generation
             # 1) generate accessoryLTPK if not existing

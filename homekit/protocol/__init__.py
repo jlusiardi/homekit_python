@@ -220,7 +220,7 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
         'AccessoryPairingID': response_tlv[0][1].decode(),
         'AccessoryLTPK': hexlify(response_tlv[1][1]).decode(),
         'iOSPairingId': ios_pairing_id,
-        'iOSDeviceLTSK': ios_device_ltsk.to_ascii(encoding='hex').decode(),
+        'iOSDeviceLTSK': ios_device_ltsk.to_ascii(encoding='hex').decode()[:64],
         'iOSDeviceLTPK': hexlify(ios_device_ltpk.to_bytes()).decode()
     }
 
@@ -308,7 +308,8 @@ def get_session_keys(conn, pairing_data):
 
     # 8) sign iOSDeviceInfo with long term secret key
     ios_device_ltsk_h = pairing_data['iOSDeviceLTSK']
-    ios_device_ltsk = ed25519.SigningKey(bytes.fromhex(ios_device_ltsk_h))
+    ios_device_ltpk_h = pairing_data['iOSDeviceLTPK']
+    ios_device_ltsk = ed25519.SigningKey(bytes.fromhex(ios_device_ltsk_h) + bytes.fromhex(ios_device_ltpk_h))
     ios_device_signature = ios_device_ltsk.sign(ios_device_info)
 
     # 9) construct sub tlv

@@ -237,7 +237,7 @@ class AccessoryServerData:
 
     def set_accessory_keys(self, accessory_ltpk: bytes, accessory_ltsk: bytes):
         self.data['accessory_ltpk'] = binascii.hexlify(accessory_ltpk).decode()
-        self.data['accessory_ltsk'] = binascii.hexlify(accessory_ltsk).decode()
+        self.data['accessory_ltsk'] = binascii.hexlify(accessory_ltsk).decode()[:64]
         self._save_data()
 
     @property
@@ -672,7 +672,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                              ios_device_curve25519_pub_key_bytes
 
             # 4) sign accessory info for accessory signature
-            accessory_ltsk = ed25519.SigningKey(self.server.data.accessory_ltsk)
+            accessory_ltsk = ed25519.SigningKey(self.server.data.accessory_ltsk + self.server.data.accessory_ltpk)
             accessory_signature = accessory_ltsk.sign(accessory_info)
 
             # 5) sub tlv
@@ -1059,9 +1059,14 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             # 1) generate accessoryLTPK if not existing
             if self.server.data.accessory_ltsk is None or self.server.data.accessory_ltpk is None:
                 accessory_ltsk, accessory_ltpk = ed25519.create_keypair()
-                self.server.data.set_accessory_keys(accessory_ltpk.to_bytes(), accessory_ltsk.to_bytes())
+                self.server.data.set_accessory_keys(
+                    accessory_ltpk.to_bytes(),
+                    accessory_ltsk.to_bytes(),
+                )
             else:
-                accessory_ltsk = ed25519.SigningKey(self.server.data.accessory_ltsk)
+                accessory_ltsk = ed25519.SigningKey(
+                    self.server.data.accessory_ltsk + self.server.data.accessory_ltpk
+                )
                 accessory_ltpk = ed25519.VerifyingKey(self.server.data.accessory_ltpk)
 
             # 2) derive AccessoryX

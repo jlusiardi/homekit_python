@@ -806,12 +806,12 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 if registered_controller_LTPK != additional_controller_LTPK:
                     self.log_message('with different key')
                     # 3.a)
-                    d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Unknown, ))
-                    self._send_response_tlv(d_res)
-                else:
-                    self.log_message('with different permissions')
-                    # 3.b) update permission
-                    server_data.set_peer_permissions(additional_controller_pairing_identifier, is_admin)
+                    self.send_error_reply(TLV.M2, TLV.kTLVError_Unknown)
+                    return
+
+                self.log_message('with different permissions')
+                # 3.b) update permission
+                server_data.set_peer_permissions(additional_controller_pairing_identifier, is_admin)
             else:
                 self.log_message('add pairing')
 
@@ -820,6 +820,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 # 4.b) add pairing (could raise kTLVError_Unknown)
                 server_data.add_peer(additional_controller_pairing_identifier, additional_controller_LTPK, is_admin)
 
+            self._send_response_tlv(d_res)
             self.log_message('after step #2\n%s', TLV.to_string(d_res))
 
             return

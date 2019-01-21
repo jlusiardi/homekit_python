@@ -154,7 +154,7 @@ class AbstractCharacteristic(ToDictMixin):
             'perms': self.perms,
             'format': self.format,
         }
-        if self.value is not None:
+        if CharacteristicPermissions.paired_read in self.perms:
             d['value'] = self.value
         if self.ev:
             d['ev'] = self.ev

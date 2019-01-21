@@ -4,7 +4,6 @@ python:
     - "3.6"
 before_install:
     - sudo apt-get update
-    - sudo apt-get install -y libffi-dev build-essential python3-pip python3-dev
     - pip install coveralls
 script: coverage run -m unittest -v
 after_success:

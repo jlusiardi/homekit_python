@@ -12,14 +12,7 @@ The code presented in this repository was created based on release R1 from 2017-
 
 # Installation
 
-The code relies on some C libraries so some development packages and a compiler are required:
-
-So for debian:
-```bash
-apt install libffi-dev build-essential python3-pip python3-dev
-```
-
-After that use **pip3** to install the package:
+Use **pip3** to install the package:
 
 ```bash
 pip3 install --user homekit

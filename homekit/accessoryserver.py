@@ -202,8 +202,12 @@ class AccessoryServerData:
         del self.data['peers'][pairing_id.decode()]
         self._save_data()
 
-    def add_peer(self, pairing_id: bytes, ltpk: bytes):
-        admin = (len(self.data['peers']) == 0)
+    def set_peer_permissions(self, pairing_id: bytes, admin: bool):
+        peer = self.data['peers'][pairing_id.decode()]
+        peer['admin'] = admin
+        self._save_data()
+
+    def add_peer(self, pairing_id: bytes, ltpk: bytes, admin: bool):
         self.data['peers'][pairing_id.decode()] = {'key': binascii.hexlify(ltpk).decode(), 'admin': admin}
         self._save_data()
 
@@ -826,12 +830,12 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 if registered_controller_LTPK != additional_controller_LTPK:
                     self.log_message('with different key')
                     # 3.a)
-                    d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Unknown, ))
-                    self._send_response_tlv(d_res)
-                else:
-                    self.log_message('with different permissions')
-                    # 3.b) update permission
-                    server_data.set_peer_permissions(additional_controller_pairing_identifier, is_admin)
+                    self.send_error_reply(TLV.M2, TLV.kTLVError_Unknown)
+                    return
+
+                self.log_message('with different permissions')
+                # 3.b) update permission
+                server_data.set_peer_permissions(additional_controller_pairing_identifier, is_admin)
             else:
                 self.log_message('add pairing')
 
@@ -840,6 +844,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 # 4.b) add pairing (could raise kTLVError_Unknown)
                 server_data.add_peer(additional_controller_pairing_identifier, additional_controller_LTPK, is_admin)
 
+            self._send_response_tlv(d_res)
             self.log_message('after step #2\n%s', TLV.to_string(d_res))
 
             return
@@ -1085,7 +1090,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 return
 
             # 6) save ios_device_pairing_id and ios_device_ltpk
-            self.server.data.add_peer(ios_device_pairing_id, ios_device_ltpk)
+            self.server.data.add_peer(ios_device_pairing_id, ios_device_ltpk, True)
 
             # Response Generation
             # 1) generate accessoryLTPK if not existing

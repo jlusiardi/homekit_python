@@ -646,6 +646,13 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
     def _post_pair_verify(self):
         d_req = TLV.decode_bytes(self.body)
 
+        # Order is not consistent, so force things in to order specified in spec
+        d_req = TLV.reorder(d_req, [
+            TLV.kTLVType_State,
+            TLV.kTLVType_PublicKey,
+            TLV.kTLVType_EncryptedData,
+        ])
+
         d_res = []
 
         if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M1:
@@ -770,6 +777,20 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
     def _post_pairings(self):
         d_req = TLV.decode_bytes(self.body)
+
+        # Order is not consistent, so force things in to order specified in spec
+        d_req = TLV.reorder(d_req, [
+            TLV.kTLVType_State,
+            TLV.kTLVType_Method,
+
+            # AddPairing/RemovePairing, M1
+            TLV.kTLVType_Identifier,
+
+            # AddPairing, M1
+            TLV.kTLVType_PublicKey,
+            TLV.kTLVType_Permissions,
+        ])
+
         self.log_message('POST /pairings request body:\n%s', TLV.to_string(d_req))
 
         session = self.server.sessions[self.session_id]
@@ -919,6 +940,18 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
     def _post_pair_setup(self):
         d_req = TLV.decode_bytes(self.body)
+
+        # Order is not consistent, so force things in to order specified in spec
+        d_req = TLV.reorder(d_req, [
+            TLV.kTLVType_State,
+            TLV.kTLVType_Method,
+            # For M3
+            TLV.kTLVType_PublicKey,
+            TLV.kTLVType_Proof,
+            # For M5
+            TLV.kTLVType_EncryptedData,
+        ])
+
         self.log_message('POST /pair-setup request body:\n%s', TLV.to_string(d_req))
 
         d_res = []

@@ -5,10 +5,14 @@ HomeKit Controller.
 
 **Limitations**
 
- * This code only works with HomeKit IP Accessories. no Bluetooth LE Accessories (yet)!
  * No reaction to events whatsoever.
 
 The code presented in this repository was created based on release R1 from 2017-06-07.
+
+# Contributors
+
+ * [jc2k](https://github.com/Jc2k) for helping with the session security on Bluetooth LE 
+   accessories. 
 
 # Installation
 

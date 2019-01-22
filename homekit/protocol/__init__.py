@@ -17,7 +17,9 @@
 import hashlib
 import ed25519
 import hkdf
+import py25519
 from binascii import hexlify
+import logging
 from cryptography.hazmat.primitives.asymmetric import x25519
 
 from homekit.protocol.tlv import TLV
@@ -52,13 +54,47 @@ def error_handler(error, stage):
         raise InvalidError(stage)
 
 
-def perform_pair_setup(connection, pin, ios_pairing_id):
+def create_ip_pair_setup_write(connection):
+    def write_http(request, expected):
+        logging.debug('write message: %s', TLV.to_string(TLV.decode_bytes(request)))
+        headers = {
+            'Content-Type': 'application/pairing+tlv8'
+        }
+
+        connection.request('POST', '/pair-setup', request, headers)
+        resp = connection.getresponse()
+        response_tlv = TLV.decode_bytes(resp.read(), expected)
+        logging.debug('response: %s', TLV.to_string(response_tlv))
+        return response_tlv
+
+    return write_http
+
+
+def create_ip_pair_verify_write(connection):
+    def write_http(request, expected):
+        logging.debug('write message: %s', TLV.to_string(TLV.decode_bytes(request)))
+        headers = {
+            'Content-Type': 'application/pairing+tlv8'
+        }
+
+        connection.request('POST', '/pair-verify', request, headers)
+        resp = connection.getresponse()
+        response_tlv = TLV.decode_bytes(resp.read(), expected)
+        logging.debug('response: %s', TLV.to_string(response_tlv))
+        return response_tlv
+
+    return write_http
+
+
+def perform_pair_setup(pin, ios_pairing_id, write_fun):
     """
     Performs a pair setup operation as described in chapter 4.7 page 39 ff.
 
     :param connection: the http_impl connection to the target accessory
     :param pin: the setup code from the accessory
     :param ios_pairing_id: the id of the simulated ios device
+    :param write_fun: a function that takes a bytes representation of a TLV, the expected keys as list and returns
+        decoded TLV as list
     :return: a dict with the ios device's part of the pairing information
     :raises UnavailableError: if the device is already paired
     :raises MaxTriesError: if the device received more than 100 unsuccessful pairing attempts
@@ -74,20 +110,20 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     #
     # Step #1 ios --> accessory (send SRP start Request) (see page 39)
     #
+    logging.debug('#1 ios -> accessory: send SRP start request')
     request_tlv = TLV.encode_list([
         (TLV.kTLVType_State, TLV.M1),
         (TLV.kTLVType_Method, TLV.PairSetup)
     ])
 
-    connection.request('POST', '/pair-setup', request_tlv, headers)
-    resp = connection.getresponse()
-    response_tlv = TLV.decode_bytes(resp.read())
+    step2_expectations = [TLV.kTLVType_State, TLV.kTLVType_Error, TLV.kTLVType_PublicKey, TLV.kTLVType_Salt]
+    response_tlv = write_fun(request_tlv, step2_expectations)
 
     #
     # Step #3 ios --> accessory (send SRP verify request) (see page 41)
     #
-    response_tlv = TLV.reorder(response_tlv,
-                               [TLV.kTLVType_State, TLV.kTLVType_Error, TLV.kTLVType_PublicKey, TLV.kTLVType_Salt])
+    logging.debug('#3 ios -> accessory: send SRP verify request')
+    response_tlv = TLV.reorder(response_tlv, step2_expectations)
     assert response_tlv[0][0] == TLV.kTLVType_State and response_tlv[0][1] == TLV.M2, 'perform_pair_setup: State not M2'
 
     # the errors here can be:
@@ -112,16 +148,16 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
         (TLV.kTLVType_Proof, SrpClient.to_byte_array(client_proof)),
     ])
 
-    connection.request('POST', '/pair-setup', response_tlv, headers)
-    resp = connection.getresponse()
-    response_tlv = TLV.decode_bytes(resp.read())
+    step4_expectations = [TLV.kTLVType_State, TLV.kTLVType_Error, TLV.kTLVType_Proof]
+    response_tlv = write_fun(response_tlv, step4_expectations)
 
     #
     # Step #5 ios --> accessory (Exchange Request) (see page 43)
     #
+    logging.debug('#5 ios -> accessory: send SRP exchange request')
 
     # M4 Verification (page 43)
-    response_tlv = TLV.reorder(response_tlv, [TLV.kTLVType_State, TLV.kTLVType_Error, TLV.kTLVType_Proof])
+    response_tlv = TLV.reorder(response_tlv, step4_expectations)
     assert response_tlv[0][0] == TLV.kTLVType_State and response_tlv[0][1] == TLV.M4, \
         'perform_pair_setup: State not M4'
     if response_tlv[1][0] == TLV.kTLVType_Error:
@@ -173,14 +209,13 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     ]
     body = TLV.encode_list(response_tlv)
 
-    connection.request('POST', '/pair-setup', body, headers)
-    resp = connection.getresponse()
-    response_tlv = TLV.decode_bytes(resp.read())
+    step6_expectations = [TLV.kTLVType_State, TLV.kTLVType_Error, TLV.kTLVType_EncryptedData]
+    response_tlv = write_fun(body, step6_expectations)
 
     #
     # Step #7 ios (Verification) (page 47)
     #
-    response_tlv = TLV.reorder(response_tlv, [TLV.kTLVType_State, TLV.kTLVType_Error, TLV.kTLVType_EncryptedData])
+    response_tlv = TLV.reorder(response_tlv, step6_expectations)
     assert response_tlv[0][0] == TLV.kTLVType_State and response_tlv[0][1] == TLV.M6, 'perform_pair_setup: State not M6'
     if response_tlv[1][0] == TLV.kTLVType_Error:
         error_handler(response_tlv[1][1], 'step 7')
@@ -225,21 +260,23 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     }
 
 
-def get_session_keys(conn, pairing_data):
+def get_session_keys(conn, pairing_data, write_fun):
     """
     HomeKit Controller side call to perform a pair verify operation as described in chapter 4.8 page 47 ff.
 
     :param conn: the http_impl connection to the target accessory
     :param pairing_data: the paring data as returned by perform_pair_setup
+    :param write_fun: a function that takes a bytes representation of a TLV, the expected keys as list and returns
+        decoded TLV as list
     :return: tuple of the session keys (controller_to_accessory_key and  accessory_to_controller_key)
     :raises InvalidAuthTagError: if the auth tag could not be verified,
     :raises IncorrectPairingIdError: if the accessory's LTPK could not be found
     :raises InvalidSignatureError: if the accessory's signature could not be verified
     :raises AuthenticationError: if the secured session could not be established
     """
-    headers = {
-        'Content-Type': 'application/pairing+tlv8'
-    }
+    # headers = {
+    #     'Content-Type': 'application/pairing+tlv8'
+    # }
 
     #
     # Step #1 ios --> accessory (send verify start Request) (page 47)
@@ -252,14 +289,16 @@ def get_session_keys(conn, pairing_data):
         (TLV.kTLVType_PublicKey, ios_key_pub)
     ])
 
-    conn.request('POST', '/pair-verify', request_tlv, headers)
-    resp = conn.getresponse()
-    response_tlv = TLV.decode_bytes(resp.read())
+    # conn.request('POST', '/pair-verify', request_tlv, headers)
+    # resp = conn.getresponse()
+    # response_tlv = TLV.decode_bytes(resp.read())
+    step2_expectations = [TLV.kTLVType_State, TLV.kTLVType_PublicKey, TLV.kTLVType_EncryptedData]
+    response_tlv = write_fun(request_tlv, step2_expectations)
 
     #
     # Step #3 ios --> accessory (send SRP verify request)  (page 49)
     #
-    response_tlv = TLV.reorder(response_tlv, [TLV.kTLVType_State, TLV.kTLVType_PublicKey, TLV.kTLVType_EncryptedData])
+    response_tlv = TLV.reorder(response_tlv, step2_expectations)
     assert response_tlv[0][0] == TLV.kTLVType_State and response_tlv[0][1] == TLV.M2, 'get_session_keys: not M2'
     assert response_tlv[1][0] == TLV.kTLVType_PublicKey, 'get_session_keys: no public key'
     assert response_tlv[2][0] == TLV.kTLVType_EncryptedData, 'get_session_keys: no encrypted data'
@@ -331,17 +370,19 @@ def get_session_keys(conn, pairing_data):
     ])
 
     # 12) send to accessory
-    conn.request('POST', '/pair-verify', request_tlv, headers)
-    resp = conn.getresponse()
-    response_tlv = TLV.decode_bytes(resp.read())
+    # conn.request('POST', '/pair-verify', request_tlv, headers)
+    # resp = conn.getresponse()
+    # response_tlv = TLV.decode_bytes(resp.read())
+    step3_expectations = [TLV.kTLVType_State, TLV.kTLVType_Error]
+    response_tlv = write_fun(request_tlv, step3_expectations)
 
     #
     #   Post Step #4 verification (page 51)
     #
-    response_tlv = TLV.reorder(response_tlv, [TLV.kTLVType_State, TLV.kTLVType_Error])
+    response_tlv = TLV.reorder(response_tlv, step3_expectations)
     assert response_tlv[0][0] == TLV.kTLVType_State and response_tlv[0][1] == TLV.M4, 'get_session_keys: not M4'
     if len(response_tlv) == 2 and response_tlv[1][0] == TLV.kTLVType_Error:
-        error_handler(response_tlv[1][1] , 'verification')
+        error_handler(response_tlv[1][1], 'verification')
 
     # calculate session keys
     hkdf_inst = hkdf.Hkdf('Control-Salt'.encode(), shared_secret, hash=hashlib.sha512)

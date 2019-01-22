@@ -14,6 +14,13 @@
 # limitations under the License.
 #
 
+__all__ = [
+    'TestServerData', 'BleCharacteristicFormatsTest', 'BleCharacteristicUnitsTest', 'CharacteristicTypesTest',
+    'TestBLEController', 'TestChacha20poly1305', 'TestCharacteristicsTypes', 'TestController', 'TestControllerIpPaired',
+    'TestControllerIpUnpaired', 'TestHttpResponse', 'TestHttpStatusCodes', 'TestMfrData', 'TestSrp', 'TestTLV',
+    'TestZeroconf'
+]
+
 from tests.tlv_test import TestTLV
 from tests.srp_test import TestSrp
 from tests.chacha20poly1305_test import TestChacha20poly1305
@@ -22,5 +29,8 @@ from tests.http_response_test import TestHttpResponse
 from tests.httpStatusCodes_test import TestHttpStatusCodes
 from tests.characteristicsTypes_test import TestCharacteristicsTypes
 from tests.zeroconf_test import TestZeroconf
-from tests.controller_test import TestControllerPaired, TestControllerUnpaired
-
+from tests.controller_test import TestControllerIpPaired, TestControllerIpUnpaired, TestController
+from tests.bleCharacteristicFormats_test import BleCharacteristicFormatsTest
+from tests.bleCharacteristicUnits_test import BleCharacteristicUnitsTest
+from tests.characteristicTypes_test import CharacteristicTypesTest
+from tests.ble_controller_test import TestBLEController, TestMfrData

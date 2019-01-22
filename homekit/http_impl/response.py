@@ -125,4 +125,3 @@ class HttpResponse(object):
 class HttpException(Exception):
     def __init__(self):
         pass
-

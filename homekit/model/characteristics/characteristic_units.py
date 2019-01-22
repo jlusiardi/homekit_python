@@ -24,3 +24,27 @@ class CharacteristicUnits(object):
     arcdegrees = 'arcdegrees'
     lux = 'lux'
     seconds = 'seconds'
+
+
+class _BleCharacteristicUnits(object):
+    """
+    Mapping taken from Table 6-37 page 130 and https://www.bluetooth.com/specifications/assigned-numbers/units
+    """
+    def __init__(self):
+        self._formats = {
+            0x272F: 'celsius',
+            0x2763: 'arcdegrees',
+            0x27AD: 'percentage',
+            0x2700: 'unitless',
+            0x2731: 'lux',
+            0x2703: 'seconds',
+        }
+
+    def get(self, key, default):
+        return self._formats.get(key, default)
+
+
+#
+#   Have a singleton to avoid overhead
+#
+BleCharacteristicUnits = _BleCharacteristicUnits()

@@ -276,5 +276,3 @@ class SrpServer(Srp):
         hash_instance.update(Srp.to_byte_array(m))
         hash_instance.update(Srp.to_byte_array(self.get_session_key()))
         return int.from_bytes(hash_instance.digest(), "big")
-
-

@@ -19,10 +19,12 @@
 import json
 import sys
 import argparse
+import logging
 
 from homekit.controller import Controller
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.services import ServicesTypes
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
@@ -31,17 +33,23 @@ def setup_args_parser():
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-o', action='store', dest='output', default='compact', choices=['json', 'compact'],
                         help='Specify output format')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
+    add_log_arguments(parser)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
 
-    controller = Controller()
+    setup_logging(args.loglevel)
+
+    controller = Controller(args.adapter)
     try:
         controller.load_data(args.file)
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)
 
     if args.alias not in controller.get_pairings():
@@ -53,6 +61,7 @@ if __name__ == '__main__':
         data = pairing.list_accessories_and_characteristics()
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)
 
     # prepare output

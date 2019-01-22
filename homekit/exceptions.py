@@ -27,6 +27,10 @@ class HomeKitException(Exception):
     pass
 
 
+class BluetoothAdapterError(HomeKitException):
+    pass
+
+
 class ProtocolError(HomeKitException):
     """
     Class to represent an abstraction layer for all errors that are defined in the Error Codes table 4-5 page 60 of the
@@ -166,6 +170,7 @@ class AccessoryNotFoundError(HomeKitException):
 class AccessoryDisconnectedError(HomeKitException):
     """
     Used if a HomeKit disconnects part way through an operation or series of operations.
+
     It may be possible to reconnect and retry the request.
     """
     def __init__(self, message):
@@ -207,3 +212,13 @@ class AlreadyPairedError(HomeKitException):
     """
     def __init__(self, message):
         Exception.__init__(self, message)
+
+
+class RequestRejected(HomeKitException):
+    """
+    Raised when a request fails with a HAP error code
+    """
+    def __init__(self, message, error_code):
+        self.error_code = error_code
+        self.message = message
+        Exception.__init__(message)

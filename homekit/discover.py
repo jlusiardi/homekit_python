@@ -18,20 +18,24 @@
 
 import argparse
 
+from homekit.log_support import setup_logging, add_log_arguments
 from homekit.controller import Controller
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit discover app - list all HomeKit devices on the same network')
+    parser = argparse.ArgumentParser(description='HomeKit IP discover app -'
+                                                 ' list all HomeKit devices on the same IP network')
     parser.add_argument('-t', action='store', required=False, dest='timeout', type=int, default=10,
                         help='Number of seconds to wait')
+    add_log_arguments(parser)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
+    setup_logging(args.loglevel)
 
-    results = Controller.discover()
+    results = Controller.discover(args.timeout)
     for info in results:
         # TODO wait for result of https://github.com/jlusiardi/homekit_python/issues/40
         print('Name: {name}'.format(name=info['name']))

@@ -18,27 +18,34 @@
 
 import argparse
 import sys
+import logging
+
 from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit pairing app')
+    parser = argparse.ArgumentParser(description='HomeKit IP pairing app')
     parser.add_argument('-d', action='store', required=True, dest='device',
                         help='HomeKit Device ID (use discover to get it)')
     parser.add_argument('-p', action='store', required=True, dest='pin', help='HomeKit configuration code')
     parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
+    add_log_arguments(parser)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
 
+    setup_logging(args.loglevel)
+
     controller = Controller()
     try:
         controller.load_data(args.file)
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)
 
     if args.alias in controller.get_pairings():
@@ -50,7 +57,8 @@ if __name__ == '__main__':
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()
         controller.save_data(args.file)
-        print('Pairing for {a} was established.'.format(a=args.alias))
+        print('Pairing for "{a}" was established.'.format(a=args.alias))
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)

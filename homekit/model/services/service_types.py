@@ -19,6 +19,10 @@ class _ServicesTypes(object):
     """
     This data is taken from Table 12-3 Accessory Categories on page 254. Values above 19 are reserved.
     """
+    INFORMATION_SERVICE = 'A2'  # new for ble, homekit spec page 126
+    PAIRING_SERVICE = '55'      # new for ble, homekit spec page 57
+    ACCESSORY_INFORMATION_SERVICE = '3E'
+    BATTERY_SERVICE = '96'
 
     def __init__(self):
         self.baseUUID = '-0000-1000-8000-0026BB765291'
@@ -32,6 +36,7 @@ class _ServicesTypes(object):
             '47': 'public.hap.service.outlet',
             '49': 'public.hap.service.switch',
             '4A': 'public.hap.service.thermostat',
+            '55': 'public.hap.service.pairing',                             # new for ble, homekit spec page 57
             '7E': 'public.hap.service.security-system',
             '7F': 'public.hap.service.sensor.carbon-monoxide',
             '80': 'public.hap.service.sensor.contact',
@@ -49,6 +54,7 @@ class _ServicesTypes(object):
             '8D': 'public.hap.service.sensor.air-quality',
             '96': 'public.hap.service.battery',
             '97': 'public.hap.service.sensor.carbon-dioxide',
+            'A2': 'public.hap.service.protocol.information.service',        # new for ble, homekit spec page 126
             'B7': 'public.hap.service.fanv2',
             'B9': 'public.hap.service.vertical-slat',
             'BA': 'public.hap.service.filter-maintenance',

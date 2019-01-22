@@ -13,13 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import logging
+
+logger = logging.getLogger('homekit.protocol.tlv')
 
 
 class TLV:
     """
     as described in Appendix 12 (page 251)
     """
-    DEBUG = False
 
     # Steps
     M1 = bytearray(b'\x01')
@@ -55,6 +57,7 @@ class TLV:
     kTLVType_FragmentLast = 13
     kTLVType_Separator = 255
     kTLVType_Separator_Pair = [255, bytearray(b'')]
+    kTLVType_SessionID = 0x0e   # Table 6-27 page 116
 
     # Errors (see table 4-5 page 60)
     kTLVError_Unknown = bytearray(b'\x01')
@@ -65,17 +68,42 @@ class TLV:
     kTLVError_Unavailable = bytearray(b'\x06')
     kTLVError_Busy = bytearray(b'\x07')
 
-    @staticmethod
-    def decode_bytes(bs) -> list:
-        return TLV.decode_bytearray(bytearray(bs))
+    # Table 6-27 page 116
+    kTLVMethod_Resume = 0x07
+
+    # Additional Parameter Types for BLE (Table 6-9 page 98)
+    kTLVHAPParamValue = 0x01
+    kTLVHAPParamAdditionalAuthorizationData = 0x02
+    kTLVHAPParamOrigin = 0x03
+    kTLVHAPParamCharacteristicType = 0x04
+    kTLVHAPParamCharacteristicInstanceId = 0x05
+    kTLVHAPParamServiceType = 0x06
+    kTLVHAPParamServiceInstanceId = 0x07
+    kTLVHAPParamTTL = 0x08
+    kTLVHAPParamParamReturnResponse = 0x09
+    kTLVHAPParamHAPCharacteristicPropertiesDescriptor = 0x0a
+    kTLVHAPParamGATTUserDescriptionDescriptor = 0x0b
+    kTLVHAPParamGATTPresentationFormatDescriptor = 0x0c
+    kTLVHAPParamGATTValidRange = 0x0d
+    kTLVHAPParamHAPStepValueDescriptor = 0x0e
+    kTLVHAPParamHAPServiceProperties = 0x0f
+    kTLVHAPParamHAPLinkedServices = 0x10
+    kTLVHAPParamHAPValidValuesDescriptor = 0x11
+    kTLVHAPParamHAPValidValuesRangeDescriptor = 0x12
 
     @staticmethod
-    def decode_bytearray(ba: bytearray) -> list:
+    def decode_bytes(bs, expected=None) -> list:
+        return TLV.decode_bytearray(bytearray(bs), expected)
+
+    @staticmethod
+    def decode_bytearray(ba: bytearray, expected=None) -> list:
         result = []
         # do not influence caller!
         tail = ba.copy()
         while len(tail) > 0:
             key = tail.pop(0)
+            if expected and key not in expected:
+                break
             length = tail.pop(0)
             value = tail[:length]
             if length != len(value):
@@ -86,8 +114,7 @@ class TLV:
                 result[-1][1] += value
             else:
                 result.append([key, value])
-        if TLV.DEBUG:
-            print('receiving ' + TLV.to_string(result))
+        logger.debug('receiving %s', TLV.to_string(result))
         return result
 
     @staticmethod
@@ -104,8 +131,7 @@ class TLV:
 
     @staticmethod
     def encode_list(d: list) -> bytearray:
-        if TLV.DEBUG:
-            print('sending ' + TLV.to_string(d))
+        logger.debug('sending %s', TLV.to_string(d))
         result = bytearray()
         for p in d:
             (key, value) = p
@@ -138,18 +164,22 @@ class TLV:
 
     @staticmethod
     def to_string(d) -> str:
+        def entry_to_string(entry_key, entry_value) -> str:
+            if isinstance(entry_value, bytearray):
+                return '  {k}: ({len} bytes) 0x{v}\n'.format(k=entry_key, v=entry_value.hex(), len=len(entry_value))
+            return '  {k}: ({len} bytes) {v}\n'.format(k=entry_key, v=entry_value, len=len(entry_value))
+
         if isinstance(d, dict):
             res = '{\n'
             for k in d.keys():
-                res += '  {k}: ({l} bytes) {v}\n'.format(k=k, v=d[k], l=len(d[k]))
+                res += entry_to_string(k, d[k])
             res += '}\n'
         else:
             res = '[\n'
             for k in d:
-                res += '  {k}: ({l} bytes) {v}\n'.format(k=k[0], v=k[1], l=len(k[1]))
+                res += entry_to_string(k[0], k[1])
             res += ']\n'
         return res
-
 
     @staticmethod
     def reorder(tlv_array, preferred_order):
@@ -175,4 +205,3 @@ class TLV:
 class TlvParseException(Exception):
     """Raised upon parse error with some TLV"""
     pass
-

@@ -15,7 +15,7 @@
 #
 
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
-    AbstractCharacteristic, CharacteristicUnits
+    AbstractCharacteristic
 
 
 class AudioFeedbackCharacteristic(AbstractCharacteristic):

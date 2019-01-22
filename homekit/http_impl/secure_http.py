@@ -21,6 +21,7 @@ import select
 from homekit.http_impl.response import HttpResponse
 from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 from homekit.http_impl import HttpContentTypes
+from homekit import exceptions
 
 
 class SecureHttp:
@@ -86,8 +87,11 @@ class SecureHttp:
             self.c2a_counter += 1
             ciper_and_mac = chacha20_aead_encrypt(len_bytes, self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]),
                                                   data.encode())
-            self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
-            return self._read_response()
+            try:
+                self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
+                return self._read_response()
+            except OSError as e:
+                raise exceptions.AccessoryDisconnectedError(str(e))
 
     @staticmethod
     def _parse(chunked_data):
@@ -174,4 +178,7 @@ class SecureHttp:
         This reads the enciphered response from an accessory after registering for events.
         :return: the event data as string (not as json object)
         """
-        return self._read_response(1)
+        try:
+            return self._read_response(1)
+        except OSError as e:
+            raise exceptions.AccessoryDisconnectedError(str(e))

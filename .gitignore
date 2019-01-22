@@ -112,3 +112,4 @@ ENV/
 /.idea/homekit_python.iml
 *.json
 MANIFEST
+Tests.md

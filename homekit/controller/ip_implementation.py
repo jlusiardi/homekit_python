@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 import json
+from json.decoder import JSONDecodeError
 import time
 import logging
 
 from homekit.controller.tools import AbstractPairing, check_convert_value
 from homekit.protocol.tlv import TLV
-from homekit.exceptions import AccessoryNotFoundError, UnknownError, UnpairedError
+from homekit.exceptions import AccessoryNotFoundError, UnknownError, UnpairedError, AccessoryDisconnectedError
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
@@ -51,6 +51,14 @@ class IpPairing(AbstractPairing):
         if self.session:
             self.session.close()
 
+    def _get_pairing_data(self):
+        """
+        This method returns the internal pairing data. DO NOT mess around with it.
+
+        :return: a dict containing the data
+        """
+        return self.pairing_data
+
     def list_accessories_and_characteristics(self):
         """
         This retrieves a current set of accessories and characteristics behind this pairing.
@@ -60,7 +68,12 @@ class IpPairing(AbstractPairing):
         """
         if not self.session:
             self.session = IpSession(self.pairing_data)
-        response = self.session.get('/accessories')
+        try:
+            response = self.session.get('/accessories')
+        except AccessoryDisconnectedError:
+            self.session.close()
+            self.session = None
+            raise
         tmp = response.read().decode()
         accessories = json.loads(tmp)['accessories']
         self.pairing_data['accessories'] = accessories
@@ -87,8 +100,13 @@ class IpPairing(AbstractPairing):
             (TLV.kTLVType_State, TLV.M1),
             (TLV.kTLVType_Method, TLV.ListPairings)
         ])
-        response = self.session.sec_http.post('/pairings', request_tlv.decode())
-        data = response.read()
+        try:
+            response = self.session.sec_http.post('/pairings', request_tlv.decode())
+            data = response.read()
+        except AccessoryDisconnectedError:
+            self.session.close()
+            self.session = None
+            raise
         data = TLV.decode_bytes(data)
 
         if not (data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2):
@@ -151,8 +169,20 @@ class IpPairing(AbstractPairing):
         else:
             url += '&ev=0'
 
-        response = self.session.get(url)
-        data = json.loads(response.read().decode())['characteristics']
+        try:
+            response = self.session.get(url)
+        except AccessoryDisconnectedError:
+            self.session.close()
+            self.session = None
+            raise
+
+        try:
+            data = json.loads(response.read().decode())['characteristics']
+        except JSONDecodeError:
+            self.session.close()
+            self.session = None
+            raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
+
         tmp = {}
         for c in data:
             key = (c['aid'], c['iid'])
@@ -202,10 +232,23 @@ class IpPairing(AbstractPairing):
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
             data.append({'aid': aid, 'iid': iid, 'value': value})
         data = json.dumps({'characteristics': data})
-        response = self.session.put('/characteristics', data)
+
+        try:
+            response = self.session.put('/characteristics', data)
+        except AccessoryDisconnectedError:
+            self.session.close()
+            self.session = None
+            raise
+
         if response.code != 204:
             data = response.read().decode()
-            data = json.loads(data)['characteristics']
+            try:
+                data = json.loads(data)['characteristics']
+            except JSONDecodeError:
+                self.session.close()
+                self.session = None
+                raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
+
             data = {(d['aid'], d['iid']): {'status': d['status'], 'description': HapStatusCodes[d['status']]} for d in
                     data}
             return data
@@ -242,11 +285,24 @@ class IpPairing(AbstractPairing):
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
             data.append({'aid': aid, 'iid': iid, 'ev': True})
         data = json.dumps({'characteristics': data})
-        response = self.session.put('/characteristics', data)
+
+        try:
+            response = self.session.put('/characteristics', data)
+        except AccessoryDisconnectedError:
+            self.session.close()
+            self.session = None
+            raise
+
         # handle error responses
         if response.code != 204:
             tmp = {}
-            data = json.loads(response.read().decode())
+            try:
+                data = json.loads(response.read().decode())
+            except JSONDecodeError:
+                self.session.close()
+                self.session = None
+                raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
+
             for characteristic in data['characteristics']:
                 status = characteristic['status']
                 if status == 0:
@@ -260,10 +316,21 @@ class IpPairing(AbstractPairing):
         event_count = 0
         s = time.time()
         while (max_events == -1 or event_count < max_events) and (max_seconds == -1 or s + max_seconds >= time.time()):
-            r = self.session.sec_http.handle_event_response()
-            body = r.read().decode()
+            try:
+                r = self.session.sec_http.handle_event_response()
+                body = r.read().decode()
+            except AccessoryDisconnectedError:
+                self.session.close()
+                self.session = None
+                raise
+
             if len(body) > 0:
-                r = json.loads(body)
+                try:
+                    r = json.loads(body)
+                except JSONDecodeError:
+                    self.session.close()
+                    self.session = None
+                    raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
                 tmp = []
                 for c in r['characteristics']:
                     tmp.append((c['aid'], c['iid'], c['value']))
@@ -348,7 +415,12 @@ class IpSession(object):
         """
         Close the session. This closes the socket.
         """
-        self.sock.close()
+        try:
+            self.sock.close()
+        except OSError:
+            # If we get an OSError its probably because the socket is already closed
+            pass
+        self.sock = None
 
     def get_from_pairing_data(self, key):
         if key not in self.pairing_data:

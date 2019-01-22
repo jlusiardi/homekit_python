@@ -1,4 +1,4 @@
-# HomeKit Python [![Build Status](https://travis-ci.org/jlusiardi/homekit_python.svg?branch=master)](https://travis-ci.org/jlusiardi/homekit_python) [![Coverage Status](https://coveralls.io/repos/github/jlusiardi/homekit_python/badge.svg?branch=master)](https://coveralls.io/github/jlusiardi/homekit_python?branch=master)
+# HomeKit Python [![Build Status](https://travis-ci.org/jlusiardi/homekit_python.svg?branch=master)](https://travis-ci.org/jlusiardi/homekit_python) [![Coverage Status](https://coveralls.io/repos/github/jlusiardi/homekit_python/badge.svg?branch=master)](https://coveralls.io/github/jlusiardi/homekit_python?branch=master) [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/homekit_python/community)
 
 With this code it is possible to implement either a HomeKit Accessory or simulate a
 HomeKit Controller.
@@ -16,14 +16,7 @@ The code presented in this repository was created based on release R1 from 2017-
 
 # Installation
 
-Since the code relies on **gmpy2** for large numbers some development libraries and a compiler is required:
-
-So for debian:
-```bash
-apt install libgmp-dev libmpfr-dev libmpc-dev libffi-dev build-essential python3-pip python3-dev
-```
-
-After that use **pip3** to install the package:
+Use **pip3** to install the package:
 
 ```bash
 pip3 install --user homekit

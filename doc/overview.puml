@@ -107,7 +107,9 @@ package homekit {
     }
 }
 
-class homekit.Pairing {
+class homekit.AbstractPairing {
+    + close()
+    + list_accessories_and_characteristics()
     + get_accessories()
     + get_characteristics(characteristics[], include_meta, include_perms, include_type, include_events)
     + get_events(characteristics[], callback_fun, max_events=-1, max_seconds=-1)
@@ -120,17 +122,43 @@ class homekit.Controller {
     + __init__(self, data)
     + get_pairings()
     + load_data(filename)
-    + perform_pairing(alias, accessory_id, pin)
+    + perform_pairing(alias, id, pin, type='IP')
     + remove_pairing(alias)
     + save_data(filename)
     + {static}discover(max_seconds)
-    + {static}identify(accessory_id)
+    + {static}identify(id, type='IP')
 }
 
+package homekit {
+note as n3
+    The <b>type</b> marks whether the
+    transport is IP or Bluetooth LE.
+    Depending on the type the <b>id</b>
+    is either the device ID for IP
+    Accessories or the MAC for
+    Bluetooth LE Accessories.
+end note
+}
+
+n3 .right. homekit.Controller
 
 
-homekit.Pairing "*" <-down- "1" homekit.Controller
+class homekit.IpPairing {
+}
 
+class homekit.BlePairing {
+}
+
+homekit.IpPairing  -up-|> homekit.AbstractPairing
+
+homekit.BlePairing  -up-|> homekit.AbstractPairing
+
+homekit.AbstractPairing "*" <-down- "1" homekit.Controller
+
+
+homekit.BleSession <-left- homekit.BlePairing
+
+homekit.IpSession <-right- homekit.IpPairing
 
 class homekit.discover <<(E,#FF7700) executable>> {
     + timeout
@@ -201,7 +229,7 @@ hide <<executable>> circle
 @enduml
 
 
-class homekit.Session {
+class homekit.IpSession {
     + {static} create_from_pairing_data(data)
     + {static} create_from_file(file)
     + get(self, url)

@@ -17,7 +17,7 @@
 import setuptools
 
 
-with open("README.md", "r") as fh:
+with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
@@ -25,12 +25,12 @@ setuptools.setup(
     packages=['homekit', 'homekit.crypto', 'homekit.http_impl', 'homekit.model', 'homekit.model.services',
               'homekit.model.characteristics', 'homekit.protocol', 'homekit.zeroconf_impl'],
 
-    version='0.12.0',
+    version='0.12.2',
     description='Python code to interface HomeKit Accessories and Controllers',
     author='Joachim Lusiardi',
     author_email='pypi@lusiardi.de',
     url='https://github.com/jlusiardi/homekit_python',
-    download_url='https://github.com/jlusiardi/homekit_python/archive/0.12.0.tar.gz',
+    download_url='https://github.com/jlusiardi/homekit_python/archive/0.12.2.tar.gz',
     keywords=['HomeKit'],
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
@@ -40,10 +40,9 @@ setuptools.setup(
     ],
     install_requires=[
         'zeroconf',
-        'gmpy2',
-        'py25519',
         'hkdf',
         'ed25519',
+        'cryptography',
     ],
     license='Apache License 2.0',
     long_description=long_description,

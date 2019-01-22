@@ -196,10 +196,11 @@ class AbstractCharacteristic(ToDictMixin):
         d = {
             'type': self.type,
             'iid': self.iid,
-            'value': self.value,
             'perms': self.perms,
             'format': self.format,
         }
+        if CharacteristicPermissions.paired_read in self.perms:
+            d['value'] = self.value
         if self.ev:
             d['ev'] = self.ev
         if self.description:

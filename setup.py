@@ -25,12 +25,12 @@ setuptools.setup(
     packages=['homekit', 'homekit.crypto', 'homekit.http_impl', 'homekit.model', 'homekit.model.services',
               'homekit.model.characteristics', 'homekit.protocol', 'homekit.zeroconf_impl'],
 
-    version='0.12.1',
+    version='0.12.2',
     description='Python code to interface HomeKit Accessories and Controllers',
     author='Joachim Lusiardi',
     author_email='pypi@lusiardi.de',
     url='https://github.com/jlusiardi/homekit_python',
-    download_url='https://github.com/jlusiardi/homekit_python/archive/0.12.1.tar.gz',
+    download_url='https://github.com/jlusiardi/homekit_python/archive/0.12.2.tar.gz',
     keywords=['HomeKit'],
     classifiers=[
         'License :: OSI Approved :: Apache Software License',

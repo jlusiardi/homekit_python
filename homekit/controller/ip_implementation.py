@@ -13,19 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import base64
-import binascii
-
-import uuid
 import json
-from distutils.util import strtobool
 from json.decoder import JSONDecodeError
 import time
 import logging
 
 from homekit.controller.tools import AbstractPairing, check_convert_value
 from homekit.protocol.tlv import TLV
-from homekit.exceptions import AccessoryNotFoundError, UnknownError, UnpairedError
+from homekit.exceptions import AccessoryNotFoundError, UnknownError, UnpairedError, AccessoryDisconnectedError
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes

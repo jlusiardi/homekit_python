@@ -23,7 +23,6 @@ https://tools.ietf.org/html/rfc5054. See HomeKit spec page 36 for adjustments im
 import crypt
 import math
 import hashlib
-import sys
 
 
 class Srp:

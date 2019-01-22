@@ -78,8 +78,8 @@ class Device:
         self.is_paired = False
         self.unsuccessful_tries = 0
         self.setup_code = '111-11-111'
-        self.accessory_ltpk = b'XXX'
-        self.accessory_ltsk = b'XXX'
+        self.accessory_ltpk = None  # b'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        self.accessory_ltsk = None  # b'YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY'
         self.accessory_pairing_id_bytes = b'12:00:00:00:00:00'
 
         self.session_id = 'XXX'
@@ -93,8 +93,12 @@ class Device:
 
         self.services.append(PairingServiceHandler(self))
 
-    def add_peer(self, pairing_id: bytes, ltpk: bytes):
-        admin = len(self.peers) == 0
+    def set_accessory_keys(self, ltpk, ltsk):
+        self.accessory_ltpk = ltpk
+        self.accessory_ltsk = ltsk
+
+    def add_peer(self, pairing_id: bytes, ltpk: bytes, admin: bool):
+        # admin = len(self.peers) == 0
         self.peers[pairing_id.decode()] = {
             'key': binascii.hexlify(ltpk).decode(),
             'admin': admin,

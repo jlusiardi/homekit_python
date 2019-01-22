@@ -128,7 +128,7 @@ class TestControllerIpUnpaired(unittest.TestCase):
         """Try to pair the test accessory"""
         self.controller.perform_pairing('alias', '12:34:56:00:01:0B', '010-22-020')
         pairings = self.controller.get_pairings()
-        self.controller.save_data(TestControllerIpUnpaired.controller_file.name)
+        self.controller.save_data(self.controller_file.name)
         self.assertIn('alias', pairings)
 
     def test_02_pair_accessory_not_found(self):
@@ -220,7 +220,7 @@ class TestControllerIpPaired(unittest.TestCase):
 
     def test_02_pair_alias_exists(self):
         """Try to pair the test accessory"""
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         self.assertRaises(AlreadyPairedError, self.controller.perform_pairing, 'alias', '12:34:56:00:01:0B',
                           '010-22-020')
 
@@ -229,7 +229,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertRaises(AlreadyPairedError, self.controller.identify, '12:34:56:00:01:0A')
 
     def test_03_get_accessories(self):
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.list_accessories_and_characteristics()
         for characteristic in result[0]['services'][0]['characteristics']:
@@ -242,7 +242,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertIn('services', result)
 
     def test_04_1_get_characteristic(self):
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4)])
         self.assertIn((1, 4), result)
@@ -251,7 +251,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertEqual(['value'], list(result[(1, 4)].keys()))
 
     def test_04_2_get_characteristics(self):
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4), (1, 10)])
         self.assertIn((1, 4), result)
@@ -263,7 +263,7 @@ class TestControllerIpPaired(unittest.TestCase):
 
     def test_04_3_get_characteristic_with_events(self):
         """This tests the include_events flag on get_characteristics"""
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4)], include_events=True)
         self.assertIn((1, 4), result)
@@ -273,7 +273,7 @@ class TestControllerIpPaired(unittest.TestCase):
 
     def test_04_4_get_characteristic_with_type(self):
         """This tests the include_type flag on get_characteristics"""
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4)], include_type=True)
         self.assertIn((1, 4), result)
@@ -284,7 +284,7 @@ class TestControllerIpPaired(unittest.TestCase):
 
     def test_04_5_get_characteristic_with_perms(self):
         """This tests the include_perms flag on get_characteristics"""
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4)], include_perms=True)
         self.assertIn((1, 4), result)
@@ -297,7 +297,7 @@ class TestControllerIpPaired(unittest.TestCase):
 
     def test_04_4_get_characteristic_with_meta(self):
         """This tests the include_meta flag on get_characteristics"""
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4)], include_meta=True)
         self.assertIn((1, 4), result)
@@ -311,7 +311,7 @@ class TestControllerIpPaired(unittest.TestCase):
     def test_05_1_put_characteristic(self):
         """"""
         global value
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.put_characteristics([(1, 10, 'On')])
         self.assertEqual(result, {})
@@ -323,7 +323,7 @@ class TestControllerIpPaired(unittest.TestCase):
     def test_05_2_put_characteristic_do_conversion(self):
         """"""
         global value
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.put_characteristics([(1, 10, 'On')], do_conversion=True)
         self.assertEqual(result, {})
@@ -334,13 +334,13 @@ class TestControllerIpPaired(unittest.TestCase):
 
     def test_05_2_put_characteristic_do_conversion_wrong_value(self):
         """Tests that values that are not convertible to boolean cause a HomeKitTypeException"""
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         self.assertRaises(FormatError, pairing.put_characteristics, [(1, 10, 'Hallo Welt')], do_conversion=True)
 
     def test_06_list_pairings(self):
         """Gets the listing of registered controllers of the device. Count must be 1."""
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.list_pairings()
         self.assertEqual(1, len(result))
@@ -355,7 +355,7 @@ class TestControllerIpPaired(unittest.TestCase):
     def test_07_paired_identify(self):
         """Tests the paired variant of the identify method."""
         global identify
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.identify()
         self.assertTrue(result)
@@ -364,7 +364,7 @@ class TestControllerIpPaired(unittest.TestCase):
 
     def test_99_remove_pairing(self):
         """Tests that a removed pairing is not present in the list of pairings anymore."""
-        self.controller.load_data(TestControllerIpPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         self.controller.remove_pairing('alias')
         pairings = self.controller.get_pairings()
         self.assertNotIn('alias', pairings)

@@ -17,7 +17,6 @@
 import hashlib
 import ed25519
 import hkdf
-import py25519
 from binascii import hexlify
 import logging
 from cryptography.hazmat.primitives.asymmetric import x25519
@@ -103,9 +102,6 @@ def perform_pair_setup(pin, ios_pairing_id, write_fun):
     :raises MaxPeersError: if the device cannot accept an additional pairing
     :raises IllegalData: if the verification of the accessory's data fails
     """
-    headers = {
-        'Content-Type': 'application/pairing+tlv8'
-    }
 
     #
     # Step #1 ios --> accessory (send SRP start Request) (see page 39)

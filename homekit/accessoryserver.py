@@ -673,7 +673,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             # 2) generate shared secret
             ios_device_curve25519_pub_key_bytes = bytes(d_req[1][1])
             self.server.sessions[self.session_id]['ios_device_pub_key'] = ios_device_curve25519_pub_key_bytes
-            ios_device_curve25519_pub_key = x25519.X25519PublicKey.from_public_bytes(ios_device_curve25519_pub_key_bytes)
+            ios_device_curve25519_pub_key = x25519.X25519PublicKey.from_public_bytes(
+                ios_device_curve25519_pub_key_bytes)
 
             shared_secret = accessory_session_key.exchange(ios_device_curve25519_pub_key)
             self.server.sessions[self.session_id]['shared_secret'] = shared_secret
@@ -683,7 +684,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 ios_device_curve25519_pub_key_bytes
 
             # 4) sign accessory info for accessory signature
-            accessory_ltsk = ed25519.SigningKey(self.server.data.accessory_ltsk + self.server.data.accessory_ltpk)
+            # accessory_ltsk = ed25519.SigningKey(self.server.data.accessory_ltsk + self.server.data.accessory_ltpk)
+            accessory_ltsk = ed25519.SigningKey(self.server.data.accessory_ltsk)
             accessory_signature = accessory_ltsk.sign(accessory_info)
 
             # 5) sub tlv

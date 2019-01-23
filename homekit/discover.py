@@ -17,6 +17,7 @@
 #
 
 import argparse
+import locale
 
 from homekit.log_support import setup_logging, add_log_arguments
 from homekit.controller import Controller
@@ -31,19 +32,28 @@ def setup_args_parser():
     return parser.parse_args()
 
 
+def prepare_string(input_string):
+    """
+    Make a string save for printing in a terminal. The string get recoded using the terminals preferred locale and
+    replacing the characters that cannot be encoded.
+    :param input_string: the input string
+    :return: the output string which is save for printing
+    """
+    return '{t}'.format(t=input_string.encode(locale.getpreferredencoding(), errors='replace').decode())
+
+
 if __name__ == '__main__':
     args = setup_args_parser()
     setup_logging(args.loglevel)
 
     results = Controller.discover(args.timeout)
     for info in results:
-        # TODO wait for result of https://github.com/jlusiardi/homekit_python/issues/40
-        print('Name: {name}'.format(name=info['name']))
+        print('Name: {name}'.format(name=prepare_string(info['name'])))
         print('Url: http_impl://{ip}:{port}'.format(ip=info['address'], port=info['port']))
         print('Configuration number (c#): {conf}'.format(conf=info['c#']))
         print('Feature Flags (ff): {f} (Flag: {flags})'.format(f=info['flags'], flags=info['ff']))
         print('Device ID (id): {id}'.format(id=info['id']))
-        print('Model Name (md): {md}'.format(md=info['md']))
+        print('Model Name (md): {md}'.format(md=prepare_string(info['md'])))
         print('Protocol Version (pv): {pv}'.format(pv=info['pv']))
         print('State Number (s#): {sn}'.format(sn=info['s#']))
         print('Status Flags (sf): {sf}'.format(sf=info['sf']))

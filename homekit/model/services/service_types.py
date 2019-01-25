@@ -63,6 +63,7 @@ class _ServicesTypes(object):
         self._services_rev = {self._services[k]: k for k in self._services.keys()}
 
     def __getitem__(self, item):
+        item = item.upper()
         if item in self._services:
             return self._services[item]
 
@@ -73,6 +74,7 @@ class _ServicesTypes(object):
         return 'Unknown Service: {i}'.format(i=item)
 
     def get_short(self, item):
+        item = item.upper()
         orig_item = item
         if item.endswith(self.baseUUID):
             item = item.split('-', 1)[0]

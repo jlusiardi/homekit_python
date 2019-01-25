@@ -246,6 +246,7 @@ class _CharacteristicsTypes(object):
         self._characteristics_rev = {self._characteristics[k]: k for k in self._characteristics.keys()}
 
     def __getitem__(self, item):
+        item = item.upper()
         if item in self._characteristics:
             return self._characteristics[item]
 
@@ -265,6 +266,7 @@ class _CharacteristicsTypes(object):
         :param uuid: the UUID in long form or the shortened version as defined in chapter 5.6.1 page 72.
         :return: the textual representation
         """
+        uuid = uuid.upper()
         orig_item = uuid
         if uuid.endswith(self.baseUUID):
             uuid = uuid.split('-', 1)[0]

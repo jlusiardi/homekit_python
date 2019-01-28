@@ -66,7 +66,7 @@ class Controller(object):
          * md: the model name of the accessory (required)
          * pv: the protocol version
          * s#: the current state number (required)
-         * sf: the status flag (see table 5-9 page 70)
+         * sf / statusflags: the status flag (see table 5-9 page 70)
          * ci / category: the category identifier in numerical and human readable form. For more information see table
                         12-3 page 254 or homekit.Categories (required)
 

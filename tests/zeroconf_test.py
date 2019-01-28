@@ -59,7 +59,7 @@ class TestZeroconf(unittest.TestCase):
 
     def test_discover_homekit_devices(self):
         zeroconf = Zeroconf()
-        desc = {'c#': '1', 'id': '00:00:01:00:00:02', 'md': 'unittest', 's#': '1', 'ci': '5'}
+        desc = {'c#': '1', 'id': '00:00:01:00:00:02', 'md': 'unittest', 's#': '1', 'ci': '5', 'sf': '0'}
         info = ServiceInfo('_hap._tcp.local.', 'foo2._hap._tcp.local.', address=socket.inet_aton('127.0.0.1'),
                            port=1234, properties=desc, weight=0, priority=0)
         zeroconf.unregister_all_services()
@@ -74,7 +74,7 @@ class TestZeroconf(unittest.TestCase):
 
     def test_discover_homekit_devices_missing_c(self):
         zeroconf = Zeroconf()
-        desc = {'id': '00:00:01:00:00:03', 'md': 'unittest', 's#': '1', 'ci': '5'}
+        desc = {'id': '00:00:01:00:00:03', 'md': 'unittest', 's#': '1', 'ci': '5', 'sf': '0'}
         info = ServiceInfo('_hap._tcp.local.', 'foo3._hap._tcp.local.', address=socket.inet_aton('127.0.0.1'),
                            port=1234, properties=desc, weight=0, priority=0)
         zeroconf.unregister_all_services()
@@ -89,7 +89,7 @@ class TestZeroconf(unittest.TestCase):
 
     def test_discover_homekit_devices_missing_md(self):
         zeroconf = Zeroconf()
-        desc = {'c#': '1', 'id': '00:00:01:00:00:04', 's#': '1', 'ci': '5'}
+        desc = {'c#': '1', 'id': '00:00:01:00:00:04', 's#': '1', 'ci': '5', 'sf': '0'}
         info = ServiceInfo('_hap._tcp.local.', 'foo4._hap._tcp.local.', address=socket.inet_aton('127.0.0.1'),
                            port=1234, properties=desc, weight=0, priority=0)
         zeroconf.unregister_all_services()

@@ -21,6 +21,7 @@ from zeroconf import Zeroconf, ServiceBrowser
 
 from homekit.model import Categories
 from homekit.model.feature_flags import FeatureFlags
+from homekit.model.status_flags import StatusFlags
 
 
 class CollectingListener(object):
@@ -131,7 +132,8 @@ def discover_homekit_devices(max_seconds=10):
 
         sf = get_from_properties(props, b'sf', case_sensitive=False, default=0)
         if sf:
-            d['sf'] = sf
+            d['sf'] = int(sf)
+        d['statusflags'] = StatusFlags[int(sf)]
 
         ci = get_from_properties(props, b'ci', case_sensitive=False)
         if ci:

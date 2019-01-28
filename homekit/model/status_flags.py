@@ -15,22 +15,22 @@
 #
 
 
-class _FeatureFlags(object):
+class _StatusFlags(object):
     """
-    Data taken form table 5-8 Bonjour TXT Record Feature Flags on page 69.
+    Data taken form table 5-9 page 70
     """
 
     def __init__(self):
         self._data = {
-            0: 'No support for HAP Pairing',
-            1: 'Supports HAP Pairing'
+            0: 'paired',
+            1: 'unpaired'
         }
 
     def __getitem__(self, item):
         if item in self._data:
             return self._data[item]
-
+        print(type(item))
         raise KeyError('Item {item} not found'.format(item=item))
 
 
-FeatureFlags = _FeatureFlags()
+StatusFlags = _StatusFlags()

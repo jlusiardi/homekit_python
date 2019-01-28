@@ -130,9 +130,9 @@ def discover_homekit_devices(max_seconds=10):
         if s:
             d['s#'] = s
 
-        sf = get_from_properties(props, b'sf', case_sensitive=False, default=0)
+        sf = get_from_properties(props, b'sf', case_sensitive=False)
         if sf:
-            d['sf'] = int(sf)
+            d['sf'] = sf
         d['statusflags'] = StatusFlags[int(sf)]
 
         ci = get_from_properties(props, b'ci', case_sensitive=False)

@@ -42,6 +42,6 @@ if __name__ == '__main__':
         print('Model Name (md): {md}'.format(md=info['md']))
         print('Protocol Version (pv): {pv}'.format(pv=info['pv']))
         print('State Number (s#): {sn}'.format(sn=info['s#']))
-        print('Status Flags (sf): {sf}'.format(sf=info['sf']))
+        print('Status Flags (sf): {sf} (Flag: {flags})'.format(sf=info['statusflags'], flags=info['sf']))
         print('Category Identifier (ci): {c} (Id: {ci})'.format(c=info['category'], ci=info['ci']))
         print()

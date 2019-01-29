@@ -246,8 +246,8 @@ class _CharacteristicsTypes(object):
         self._characteristics_rev = {self._characteristics[k]: k for k in self._characteristics.keys()}
 
     def __getitem__(self, item):
-        if item.upper() in self._characteristics:
-            return self._characteristics[item.upper()]
+        if item in self._characteristics:
+            return self._characteristics[item]
 
         if item in self._characteristics_rev:
             return self._characteristics_rev[item]

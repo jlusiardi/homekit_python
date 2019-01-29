@@ -34,6 +34,7 @@ from homekit.model.characteristics.characteristic_formats import BleCharacterist
 from homekit.model import mixin as model_mixin
 from homekit import exceptions
 from homekit.controller.ble_impl.manufacturer_data import parse_manufacturer_specific
+from homekit.model.status_flags import BleStatusFlags
 
 
 class DeviceManager:
@@ -993,10 +994,10 @@ class TestMfrData(unittest.TestCase):
             'cn': 2,
             'cv': 2,
             'device_id': '99:99:99:99:99:99',
-            'flags': 'paired',
             'gsn': 3985,
             'manufacturer': 'apple',
             'sf': 0,
+            'flags': BleStatusFlags[0],
             'type': 'HomeKit'
         })
 
@@ -1008,10 +1009,10 @@ class TestMfrData(unittest.TestCase):
             'cn': 2,
             'cv': 2,
             'device_id': '4A:4D:00:00:00:00',
-            'flags': 'paired',
             'gsn': 11,
             'manufacturer': 'apple',
             'sf': 0,
+            'flags': BleStatusFlags[0],
             'type': 'HomeKit'
         })
 
@@ -1023,9 +1024,9 @@ class TestMfrData(unittest.TestCase):
             'cn': 2,
             'cv': 2,
             'device_id': '7B:21:21:49:23:3C',
-            'flags': 'unpaired',
             'gsn': 66,
             'manufacturer': 'apple',
             'sf': 1,
+            'flags': BleStatusFlags[1],
             'type': 'HomeKit'
         })

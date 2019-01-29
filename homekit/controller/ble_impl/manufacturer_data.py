@@ -17,6 +17,7 @@
 import logging
 
 from homekit.model import Categories
+from homekit.model.status_flags import BleStatusFlags
 
 
 def parse_manufacturer_specific(input_data):
@@ -46,12 +47,7 @@ def parse_manufacturer_specific(input_data):
         input_data = input_data[1:]
 
         sf = input_data[0]
-        if sf == 0:
-            flags = 'paired'
-        elif sf == 1:
-            flags = 'unpaired'
-        else:
-            flags = 'error'
+        flags = BleStatusFlags[sf]
         input_data = input_data[1:]
 
         device_id = (':'.join(input_data[:6].hex()[0 + i:2 + i] for i in range(0, 12, 2))).upper()

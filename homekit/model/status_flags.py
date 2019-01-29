@@ -40,4 +40,24 @@ class _IpStatusFlags(object):
             raise KeyError('Item {item} not found'.format(item=item))
 
 
+class _BleStatusFlags(object):
+    """
+    Data taken form table 6-32 page 125
+    """
+
+    def __getitem__(self, item):
+        i = int(item)
+        result = []
+        if i & 0x01:
+            result.append('The accessory has not been paired with any controllers.')
+            i = i - 0x01
+        else:
+            result.append('The accessory has been paired with a controllers.')
+        if i == 0:
+            return ' '.join(result)
+        else:
+            raise KeyError('Item {item} not found'.format(item=item))
+
+
 IpStatusFlags = _IpStatusFlags()
+BleStatusFlags = _BleStatusFlags()

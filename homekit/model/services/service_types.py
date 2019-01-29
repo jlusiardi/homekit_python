@@ -63,8 +63,8 @@ class _ServicesTypes(object):
         self._services_rev = {self._services[k]: k for k in self._services.keys()}
 
     def __getitem__(self, item):
-        if item.upper() in self._services:
-            return self._services[item.upper()]
+        if item in self._services:
+            return self._services[item]
 
         if item in self._services_rev:
             return self._services_rev[item]

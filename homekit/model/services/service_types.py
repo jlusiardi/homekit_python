@@ -79,6 +79,7 @@ class _ServicesTypes(object):
         return 'Unknown Service: {i}'.format(i=item)
 
     def get_short(self, item):
+        item = item.upper()
         orig_item = item
         if item.endswith(self.baseUUID):
             item = item.split('-', 1)[0]

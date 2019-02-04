@@ -151,7 +151,15 @@ class BlePairing(AbstractPairing):
         return results
 
     def _convert_from_python(self, aid, cid, value):
-        # TODO document me
+        """
+        Convert a python value into a representation usable for the Bluetooth LE transport. The type to be used will be
+        queried from the characteristic.
+
+        :param aid: the accessory id
+        :param cid: the characteristic id
+        :param value: the value to convert (as python value)
+        :return: the converted value as bytes
+        """
         char_format = None
         characteristic = self._find_characteristic_in_pairing_data(aid, cid)
         if characteristic:
@@ -163,17 +171,81 @@ class BlePairing(AbstractPairing):
                 val = strtobool(str(value))
             except ValueError:
                 raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+            return struct.pack('?', val)
 
-            value = struct.pack('?', val)
-        elif char_format == CharacteristicFormats.int:
-            value = struct.pack('i', int(value))
-        elif char_format == CharacteristicFormats.float:
-            value = struct.pack('f', float(value))
+        # no  more boolean input after this line
+        if type(value) == bool:
+            raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
 
+        if char_format == CharacteristicFormats.float:
+            try:
+                return struct.pack('f', float(value))
+            except ValueError:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+
+        if char_format == CharacteristicFormats.string:
+            if type(value) != str:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+            return value.encode('UTF-8')
+
+        if char_format == CharacteristicFormats.data or char_format == CharacteristicFormats.tlv8:
+            return value.hex().encode()
+
+        # from here only integer values of different sizes
+        if char_format == CharacteristicFormats.int:
+            try:
+                if float(value) != int(value):
+                    raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+                value = struct.pack('i', int(value))
+            except ValueError:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+        elif char_format == CharacteristicFormats.uint8:
+            try:
+                if float(value) != int(value):
+                    raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+                value = struct.pack('B', int(value))
+            except ValueError:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+            except struct.error:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+        elif char_format == CharacteristicFormats.uint16:
+            try:
+                if float(value) != int(value):
+                    raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+                value = struct.pack('H', int(value))
+            except ValueError:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+            except struct.error:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+        elif char_format == CharacteristicFormats.uint32:
+            try:
+                if float(value) != int(value):
+                    raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+                value = struct.pack('I', int(value))
+            except ValueError:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+            except struct.error:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+        elif char_format == CharacteristicFormats.uint64:
+            try:
+                if float(value) != int(value):
+                    raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+                value = struct.pack('Q', int(value))
+            except ValueError:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
+            except struct.error:
+                raise FormatError('"{v}" is no valid "{t}"!'.format(v=value, t=char_format))
         return value
 
     def _convert_to_python(self, aid, cid, value):
-        # TODO document me
+        """
+        Convert a value from the Bluetooth LE transport to python values.
+
+        :param aid: the accessory id
+        :param cid: the characteristic id
+        :param value: the value as bytes
+        :return: the converted value as python value
+        """
         char_format = None
         characteristic = self._find_characteristic_in_pairing_data(aid, cid)
         if characteristic:
@@ -198,16 +270,16 @@ class BlePairing(AbstractPairing):
             value = value.decode('UTF-8')
         else:
             value = value.hex()
-
         return value
 
     def _find_characteristic_in_pairing_data(self, aid, cid):
         """
-        # TODO document me
+        Iterate over the accessories in the pairing data. If a characteristic with the correct accessory id and
+        characteristic id is found, the characteristic is returned. If no characteristic is found, it returns None.
 
-        :param aid:
-        :param cid:
-        :return:
+        :param aid: the accessory id
+        :param cid: the characteristic id
+        :return: the characteristic or None
         """
         for a in self.pairing_data['accessories']:
             if a['aid'] == int(aid):

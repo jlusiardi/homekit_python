@@ -21,7 +21,7 @@ from homekit.exceptions import FormatError
 from homekit.protocol.tlv import TLV
 
 
-class TestBLEController(unittest.TestCase):
+class TestBLEPairing(unittest.TestCase):
     def _create_pairing_data(self):
         return {
             'accessories': [

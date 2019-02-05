@@ -18,7 +18,7 @@ __all__ = [
     'TestServerData', 'BleCharacteristicFormatsTest', 'BleCharacteristicUnitsTest', 'CharacteristicTypesTest',
     'TestBLEController', 'TestChacha20poly1305', 'TestCharacteristicsTypes', 'TestController', 'TestControllerIpPaired',
     'TestControllerIpUnpaired', 'TestHttpResponse', 'TestHttpStatusCodes', 'TestMfrData', 'TestSrp', 'TestTLV',
-    'TestZeroconf'
+    'TestZeroconf', 'TestBLEPairing'
 ]
 
 from tests.tlv_test import TestTLV
@@ -34,3 +34,4 @@ from tests.bleCharacteristicFormats_test import BleCharacteristicFormatsTest
 from tests.bleCharacteristicUnits_test import BleCharacteristicUnitsTest
 from tests.characteristicTypes_test import CharacteristicTypesTest
 from tests.ble_controller_test import TestBLEController, TestMfrData
+from tests.ble_pairing_test import TestBLEPairing

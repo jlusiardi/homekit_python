@@ -155,7 +155,7 @@ class SecureHttp:
 
             decrypted = self.decrypt_block(length, block, tag)
             # TODO how to react to False?
-            if tmp is not False:
+            if decrypted is not False:
                 response.parse(decrypted)
 
             # check how long next block will be

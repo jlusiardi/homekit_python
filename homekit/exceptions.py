@@ -163,6 +163,14 @@ class AccessoryNotFoundError(HomeKitException):
         Exception.__init__(self, message)
 
 
+class EncryptionError(HomeKitException):
+    """
+    Used if during a transmission some errors occurred.
+    """
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
 class AccessoryDisconnectedError(HomeKitException):
     """
     Used if a HomeKit disconnects part way through an operation or series of operations.

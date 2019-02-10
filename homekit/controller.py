@@ -26,7 +26,8 @@ from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, UnpairedError, \
-    AuthenticationError, ConfigSavingError, AlreadyPairedError, FormatError, AccessoryDisconnectedError
+    AuthenticationError, ConfigSavingError, AlreadyPairedError, FormatError, AccessoryDisconnectedError, \
+    EncryptionError
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, perform_pair_setup
 from homekit.protocol.tlv import TLV, TlvParseException
@@ -272,7 +273,7 @@ class Pairing(object):
             self.session = Session(self.pairing_data)
         try:
             response = self.session.get('/accessories')
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -305,7 +306,7 @@ class Pairing(object):
         try:
             response = self.session.sec_http.post('/pairings', request_tlv.decode())
             data = response.read()
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -373,7 +374,7 @@ class Pairing(object):
 
         try:
             response = self.session.get(url)
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -437,7 +438,7 @@ class Pairing(object):
 
         try:
             response = self.session.put('/characteristics', data)
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -490,7 +491,7 @@ class Pairing(object):
 
         try:
             response = self.session.put('/characteristics', data)
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -521,7 +522,7 @@ class Pairing(object):
             try:
                 r = self.session.sec_http.handle_event_response()
                 body = r.read().decode()
-            except AccessoryDisconnectedError:
+            except (AccessoryDisconnectedError, EncryptionError):
                 self.session.close()
                 self.session = None
                 raise

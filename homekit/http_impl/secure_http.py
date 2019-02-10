@@ -31,6 +31,7 @@ class SecureHttp:
     """
 
     class Wrapper:
+        # TODO not used anymore?
         def __init__(self, data):
             self.data = data
 
@@ -38,6 +39,7 @@ class SecureHttp:
             return io.BytesIO(self.data)
 
     class HTTPResponseWrapper:
+        # TODO not used anymore?
         def __init__(self, data):
             self.data = data
             self.status = 200
@@ -45,7 +47,7 @@ class SecureHttp:
         def read(self):
             return self.data
 
-    def __init__(self, session):
+    def __init__(self, session, timeout=10):
         """
         Initializes the secure HTTP class. The required keys can be obtained with get_session_keys
 
@@ -58,6 +60,7 @@ class SecureHttp:
         self.c2a_key = session.c2a_key
         self.c2a_counter = 0
         self.a2c_counter = 0
+        self.timeout = timeout
         self.lock = threading.Lock()
 
     def get(self, target):
@@ -89,12 +92,13 @@ class SecureHttp:
 
             try:
                 self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
-                return self._read_response()
+                return self._read_response(self.timeout)
             except OSError as e:
                 raise exceptions.AccessoryDisconnectedError(str(e))
 
     @staticmethod
     def _parse(chunked_data):
+        # TODO not used anymore?
         splitter = b'\r\n'
         tmp = chunked_data.split(splitter, 1)
         length = int(tmp[0].decode(), 16)

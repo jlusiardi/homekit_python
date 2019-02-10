@@ -101,11 +101,12 @@ class InvalidError(ProtocolError):
     pass
 
 
-class HttpException(HomeKitException):
+class HttpException(Exception):
     """
     Used within the HTTP Parser.
     """
-    pass
+    def __init__(self, message):
+        Exception.__init__(self, message)
 
 
 class InvalidAuthTagError(ProtocolError):

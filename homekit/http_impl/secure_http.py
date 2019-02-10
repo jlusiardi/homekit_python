@@ -158,11 +158,13 @@ class SecureHttp:
             tmp = tmp[16:]
 
             decrypted = self.decrypt_block(length, block, tag)
-            # TODO how to react to False?
             if decrypted is not False:
                 response.parse(decrypted)
             else:
-                self.sock.close()
+                try:
+                    self.sock.close()
+                except OSError:
+                    pass
                 raise exceptions.EncryptionError('Error during transmission.')
 
             # check how long next block will be

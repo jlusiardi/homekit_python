@@ -101,11 +101,12 @@ class InvalidError(ProtocolError):
     pass
 
 
-class HttpException(HomeKitException):
+class HttpException(Exception):
     """
     Used within the HTTP Parser.
     """
-    pass
+    def __init__(self, message):
+        Exception.__init__(self, message)
 
 
 class InvalidAuthTagError(ProtocolError):
@@ -158,6 +159,14 @@ class AccessoryNotFoundError(HomeKitException):
     """
     Used if a HomeKit Accessory's IP and port could not be received via Bonjour / Zeroconf. This might be a temporary
     issue due to the way Bonjour / Zeroconf works.
+    """
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+class EncryptionError(HomeKitException):
+    """
+    Used if during a transmission some errors occurred.
     """
     def __init__(self, message):
         Exception.__init__(self, message)

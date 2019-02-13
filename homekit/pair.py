@@ -19,6 +19,7 @@
 import argparse
 import sys
 import logging
+import re
 
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
@@ -28,11 +29,26 @@ def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit IP pairing app')
     parser.add_argument('-d', action='store', required=True, dest='device',
                         help='HomeKit Device ID (use discover to get it)')
-    parser.add_argument('-p', action='store', required=True, dest='pin', help='HomeKit configuration code')
+    parser.add_argument('-p', action='store', required=False, dest='pin', help='HomeKit configuration code')
     parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     add_log_arguments(parser)
     return parser.parse_args()
+
+
+def pin_from_parameter(number):
+    def tmp():
+        return number
+    return tmp
+
+
+def pin_from_keyboard():
+    def tmp():
+        read_pin = ''
+        while re.match(r'^\d{3}-\d{2}-\d{3}$', read_pin) is None:
+            read_pin = input('Enter device pin (XXX-YY-ZZZ): ')
+        return read_pin
+    return tmp
 
 
 if __name__ == '__main__':
@@ -52,8 +68,13 @@ if __name__ == '__main__':
         print('"{a}" is a already known alias'.format(a=args.alias))
         sys.exit(-1)
 
+    if args.pin:
+        pin_function = pin_from_parameter(args.pin)
+    else:
+        pin_function = pin_from_keyboard()
+
     try:
-        controller.perform_pairing(args.alias, args.device, args.pin)
+        controller.perform_pairing(args.alias, args.device, pin_function)
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()
         controller.save_data(args.file)

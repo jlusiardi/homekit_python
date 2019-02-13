@@ -22,13 +22,14 @@ import logging
 
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
+from homekit.pair import pin_from_parameter, pin_from_keyboard
 
 
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit BLE pairing app')
     parser.add_argument('-m', action='store', required=True, dest='mac',
                         help='HomeKit Device MAC (use discover to get it)')
-    parser.add_argument('-p', action='store', required=True, dest='pin', help='HomeKit configuration code')
+    parser.add_argument('-p', action='store', required=False, dest='pin', help='HomeKit configuration code')
     parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
@@ -56,9 +57,14 @@ if __name__ == '__main__':
         print('"{a}" is a already known alias'.format(a=args.alias))
         sys.exit(-1)
 
+    if args.pin:
+        pin_function = pin_from_parameter(args.pin)
+    else:
+        pin_function = pin_from_keyboard()
+
     try:
         logging.debug('start pairing')
-        controller.perform_pairing_ble(args.alias, args.mac, args.pin, args.adapter)
+        controller.perform_pairing_ble(args.alias, args.mac, pin_function, args.adapter)
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()
         controller.save_data(args.file)

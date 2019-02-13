@@ -87,16 +87,13 @@ def create_ip_pair_verify_write(connection):
     return write_http
 
 
-def perform_pair_setup(pin, ios_pairing_id, write_fun):
+def perform_pair_setup_part1(write_fun):
     """
     Performs a pair setup operation as described in chapter 4.7 page 39 ff.
 
-    :param connection: the http_impl connection to the target accessory
-    :param pin: the setup code from the accessory
-    :param ios_pairing_id: the id of the simulated ios device
     :param write_fun: a function that takes a bytes representation of a TLV, the expected keys as list and returns
         decoded TLV as list
-    :return: a dict with the ios device's part of the pairing information
+    :return: a tuple of salt and server's public key
     :raises UnavailableError: if the device is already paired
     :raises MaxTriesError: if the device received more than 100 unsuccessful pairing attempts
     :raises BusyError: if a parallel pairing is ongoing
@@ -126,17 +123,36 @@ def perform_pair_setup(pin, ios_pairing_id, write_fun):
 
     # the errors here can be:
     #  * kTLVError_Unavailable: Device is paired
-    #  * kTLVError_MaxTries: More than 100 unsuccessfull attempts
+    #  * kTLVError_MaxTries: More than 100 unsuccessful attempts
     #  * kTLVError_Busy: There is already a pairing going on
     if response_tlv[1][0] == TLV.kTLVType_Error:
         error_handler(response_tlv[1][1], 'step 3')
 
     assert response_tlv[1][0] == TLV.kTLVType_PublicKey, 'perform_pair_setup: Not a public key'
     assert response_tlv[2][0] == TLV.kTLVType_Salt, 'perform_pair_setup: Not a salt'
+    return response_tlv[2][1], response_tlv[1][1]
+
+
+def perform_pair_setup_part2(pin, ios_pairing_id, write_fun, salt, server_public_key):
+    """
+    Performs a pair setup operation as described in chapter 4.7 page 39 ff.
+
+    :param pin: the setup code from the accessory
+    :param ios_pairing_id: the id of the simulated ios device
+    :param write_fun: a function that takes a bytes representation of a TLV, the expected keys as list and returns
+        decoded TLV as list
+    :return: a dict with the ios device's part of the pairing information
+    :raises UnavailableError: if the device is already paired
+    :raises MaxTriesError: if the device received more than 100 unsuccessful pairing attempts
+    :raises BusyError: if a parallel pairing is ongoing
+    :raises AuthenticationError: if the verification of the device's SRP proof fails
+    :raises MaxPeersError: if the device cannot accept an additional pairing
+    :raises IllegalData: if the verification of the accessory's data fails
+    """
 
     srp_client = SrpClient('Pair-Setup', pin)
-    srp_client.set_salt(response_tlv[2][1])
-    srp_client.set_server_public_key(response_tlv[1][1])
+    srp_client.set_salt(salt)
+    srp_client.set_server_public_key(server_public_key)
     client_pub_key = srp_client.get_public_key()
     client_proof = srp_client.get_proof()
 

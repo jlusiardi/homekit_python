@@ -19,7 +19,9 @@ import ed25519
 import hkdf
 from binascii import hexlify
 import logging
+
 from cryptography.hazmat.primitives.asymmetric import x25519
+from cryptography.hazmat.primitives import serialization
 
 from homekit.protocol.tlv import TLV
 from homekit.exceptions import IncorrectPairingIdError, InvalidAuthTagError, InvalidSignatureError, UnavailableError, \
@@ -278,7 +280,10 @@ def get_session_keys(conn, pairing_data, write_fun):
     # Step #1 ios --> accessory (send verify start Request) (page 47)
     #
     ios_key = x25519.X25519PrivateKey.generate()
-    ios_key_pub = ios_key.public_key().public_bytes()
+    ios_key_pub = ios_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw
+    )
 
     request_tlv = TLV.encode_list([
         (TLV.kTLVType_State, TLV.M1),

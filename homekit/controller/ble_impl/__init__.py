@@ -15,7 +15,7 @@
 #
 
 __all__ = [
-    'Device'
+    'Device', 'BlePairing', 'BleSession', 'find_characteristic_by_uuid', 'create_ble_pair_setup_write'
 ]
 
 import time

@@ -22,9 +22,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='homekit',
-    packages=['homekit', 'homekit.crypto', 'homekit.http_impl', 'homekit.model', 'homekit.model.services',
-              'homekit.model.characteristics', 'homekit.protocol', 'homekit.zeroconf_impl'],
-
+    packages=setuptools.find_packages(exclude=['tests']),
     version='0.12.2',
     description='Python code to interface HomeKit Accessories and Controllers',
     author='Joachim Lusiardi',
@@ -39,11 +37,14 @@ setuptools.setup(
         'Intended Audience :: End Users/Desktop'
     ],
     install_requires=[
-        'zeroconf',
         'hkdf',
         'ed25519',
-        'cryptography',
+        'cryptography>2',
     ],
+    extras_require={
+        'IP': ['zeroconf'],
+        'BLE': ['dbus-python', 'gatt', 'pygobject']
+    },
     license='Apache License 2.0',
     long_description=long_description,
     long_description_content_type="text/markdown",

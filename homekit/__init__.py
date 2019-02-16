@@ -15,7 +15,7 @@
 #
 
 __all__ = [
-    'Controller', 'AccessoryServer', 'BluetoothAdapterError', 'AccessoryDisconnectedError', 'AccessoryNotFoundError',
+    'Controller', 'BluetoothAdapterError', 'AccessoryDisconnectedError', 'AccessoryNotFoundError',
     'AlreadyPairedError', 'AuthenticationError', 'BackoffError', 'BusyError', 'CharacteristicPermissionError',
     'ConfigLoadingError', 'ConfigSavingError', 'ConfigurationError', 'FormatError', 'HomeKitException',
     'HttpException', 'IncorrectPairingIdError', 'InvalidAuthTagError', 'InvalidError', 'InvalidSignatureError',
@@ -24,9 +24,15 @@ __all__ = [
 ]
 
 from homekit.controller import Controller
-from homekit.accessoryserver import AccessoryServer
 from homekit.exceptions import BluetoothAdapterError, AccessoryDisconnectedError, AccessoryNotFoundError, \
     AlreadyPairedError, AuthenticationError, BackoffError, BusyError, CharacteristicPermissionError, \
     ConfigLoadingError, ConfigSavingError, ConfigurationError, FormatError, HomeKitException, HttpException, \
     IncorrectPairingIdError, InvalidAuthTagError, InvalidError, InvalidSignatureError, MaxPeersError, MaxTriesError, \
     ProtocolError, RequestRejected, UnavailableError, UnknownError, UnpairedError
+
+from homekit.tools import IP_TRANSPORT_SUPPORTED
+
+if IP_TRANSPORT_SUPPORTED:
+    from homekit.accessoryserver import AccessoryServer
+
+    __all__ += 'AccessoryServer'

@@ -1,0 +1,10 @@
+FROM debian:9
+
+RUN apt update -y; apt upgrade -y
+
+RUN apt -y install python3-pip git python3-venv
+
+RUN git clone https://github.com/jlusiardi/homekit_python.git
+
+WORKDIR /homekit_python
+

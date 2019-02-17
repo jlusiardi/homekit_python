@@ -33,6 +33,7 @@ from homekit.exceptions import BluetoothAdapterError, AccessoryDisconnectedError
 from homekit.tools import IP_TRANSPORT_SUPPORTED
 
 if IP_TRANSPORT_SUPPORTED:
-    from homekit.accessoryserver import AccessoryServer
+    # TODO: change import and let it be imported from its specific file
+    from homekit.accessoryserver import AccessoryServer  # noqa: F401
 
     __all__ += 'AccessoryServer'

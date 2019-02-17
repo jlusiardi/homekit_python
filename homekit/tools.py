@@ -14,16 +14,17 @@
 # limitations under the License.
 #
 
+# flake8 is suppressed here because in this file it should just be checked if the packages can be imported.
 try:
-    import gatt
-    import dbus
+    import gatt  # noqa: F401
+    import dbus  # noqa: F401
     BLE_TRANSPORT_SUPPORTED = True
 except ImportError as e:
     print(e)
     BLE_TRANSPORT_SUPPORTED = False
 
 try:
-    import zeroconf
+    import zeroconf  # noqa: F401
     IP_TRANSPORT_SUPPORTED = True
 except ImportError:
     IP_TRANSPORT_SUPPORTED = False

@@ -16,10 +16,38 @@ The code presented in this repository was created based on release R1 from 2017-
 
 # Installation
 
-Use **pip3** to install the package:
+## Installation for IP based accessories
+
+Simply use **pip3** to install the package:
 
 ```bash
-pip3 install --user homekit
+pip3 install --user homekit[IP]
+```
+
+This installation only for IP based accessories can be done without any operating system level installations and should 
+also work on operating systems other than linux (Mac OS X, Windows, ...).  
+
+## Installation for Bluetooth LE based accessories
+
+This variant requires some packages on operating systems for the access onto Bluetooth LE via dbus. These can be 
+installed on Debian based operating systems via:
+
+```bash
+apt install -y libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0 libdbus-1-dev
+```
+
+After that, using **pip3** is sufficient again:
+
+```bash
+pip3 install --user homekit[BLE]
+```
+
+## Installation for both type of accessories
+
+In this case, install the packages for your operating system and afterwards use **pip3**:
+
+```bash
+pip3 install --user homekit[IP,BLE]
 ```
 
 # HomeKit Accessory

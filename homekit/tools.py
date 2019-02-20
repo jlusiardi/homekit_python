@@ -20,7 +20,6 @@ try:
     import dbus  # noqa: F401
     BLE_TRANSPORT_SUPPORTED = True
 except ImportError as e:
-    print(e)
     BLE_TRANSPORT_SUPPORTED = False
 
 try:

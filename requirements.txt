@@ -5,6 +5,6 @@ dbus-python
 pycairo
 PyGObject
 gatt
-cryptography
+cryptography>=2.5
 coverage
 flake8

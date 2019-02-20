@@ -39,7 +39,7 @@ setuptools.setup(
     install_requires=[
         'hkdf',
         'ed25519',
-        'cryptography>2',
+        'cryptography>=2.5',
     ],
     extras_require={
         'IP': ['zeroconf'],

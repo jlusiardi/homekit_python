@@ -19,7 +19,7 @@ try:
     import gatt  # noqa: F401
     import dbus  # noqa: F401
     BLE_TRANSPORT_SUPPORTED = True
-except ImportError as e:
+except ImportError:
     BLE_TRANSPORT_SUPPORTED = False
 
 try:

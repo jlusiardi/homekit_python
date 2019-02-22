@@ -280,6 +280,13 @@ class Pairing(object):
             raise
         tmp = response.read().decode()
         accessories = json.loads(tmp)['accessories']
+        
+        for accessory in accessories:
+            for service in accessory['services']:
+                service['type'] = service['type'].upper()
+                for characteristic in service['characteristics']:
+                    characteristic['type'] = characteristic['type'].upper()
+        
         self.pairing_data['accessories'] = accessories
         return accessories
 

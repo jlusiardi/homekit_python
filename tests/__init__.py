@@ -23,4 +23,4 @@ from tests.httpStatusCodes_test import TestHttpStatusCodes
 from tests.characteristicsTypes_test import TestCharacteristicsTypes
 from tests.zeroconf_test import TestZeroconf
 from tests.controller_test import TestControllerPaired, TestControllerUnpaired
-
+from tests.secure_http_test import TestSecureHttp

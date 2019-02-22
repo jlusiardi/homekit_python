@@ -26,7 +26,8 @@ from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, UnpairedError, \
-    AuthenticationError, ConfigSavingError, AlreadyPairedError, FormatError, AccessoryDisconnectedError
+    AuthenticationError, ConfigSavingError, AlreadyPairedError, FormatError, AccessoryDisconnectedError, \
+    EncryptionError
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, perform_pair_setup
 from homekit.protocol.tlv import TLV, TlvParseException
@@ -59,7 +60,7 @@ class Controller(object):
          * md: the model name of the accessory (required)
          * pv: the protocol version
          * s#: the current state number (required)
-         * sf: the status flag (see table 5-9 page 70)
+         * sf / statusflags: the status flag (see table 5-9 page 70)
          * ci/category: the category identifier in numerical and human readable form. For more information see table
                         12-3 page 254 or homekit.Categories (required)
 
@@ -133,11 +134,12 @@ class Controller(object):
                 for pairing_id in data:
                     self.pairings[pairing_id] = Pairing(data[pairing_id])
         except PermissionError as e:
-            raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=filename))
+            raise ConfigLoadingError('Could not open "{f}" due to missing permissions.'.format(f=filename))
         except JSONDecodeError as e:
-            raise ConfigLoadingError('Cannot parse "{f}" as JSON file'.format(f=filename))
+            raise ConfigLoadingError('Cannot parse "{f}" as JSON file.'.format(f=filename))
         except FileNotFoundError as e:
-            raise ConfigLoadingError('Could not open "{f}" because it does not exist'.format(f=filename))
+            raise ConfigLoadingError('Could not open "{f}" because it does not exist. Use "python3 -m'
+                                     ' homekit.init_controller_storage -f {f}" to initialize it.'.format(f=filename))
 
     def save_data(self, filename):
         """
@@ -272,7 +274,7 @@ class Pairing(object):
             self.session = Session(self.pairing_data)
         try:
             response = self.session.get('/accessories')
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -305,7 +307,7 @@ class Pairing(object):
         try:
             response = self.session.sec_http.post('/pairings', request_tlv.decode())
             data = response.read()
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -373,7 +375,7 @@ class Pairing(object):
 
         try:
             response = self.session.get(url)
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -437,7 +439,7 @@ class Pairing(object):
 
         try:
             response = self.session.put('/characteristics', data)
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -490,7 +492,7 @@ class Pairing(object):
 
         try:
             response = self.session.put('/characteristics', data)
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -521,7 +523,7 @@ class Pairing(object):
             try:
                 r = self.session.sec_http.handle_event_response()
                 body = r.read().decode()
-            except AccessoryDisconnectedError:
+            except (AccessoryDisconnectedError, EncryptionError):
                 self.session.close()
                 self.session = None
                 raise

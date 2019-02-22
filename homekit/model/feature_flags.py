@@ -22,8 +22,8 @@ class _FeatureFlags(object):
 
     def __init__(self):
         self._data = {
-            0: 'Paired',
-            1: 'Supports Pairing'
+            0: 'No support for HAP Pairing',
+            1: 'Supports HAP Pairing'
         }
 
     def __getitem__(self, item):

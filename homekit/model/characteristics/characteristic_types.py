@@ -265,7 +265,6 @@ class _CharacteristicsTypes(object):
         :param uuid: the UUID in long form or the shortened version as defined in chapter 5.6.1 page 72.
         :return: the textual representation
         """
-        uuid = uuid.upper()
         orig_item = uuid
         if uuid.endswith(self.baseUUID):
             uuid = uuid.split('-', 1)[0]

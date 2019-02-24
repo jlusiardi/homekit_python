@@ -134,11 +134,12 @@ class Controller(object):
                 for pairing_id in data:
                     self.pairings[pairing_id] = Pairing(data[pairing_id])
         except PermissionError as e:
-            raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=filename))
+            raise ConfigLoadingError('Could not open "{f}" due to missing permissions.'.format(f=filename))
         except JSONDecodeError as e:
-            raise ConfigLoadingError('Cannot parse "{f}" as JSON file'.format(f=filename))
+            raise ConfigLoadingError('Cannot parse "{f}" as JSON file.'.format(f=filename))
         except FileNotFoundError as e:
-            raise ConfigLoadingError('Could not open "{f}" because it does not exist'.format(f=filename))
+            raise ConfigLoadingError('Could not open "{f}" because it does not exist. Use "python3 -m'
+                                     ' homekit.init_controller_storage -f {f}" to initialize it.'.format(f=filename))
 
     def save_data(self, filename):
         """

@@ -49,6 +49,7 @@ class _ServicesTypes(object):
             '8D': 'public.hap.service.sensor.air-quality',
             '96': 'public.hap.service.battery',
             '97': 'public.hap.service.sensor.carbon-dioxide',
+            'A2': 'public.hap.service.protocol.information.service',
             'B7': 'public.hap.service.fanv2',
             'B9': 'public.hap.service.vertical-slat',
             'BA': 'public.hap.service.filter-maintenance',

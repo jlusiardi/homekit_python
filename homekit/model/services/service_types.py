@@ -83,9 +83,27 @@ class _ServicesTypes(object):
         return 'Unknown Service: {i}'.format(i=orig_item)
 
     def get_uuid(self, item_name):
-        if item_name not in self._services_rev:
-            raise Exception('Unknown service name')
-        short = self._services_rev[item_name]
+        """
+        Returns the full length UUID for either a shorted UUID or textual characteristic type name. For information on
+        full and short UUID consult chapter 5.6.1 page 72 of the specification. It also supports to pass through full
+        HomeKit UUIDs.
+
+        :param item_name: either the type name (e.g. "public.hap.characteristic.position.current") or the short UUID or
+                          a HomeKit specific full UUID.
+        :return: the full UUID (e.g. "0000006D-0000-1000-8000-0026BB765291")
+        :raises KeyError: if the input is neither a short UUID nor a type name. Specific error is given in the message.
+        """
+        orig_item = item_name
+        # if we get a full length uuid with the proper base and a known short one, this should also work.
+        if item_name.endswith(self.baseUUID):
+            item_name = item_name.split('-', 1)[0]
+            item_name = item_name.lstrip('0')
+        if item_name in self._services_rev:
+            short = self._services_rev[item_name]
+        elif item_name in self._services:
+            short = item_name
+        else:
+            raise KeyError('No UUID found for Item {item}'.format(item=orig_item))
         medium = '0' * (8 - len(short)) + short
         long = medium + self.baseUUID
         return long

@@ -33,6 +33,9 @@ class TestServiceTypes(unittest.TestCase):
     def test_get_short(self):
         self.assertEqual(ServicesTypes.get_short('00000086-0000-1000-8000-0026BB765291'), 'occupancy')
 
+    def test_get_short_lowercase(self):
+        self.assertEqual(ServicesTypes.get_short('00000086-0000-1000-8000-0026bb765291'), 'occupancy')
+
     def test_get_short_no_baseid(self):
         self.assertEqual(ServicesTypes.get_short('00000023-0000-1000-8000-NOTBASEID'),
                          'Unknown Service: 00000023-0000-1000-8000-NOTBASEID')
@@ -46,4 +49,3 @@ class TestServiceTypes(unittest.TestCase):
 
     def test_get_uuid_no_service(self):
         self.assertRaises(Exception, ServicesTypes.get_uuid, 'public.hap.service.NO_A_SERVICE')
-

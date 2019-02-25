@@ -287,14 +287,14 @@ class Pairing(object):
                 service['type'] = service['type'].upper()
                 try:
                     service['type'] = ServicesTypes.get_uuid(service['type'].upper())
-                except Exception: 
+                except KeyError: 
                     pass
                     
                 for characteristic in service['characteristics']:
                     characteristic['type'] = characteristic['type'].upper()
                     try:
                          characteristic['type'] = CharacteristicsTypes.get_uuid(characteristic['type'].upper())
-                    except Exception: 
+                    except KeyError: 
                          pass
         
         self.pairing_data['accessories'] = accessories

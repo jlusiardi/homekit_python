@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+from homekit.exceptions import HttpException
+
 
 class HttpResponse(object):
     STATE_PRE_STATUS = 0
@@ -120,8 +122,3 @@ class HttpResponse(object):
         if self.version is not None:
             return self.version.split('/')[0]
         return None
-
-
-class HttpException(Exception):
-    def __init__(self):
-        pass

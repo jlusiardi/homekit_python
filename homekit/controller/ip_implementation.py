@@ -13,19 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 import json
 from json.decoder import JSONDecodeError
 import time
 import logging
 
 from homekit.controller.tools import AbstractPairing, check_convert_value
-from homekit.protocol.tlv import TLV
-from homekit.exceptions import AccessoryNotFoundError, UnknownError, UnpairedError, AccessoryDisconnectedError
 from homekit.protocol.statuscodes import HapStatusCodes
-from homekit.model.characteristics import CharacteristicsTypes
+from homekit.exceptions import AccessoryNotFoundError, UnknownError, UnpairedError, \
+    AccessoryDisconnectedError, EncryptionError
 from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, create_ip_pair_verify_write
+from homekit.protocol.tlv import TLV
+from homekit.model.characteristics import CharacteristicsTypes
 from homekit.zeroconf_impl import find_device_ip_and_port
 
 
@@ -70,7 +72,7 @@ class IpPairing(AbstractPairing):
             self.session = IpSession(self.pairing_data)
         try:
             response = self.session.get('/accessories')
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -103,7 +105,7 @@ class IpPairing(AbstractPairing):
         try:
             response = self.session.sec_http.post('/pairings', request_tlv.decode())
             data = response.read()
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -171,7 +173,7 @@ class IpPairing(AbstractPairing):
 
         try:
             response = self.session.get(url)
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -235,7 +237,7 @@ class IpPairing(AbstractPairing):
 
         try:
             response = self.session.put('/characteristics', data)
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -288,7 +290,7 @@ class IpPairing(AbstractPairing):
 
         try:
             response = self.session.put('/characteristics', data)
-        except AccessoryDisconnectedError:
+        except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None
             raise
@@ -319,7 +321,7 @@ class IpPairing(AbstractPairing):
             try:
                 r = self.session.sec_http.handle_event_response()
                 body = r.read().decode()
-            except AccessoryDisconnectedError:
+            except (AccessoryDisconnectedError, EncryptionError):
                 self.session.close()
                 self.session = None
                 raise

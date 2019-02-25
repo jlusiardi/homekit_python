@@ -17,7 +17,7 @@
 
 class _ServicesTypes(object):
     """
-    This data is taken from Table 12-3 Accessory Categories on page 254. Values above 19 are reserved.
+    This data is taken from chapter 9 page 216 onwards.
     """
     INFORMATION_SERVICE = 'A2'  # new for ble, homekit spec page 126
     PAIRING_SERVICE = '55'      # new for ble, homekit spec page 57
@@ -79,6 +79,13 @@ class _ServicesTypes(object):
         return 'Unknown Service: {i}'.format(i=item)
 
     def get_short(self, item):
+        """
+        get the short version of the service name (aka the last segment of the name) or if this is not in the list of
+        services it returns 'Unknown Service: XX'.
+
+        :param item: the items full UUID
+        :return: the last segment of the service name or a hint that it is unknown
+        """
         item = item.upper()
         orig_item = item
         if item.endswith(self.baseUUID):

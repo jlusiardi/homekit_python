@@ -13,3 +13,4 @@ omit =
     /usr/*
     staging/*
     tests/*
+    tests_env/*

@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-import io
 import threading
 import select
 
@@ -30,22 +29,7 @@ class SecureHttp:
     the HAP specification.
     """
 
-    class Wrapper:
-        def __init__(self, data):
-            self.data = data
-
-        def makefile(self, arg):
-            return io.BytesIO(self.data)
-
-    class HTTPResponseWrapper:
-        def __init__(self, data):
-            self.data = data
-            self.status = 200
-
-        def read(self):
-            return self.data
-
-    def __init__(self, session):
+    def __init__(self, session, timeout=10):
         """
         Initializes the secure HTTP class. The required keys can be obtained with get_session_keys
 
@@ -58,6 +42,7 @@ class SecureHttp:
         self.c2a_key = session.c2a_key
         self.c2a_counter = 0
         self.a2c_counter = 0
+        self.timeout = timeout
         self.lock = threading.Lock()
 
     def get(self, target):
@@ -89,21 +74,9 @@ class SecureHttp:
                                                   data.encode())
             try:
                 self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
-                return self._read_response()
+                return self._read_response(self.timeout)
             except OSError as e:
                 raise exceptions.AccessoryDisconnectedError(str(e))
-
-    @staticmethod
-    def _parse(chunked_data):
-        splitter = b'\r\n'
-        tmp = chunked_data.split(splitter, 1)
-        length = int(tmp[0].decode(), 16)
-        if length == 0:
-            return bytearray()
-
-        chunk = tmp[1][:length]
-        tmp[1] = tmp[1][length + 2:]
-        return chunk + SecureHttp._parse(tmp[1])
 
     def _read_response(self, timeout=10):
         # following the information from page 71 about HTTP Message splitting:
@@ -153,9 +126,14 @@ class SecureHttp:
             tmp = tmp[16:]
 
             decrypted = self.decrypt_block(length, block, tag)
-            # TODO how to react to False?
-            if tmp is not False:
+            if decrypted is not False:
                 response.parse(decrypted)
+            else:
+                try:
+                    self.sock.close()
+                except OSError:
+                    pass
+                raise exceptions.EncryptionError('Error during transmission.')
 
             # check how long next block will be
             if int.from_bytes(tmp[0:2], 'little') < 1024:

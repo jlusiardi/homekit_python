@@ -1,0 +1,6 @@
+zeroconf
+hkdf
+ed25519
+cryptography>=2.5
+coverage
+flake8

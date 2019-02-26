@@ -111,8 +111,8 @@ class _ServicesTypes(object):
             
         if item_name in self._services_rev:
             short = self._services_rev[item_name]
-        elif item_name in self._services:
-            short = item_name
+        elif item_name.upper() in self._services:
+            short = item_name.upper()
         else:
             raise KeyError('No UUID found for Item {item}'.format(item=orig_item))
             

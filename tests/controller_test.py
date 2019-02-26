@@ -25,9 +25,14 @@ from homekit.exceptions import AccessoryNotFoundError, AlreadyPairedError, Unava
     ConfigLoadingError, ConfigSavingError
 from homekit.model import Accessory
 from homekit.model.services import LightBulbService
-from homekit.controller.ble_impl import BlePairing
-from homekit.controller.ip_implementation import IpPairing
 from homekit.model import mixin as model_mixin
+from homekit.tools import BLE_TRANSPORT_SUPPORTED, IP_TRANSPORT_SUPPORTED
+
+if BLE_TRANSPORT_SUPPORTED:
+    from homekit.controller.ble_impl import BlePairing
+
+if IP_TRANSPORT_SUPPORTED:
+    from homekit.controller.ip_implementation import IpPairing
 
 
 class T(threading.Thread):
@@ -377,6 +382,7 @@ class TestController(unittest.TestCase):
     def setUp(self):
         self.controller = Controller()
 
+    @unittest.skipIf(not BLE_TRANSPORT_SUPPORTED, 'BLE no supported')
     def test_load_pairings_both_type(self):
         controller_file = tempfile.NamedTemporaryFile()
         controller_file.write("""{
@@ -407,6 +413,7 @@ class TestController(unittest.TestCase):
         self.assertIsInstance(self.controller.get_pairings()['alias_ble'], BlePairing)
         controller_file.close()
 
+    @unittest.skipIf(not BLE_TRANSPORT_SUPPORTED, 'BLE no supported')
     def test_load_pairings_missing_type(self):
         controller_file = tempfile.NamedTemporaryFile()
         controller_file.write("""{

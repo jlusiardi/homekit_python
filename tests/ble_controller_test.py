@@ -26,15 +26,19 @@ from homekit.model import Accessory
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.services import ServicesTypes, AbstractService, LightBulbService
 from homekit.model.characteristics import AbstractCharacteristic
-from homekit.controller.ble_impl import CharacteristicInstanceID
 from homekit.protocol import TLV
 from homekit import accessoryserver
-from homekit.protocol.opcodes import HapBleOpCodes
-from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
 from homekit.model import mixin as model_mixin
 from homekit import exceptions
-from homekit.controller.ble_impl.manufacturer_data import parse_manufacturer_specific
-from homekit.model.status_flags import BleStatusFlags
+
+from homekit.tools import BLE_TRANSPORT_SUPPORTED
+
+if BLE_TRANSPORT_SUPPORTED:
+    from homekit.controller.ble_impl import CharacteristicInstanceID
+    from homekit.protocol.opcodes import HapBleOpCodes
+    from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
+    from homekit.controller.ble_impl.manufacturer_data import parse_manufacturer_specific
+    from homekit.model.status_flags import BleStatusFlags
 
 
 class DeviceManager:
@@ -539,6 +543,7 @@ class Descriptor:
         return self.value
 
 
+@unittest.skipIf(not BLE_TRANSPORT_SUPPORTED, 'BLE no supported')
 class TestBLEController(unittest.TestCase):
 
     def test_discovery(self):
@@ -984,6 +989,7 @@ class TestBLEController(unittest.TestCase):
                 self.assertTrue(a.services[0].characteristics[0].value)
 
 
+@unittest.skipIf(not BLE_TRANSPORT_SUPPORTED, 'BLE no supported')
 class TestMfrData(unittest.TestCase):
 
     def test_1(self):

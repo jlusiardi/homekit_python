@@ -7,6 +7,7 @@ if [ "$TRAVIS_OS_NAME" == "linux" ]; then
     sudo apt-get install -y build-essential python3-dev libdbus-1-dev libdbus-glib-1-dev libgirepository1.0-dev;
     pip install coveralls;
     pip install flake8;
+    pip install -r requirements.txt
 fi
 
 if [ "$TRAVIS_OS_NAME" == "osx" ]; then
@@ -24,4 +25,5 @@ if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     pip3 --version
     pip3 install coveralls;
     pip3 install flake8;
+    pip3 install -r requirements.txt
 fi

@@ -81,8 +81,8 @@ class _ServicesTypes(object):
         :param item: the items full UUID
         :return: the last segment of the service name or a hint that it is unknown
         """
-        item = item.upper()
         orig_item = item
+        item = item.upper()
         if item.endswith(self.baseUUID):
             item = item.split('-', 1)[0]
             item = item.lstrip('0')
@@ -104,15 +104,18 @@ class _ServicesTypes(object):
         """
         orig_item = item_name
         # if we get a full length uuid with the proper base and a known short one, this should also work.
-        if item_name.endswith(self.baseUUID):
+        if item_name.upper().endswith(self.baseUUID):
+            item_name = item_name.upper()
             item_name = item_name.split('-', 1)[0]
             item_name = item_name.lstrip('0')
+            
         if item_name in self._services_rev:
             short = self._services_rev[item_name]
         elif item_name in self._services:
             short = item_name
         else:
             raise KeyError('No UUID found for Item {item}'.format(item=orig_item))
+            
         medium = '0' * (8 - len(short)) + short
         long = medium + self.baseUUID
         return long

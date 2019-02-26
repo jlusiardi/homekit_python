@@ -13,6 +13,8 @@ if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     brew update
     # see https://github.com/pyenv/pyenv/wiki#suggested-build-environment for Mac OS X
     brew install openssl readline sqlite3 xz zlib
-    brew install pyenv
+    # pyenv is already installed on a test node
+    brew outdated pyenv || brew upgrade pyenv
+    pyenv install --list
     pyenv install $PYTHON
 fi

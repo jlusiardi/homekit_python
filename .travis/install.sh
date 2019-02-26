@@ -17,4 +17,6 @@ if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     brew outdated pyenv || brew upgrade pyenv
     pyenv install --list
     pyenv install $PYTHON
+    pip install coveralls;
+    pip install flake8;
 fi

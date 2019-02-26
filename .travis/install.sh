@@ -17,10 +17,11 @@ if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     brew outdated pyenv || brew upgrade pyenv
     pyenv install --list
     pyenv install $PYTHON
-    pyenv local $PYTHON
+    pyenv shell $PYTHON
     python --version
+    python3 --version
     pip --version
     pip3 --version
-    pip install coveralls;
-    pip install flake8;
+    pip3 install coveralls;
+    pip3 install flake8;
 fi

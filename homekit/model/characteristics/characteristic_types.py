@@ -266,6 +266,7 @@ class _CharacteristicsTypes(object):
         :return: the textual representation
         """
         orig_item = uuid
+        uuid = uuid.upper()
         if uuid.endswith(self.baseUUID):
             uuid = uuid.split('-', 1)[0]
             uuid = uuid.lstrip('0')
@@ -287,13 +288,18 @@ class _CharacteristicsTypes(object):
         :raises KeyError: if the input is neither a UUID nor a type name. Specific error is given in the message.
         """
         orig_item = item_name
-        if item_name.endswith(self.baseUUID):
+        if item_name.upper().endswith(self.baseUUID):
+            item_name = item_name.upper()
             item_name = item_name.split('-', 1)[0]
             return item_name.lstrip('0')
-        if item_name in self._characteristics:
+        
+        if item_name.upper() in self._characteristics:
+            item_name = item_name.upper()
             return item_name
+        
         if item_name in self._characteristics_rev:
             return self._characteristics_rev[item_name]
+        
         try:
             uuid.UUID('{{{s}}}'.format(s=item_name))
             return item_name
@@ -313,15 +319,18 @@ class _CharacteristicsTypes(object):
         """
         orig_item = item_name
         # if we get a full length uuid with the proper base and a known short one, this should also work.
-        if item_name.endswith(self.baseUUID):
+        if item_name.upper().endswith(self.baseUUID):
+            item_name = item_name.upper()
             item_name = item_name.split('-', 1)[0]
             item_name = item_name.lstrip('0')
+            
         if item_name in self._characteristics_rev:
             short = self._characteristics_rev[item_name]
         elif item_name in self._characteristics:
             short = item_name
         else:
             raise KeyError('No UUID found for Item {item}'.format(item=orig_item))
+            
         medium = '0' * (8 - len(short)) + short
         long = medium + self.baseUUID
         return long

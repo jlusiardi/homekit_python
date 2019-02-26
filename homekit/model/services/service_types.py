@@ -109,8 +109,8 @@ class _ServicesTypes(object):
             item_name = item_name.split('-', 1)[0]
             item_name = item_name.lstrip('0')
             
-        if item_name in self._services_rev:
-            short = self._services_rev[item_name]
+        if item_name.lower() in self._services_rev:
+            short = self._services_rev[item_name.lower()]
         elif item_name.upper() in self._services:
             short = item_name.upper()
         else:

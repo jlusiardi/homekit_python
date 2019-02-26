@@ -326,8 +326,8 @@ class _CharacteristicsTypes(object):
             
         if item_name in self._characteristics_rev:
             short = self._characteristics_rev[item_name]
-        elif item_name in self._characteristics:
-            short = item_name
+        elif item_name.upper() in self._characteristics:
+            short = item_name.upper()
         else:
             raise KeyError('No UUID found for Item {item}'.format(item=orig_item))
             

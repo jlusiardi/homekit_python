@@ -297,7 +297,8 @@ class _CharacteristicsTypes(object):
             item_name = item_name.upper()
             return item_name
         
-        if item_name in self._characteristics_rev:
+        if item_name.lower() in self._characteristics_rev:
+            item_name = item_name.lower()
             return self._characteristics_rev[item_name]
         
         try:
@@ -324,8 +325,8 @@ class _CharacteristicsTypes(object):
             item_name = item_name.split('-', 1)[0]
             item_name = item_name.lstrip('0')
             
-        if item_name in self._characteristics_rev:
-            short = self._characteristics_rev[item_name]
+        if item_name.lower() in self._characteristics_rev:
+            short = self._characteristics_rev[item_name.lower()]
         elif item_name.upper() in self._characteristics:
             short = item_name.upper()
         else:

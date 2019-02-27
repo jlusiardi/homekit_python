@@ -7,9 +7,9 @@ before_install:
     - sudo apt-get update
     - pip install coveralls
     - wget http://launchpadlibrarian.net/400343104/libssl1.1_1.1.0g-2ubuntu4.3_amd64.deb
-    - dpkg -i libssl1.1_1.1.0g-2ubuntu4.3_amd64.deb
+    - sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4.3_amd64.deb
     - wget http://launchpadlibrarian.net/367327834/openssl_1.1.0g-2ubuntu4_amd64.deb
-    - dpkg -i openssl_1.1.0g-2ubuntu4_amd64.deb
+    - sudo dpkg -i openssl_1.1.0g-2ubuntu4_amd64.deb
 script: coverage run -m unittest -v
 after_success:
     - coveralls

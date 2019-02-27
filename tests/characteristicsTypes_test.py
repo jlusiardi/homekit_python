@@ -48,5 +48,4 @@ class TestCharacteristicsTypes(unittest.TestCase):
         self.assertEqual(CharacteristicsTypes.get_short(CharacteristicsTypes.DOOR_STATE_TARGET), 'door-state.target')
         self.assertEqual(CharacteristicsTypes.get_short(CharacteristicsTypes.AIR_PURIFIER_STATE_CURRENT),
                          'air-purifier.state.current')
-        #self.assertEqual(CharacteristicsTypes.get_short('1a'), 'Unknown Characteristic 1a')
         self.assertEqual(CharacteristicsTypes.get_short('1a'), 'lock-management.auto-secure-timeout')

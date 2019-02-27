@@ -32,6 +32,7 @@ from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, perform_pair_setup
 from homekit.protocol.tlv import TLV, TlvParseException
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats
+from homekit.model.services import ServicesTypes
 
 
 class Controller(object):
@@ -280,6 +281,22 @@ class Pairing(object):
             raise
         tmp = response.read().decode()
         accessories = json.loads(tmp)['accessories']
+        
+        for accessory in accessories:
+            for service in accessory['services']:
+                service['type'] = service['type'].upper()
+                try:
+                    service['type'] = ServicesTypes.get_uuid(service['type'])
+                except KeyError: 
+                    pass
+                    
+                for characteristic in service['characteristics']:
+                    characteristic['type'] = characteristic['type'].upper()
+                    try:
+                         characteristic['type'] = CharacteristicsTypes.get_uuid(characteristic['type'])
+                    except KeyError: 
+                         pass
+        
         self.pairing_data['accessories'] = accessories
         return accessories
 

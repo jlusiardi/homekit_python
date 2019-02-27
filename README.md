@@ -109,10 +109,12 @@ This tool will list all available HomeKit IP Accessories within the local networ
 
 Usage:
 ```bash
-python3 -m homekit.discover [-t ${TIMEOUT}]
+python3 -m homekit.discover [-t ${TIMEOUT}] [--log ${LOGLEVEL}]
 ```
 
 The option `-t` specifies the timeout for the inquiry. This is optional and 10s are the default.
+
+The option `--log` specifies the loglevel for the command. Use `DEBUG` to get more output.
 
 Output:
 ```
@@ -128,19 +130,60 @@ Status Flags (sf): 0
 Category Identifier (ci): Other (Id: 1)
 ```
 Hints: 
- * Some devices like the Koogeek P1EU Plug need bluetooth to set up wireless before. Use your phone 
+ * Some devices like the Koogeek P1EU Plug need bluetooth to set up wireless (e.g. join the wireless network) before. Use your phone 
    or the proper app to perform this
  * paired devices should not show up
 
-## identify.py
+## discover_ble.py
 
-#TODO rework after identify.py was converted to controller
-
-This tool will use the Identify Routine of a HomeKit IP Accessory.
+This tool will list all available HomeKit BLE Accessories within range of the Bluetooth LE device.
 
 Usage:
 ```bash
-python3 -m homekit.identify -d ${DEVICEID} 
+python3 -m homekit.discover_ble [-t ${TIMEOUT}] [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
+```
+
+The option `-t` specifies the timeout for the inquiry. This is optional and 10s are the default.
+
+The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default.
+
+The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+
+Output:
+```
+Name: Koogeek-DW1-8ca86c
+MAC: c6:cc:4d:a7:7c:5e
+Configuration number (cn): 1
+Device ID (id): B8:D1:29:61:A1:B0
+Compatible Version (cv): 2
+Global State Number (s#): 2
+Status Flags (sf): The accessory has been paired with a controllers. (Flag: 0)
+Category Identifier (ci): Sensor (Id: 10)
+```
+
+## identify.py
+
+This tool will use the Identify Routine of a HomeKit Accessory. It has 3 modes of operation.
+
+### identify unpaired Homekit IP Accessory
+
+Usage:
+```bash
+python3 -m homekit.identify -d ${DEVICEID} [--log ${LOGLEVEL}]
+```
+
+### identify unpaired Homekit BLE Accessory
+
+Usage:
+```bash
+python3 -m homekit.identify -m ${MACADDRESS} [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
+```
+
+### identify paired Homekit Accessory
+
+Usage:
+```bash
+python3 -m homekit.identify -m ${MACADDRESS} -f ${PAIRINGDATAFILE} -a ${ALIAS} [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
 ```
 
 Output:
@@ -154,10 +197,30 @@ This tool will perform a pairing to a new accessory.
 
 Usage:
 ```bash
-python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -a ${ALIAS} 
+python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -a ${ALIAS} [--log ${LOGLEVEL}]
 ```
 
 The option `-d` specifies the device id of the accessory to pair. Can be obtained via discovery.
+
+The option `-p` specifies the HomeKit Setup Code. Can be obtained from the accessory.
+
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device.
+
+
+The file with the pairing data will be required to for any additional commands to the accessory.
+
+## pair_ble.py
+
+This tool will perform a pairing to a new accessory.
+
+Usage:
+```bash
+python3 -m homekit.pair -m ${MACADDRESS} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -a ${ALIAS} [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
+```
+
+The option `-m` specifies the device id of the accessory to pair. Can be obtained via discovery.
 
 The option `-p` specifies the HomeKit Setup Code. Can be obtained from the accessory.
 
@@ -174,7 +237,7 @@ This tool will perform a query to list all pairings of an accessory.
 
 Usage:
 ```bash
-python3 -m homekit.list_pairings -f ${PAIRINGDATAFILE} -a ${ALIAS} 
+python3 -m homekit.list_pairings -f ${PAIRINGDATAFILE} -a ${ALIAS} [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
@@ -197,7 +260,7 @@ This tool will remove a pairing from an accessory.
 
 Usage:
 ```bash
-python -m homekit.unpair -f ${PAIRINGDATAFILE} -a ${ALIAS}
+python -m homekit.unpair -f ${PAIRINGDATAFILE} -a ${ALIAS} [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
@@ -210,7 +273,7 @@ This tool will read the accessory attribute database.
 
 Usage:
 ```bash
-python3 -m homekit.get_accessories -f ${PAIRINGDATAFILE} -a ${ALIAS} [-o {json,compact}]
+python3 -m homekit.get_accessories -f ${PAIRINGDATAFILE} -a ${ALIAS} [-o {json,compact}] [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
@@ -226,7 +289,7 @@ This tool will read values from one or more characteristics.
 
 Usage:
 ```bash
-python3 -m homekit.get_characteristic -f ${PAIRINGDATAFILE} -a ${ALIAS} -c ${Characteristics} [-m] [-p] [-t] [-e]
+python3 -m homekit.get_characteristic -f ${PAIRINGDATAFILE} -a ${ALIAS} -c ${Characteristics} [-m] [-p] [-t] [-e] [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
@@ -249,7 +312,7 @@ This tool will write values to one characteristic.
 
 Usage:
 ```bash
-python3 -m homekit.put_characteristic -f ${PAIRINGDATAFILE} -c ${Characteristics} ${value}
+python3 -m homekit.put_characteristic -f ${PAIRINGDATAFILE} -c ${Characteristics} ${value} [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
@@ -267,7 +330,7 @@ This tool will register with an accessory and listen to the events send back fro
 
 Usage
 ```bash
-python3 -m homekit.get_events -f ${PAIRINGDATAFILE} -c ${Characteristics} 
+python3 -m homekit.get_events -f ${PAIRINGDATAFILE} -c ${Characteristics} [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.

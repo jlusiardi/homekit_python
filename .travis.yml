@@ -4,12 +4,19 @@ python:
     - "3.5"
     - "3.6"
 before_install:
-    - sudo apt-get update
-    - pip install coveralls
+    - echo "-----------------------------------------"
+    - openssl version
+    - sudo dpkg -l
+    - echo "-----------------------------------------"
     - wget http://launchpadlibrarian.net/400343104/libssl1.1_1.1.0g-2ubuntu4.3_amd64.deb
     - sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4.3_amd64.deb
     - wget http://launchpadlibrarian.net/367327834/openssl_1.1.0g-2ubuntu4_amd64.deb
     - sudo dpkg -i openssl_1.1.0g-2ubuntu4_amd64.deb
+    - echo "-----------------------------------------"
+    - openssl version
+    - echo "-----------------------------------------"
+    - sudo apt-get update
+    - pip install coveralls
 script: coverage run -m unittest -v
 after_success:
     - coveralls

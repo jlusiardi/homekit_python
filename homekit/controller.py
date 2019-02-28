@@ -18,6 +18,7 @@ import binascii
 
 import uuid
 import json
+import threading
 from distutils.util import strtobool
 from json.decoder import JSONDecodeError
 import time
@@ -281,22 +282,22 @@ class Pairing(object):
             raise
         tmp = response.read().decode()
         accessories = json.loads(tmp)['accessories']
-        
+
         for accessory in accessories:
             for service in accessory['services']:
                 service['type'] = service['type'].upper()
                 try:
                     service['type'] = ServicesTypes.get_uuid(service['type'])
-                except KeyError: 
+                except KeyError:
                     pass
-                    
+
                 for characteristic in service['characteristics']:
                     characteristic['type'] = characteristic['type'].upper()
                     try:
-                         characteristic['type'] = CharacteristicsTypes.get_uuid(characteristic['type'])
-                    except KeyError: 
-                         pass
-        
+                        characteristic['type'] = CharacteristicsTypes.get_uuid(characteristic['type'])
+                    except KeyError:
+                        pass
+
         self.pairing_data['accessories'] = accessories
         return accessories
 
@@ -417,7 +418,7 @@ class Pairing(object):
             tmp[key] = c
         return tmp
 
-    def put_characteristics(self, characteristics, do_conversion=False):
+    def put_characteristics(self, characteristics, do_conversion=False, field='value', default_value=None):
         """
         Update the values of writable characteristics. The characteristics have to be identified by accessory id (aid),
         instance id (iid). If do_conversion is False (the default), the value must be of proper format for the
@@ -438,7 +439,13 @@ class Pairing(object):
         for characteristic in characteristics:
             aid = characteristic[0]
             iid = characteristic[1]
-            value = characteristic[2]
+            try:
+                value = characteristic[2]
+            except IndexError:
+                if default_value is not None:
+                    value = default_value
+                else:
+                    raise
             if do_conversion:
                 # evaluate proper format
                 c_format = None
@@ -451,7 +458,7 @@ class Pairing(object):
 
                 value = check_convert_value(value, c_format)
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
-            data.append({'aid': aid, 'iid': iid, 'value': value})
+            data.append({'aid': aid, 'iid': iid, field: value})
         data = json.dumps({'characteristics': data})
 
         try:
@@ -475,7 +482,8 @@ class Pairing(object):
             return data
         return {}
 
-    def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
+    def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1,
+                   stop_event: threading.Event = None):
         """
         This function is called to register for events on characteristics and receive them. Each time events are
         received a call back function is invoked. By that the caller gets information about the events.
@@ -489,54 +497,26 @@ class Pairing(object):
         a dict containing tupels of aid and iid for each requested characteristic with error. Those who would have
         worked are not in the result.
 
-        :param characteristics: a list of 2-tupels of accessory id (aid) and instance id (iid)
-        :param callback_fun: a function that is called each time events were recieved
+        :param characteristics: a list of 2-tuples of accessory id (aid) and instance id (iid)
+        :param callback_fun: a function that is called each time events were received
         :param max_events: number of reported events, default value -1 means unlimited
         :param max_seconds: number of seconds to wait for events, default value -1 means unlimited
-        :return: a dict mapping 2-tupels of aid and iid to dicts with status and description, e.g.
+        :param stop_event: a threading.Event instance that when set commands this function to clean up and return
+        :return: a dict mapping 2-tuples of aid and iid to dicts with status and description, e.g.
                  {(1, 37): {'description': 'Notification is not supported for characteristic.', 'status': -70406}}
         """
-        if not self.session:
-            self.session = Session(self.pairing_data)
-        data = []
-        characteristics_set = set()
-        for characteristic in characteristics:
-            aid = characteristic[0]
-            iid = characteristic[1]
-            characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
-            data.append({'aid': aid, 'iid': iid, 'ev': True})
-        data = json.dumps({'characteristics': data})
-
-        try:
-            response = self.session.put('/characteristics', data)
-        except (AccessoryDisconnectedError, EncryptionError):
-            self.session.close()
-            self.session = None
-            raise
-
-        # handle error responses
-        if response.code != 204:
-            tmp = {}
-            try:
-                data = json.loads(response.read().decode())
-            except JSONDecodeError:
-                self.session.close()
-                self.session = None
-                raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
-
-            for characteristic in data['characteristics']:
-                status = characteristic['status']
-                if status == 0:
-                    continue
-                aid = characteristic['aid']
-                iid = characteristic['iid']
-                tmp[(aid, iid)] = {'status': status, 'description': HapStatusCodes[status]}
+        # register for events
+        # characteristics = [(a, b, True) for a, b in characteristics]
+        tmp = self.put_characteristics(characteristics, field='ev', default_value=True)
+        if tmp != {}:
             return tmp
 
         # wait for incoming events
         event_count = 0
         s = time.time()
-        while (max_events == -1 or event_count < max_events) and (max_seconds == -1 or s + max_seconds >= time.time()):
+        while ((max_events == -1 or event_count < max_events) and (
+                max_seconds == -1 or s + max_seconds >= time.time()) and (
+                       stop_event is None or not stop_event.isSet())):
             try:
                 r = self.session.sec_http.handle_event_response()
                 body = r.read().decode()
@@ -557,7 +537,18 @@ class Pairing(object):
                     tmp.append((c['aid'], c['iid'], c['value']))
                 callback_fun(tmp)
                 event_count += 1
-        return {}
+        return self.stop_events(characteristics)
+
+    def stop_events(self, characteristics):
+        """
+        This functions sets the events to False so that the accessory no longer sends events to the controller
+
+        The characteristics are identified via their proper accessory id (aid) and instance id (iid).
+
+        :param characteristics: a list of 2-tuples of accessory id (aid) and instance id (iid)
+        :return: a dict from (aid, iid) onto {status, description}
+        """
+        return self.put_characteristics(characteristics, field='ev', default_value=False)
 
     def identify(self):
         """

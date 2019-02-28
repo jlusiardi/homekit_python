@@ -112,8 +112,8 @@ class SecureHttp:
                 break
 
             self.sock.settimeout(0.1)
-            
-            if len(tmp) ==0:
+
+            if len(tmp) == 0:
                 data = self.sock.recv(2)
                 tmp += data
                 continue

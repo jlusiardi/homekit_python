@@ -275,3 +275,4 @@ Users have tried (and succeeded, not checked by the author) to use the following
  * Leviton DH6HD-1BZ ([Issue #16](https://github.com/jlusiardi/homekit_python/issues/16))
  * Lutron Caseta (Smart Bridge 2 / [Issue #17](https://github.com/jlusiardi/homekit_python/issues/17))
  * iHome iSP5 ([Issue #18](https://github.com/jlusiardi/homekit_python/issues/18))
+ * Xiaomi Mi Bedside Lamp 2 ([Issue #116](https://github.com/jlusiardi/homekit_python/issues/116))

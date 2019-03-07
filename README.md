@@ -127,7 +127,7 @@ python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -a 
 
 The option `-d` specifies the device id of the accessory to pair. Can be obtained via discovery.
 
-The option `-p` specifies the HomeKit Setup Code. Can be obtained from the accessory.
+The option `-p` specifies the HomeKit Setup Code. Can be obtained from the accessory. This must look like `XXX-XX-XXX` (X is a single digit and the dashes are important).
 
 The option `-f` specifies the file that contains the pairing data.
 

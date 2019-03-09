@@ -29,6 +29,7 @@ from homekit.protocol import get_session_keys, create_ip_pair_verify_write
 from homekit.protocol.tlv import TLV
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.zeroconf_impl import find_device_ip_and_port
+from homekit.model.services import ServicesTypes
 
 
 class IpPairing(AbstractPairing):
@@ -78,6 +79,22 @@ class IpPairing(AbstractPairing):
             raise
         tmp = response.read().decode()
         accessories = json.loads(tmp)['accessories']
+
+        for accessory in accessories:
+            for service in accessory['services']:
+                service['type'] = service['type'].upper()
+                try:
+                    service['type'] = ServicesTypes.get_uuid(service['type'])
+                except KeyError:
+                    pass
+
+                for characteristic in service['characteristics']:
+                    characteristic['type'] = characteristic['type'].upper()
+                    try:
+                        characteristic['type'] = CharacteristicsTypes.get_uuid(characteristic['type'])
+                    except KeyError:
+                        pass
+
         self.pairing_data['accessories'] = accessories
         return accessories
 

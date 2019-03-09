@@ -88,10 +88,10 @@ class _CharacteristicsTypes(object):
     OCCUPANCY_DETECTED = '71'
     ON = '25'
     OUTLET_IN_USE = '26'
-    PAIR_SETUP = '4C'                                                       # new for BLE, homekit spec page 57
-    PAIR_VERIFY = '4E'                                                      # new for BLE, homekit spec page 57
-    PAIRING_FEATURES = '4F'                                                 # new for BLE, homekit spec page 58
-    PAIRING_PAIRINGS = '50'                                                 # new for BLE, homekit spec page 58
+    PAIR_SETUP = '4C'  # new for BLE, homekit spec page 57
+    PAIR_VERIFY = '4E'  # new for BLE, homekit spec page 57
+    PAIRING_FEATURES = '4F'  # new for BLE, homekit spec page 58
+    PAIRING_PAIRINGS = '50'  # new for BLE, homekit spec page 58
     POSITION_CURRENT = '6D'
     POSITION_HOLD = '6F'
     POSITION_STATE = '72'
@@ -108,8 +108,8 @@ class _CharacteristicsTypes(object):
     SERIAL_NUMBER = '30'
     SERVICE_LABEL_INDEX = 'CB'
     SERVICE_LABEL_NAMESPACE = 'CD'
-    SERVICE_INSTANCE_ID = 'e604e95d-a759-4817-87d3-aa005083a0d1'.upper()    # new for BLE, homekit spec page 127
-    SERVICE_SIGNATURE = 'A5'                                                # new for BLE, homekit spec page 128
+    SERVICE_INSTANCE_ID = 'e604e95d-a759-4817-87d3-aa005083a0d1'.upper()  # new for BLE, homekit spec page 127
+    SERVICE_SIGNATURE = 'A5'  # new for BLE, homekit spec page 128
     SETUP_ENDPOINTS = '118'
     SLAT_STATE_CURRENT = 'AA'
     SMOKE_DETECTED = '76'
@@ -175,10 +175,10 @@ class _CharacteristicsTypes(object):
             '35': 'public.hap.characteristic.temperature.target',
             '36': 'public.hap.characteristic.temperature.units',
             '37': 'public.hap.characteristic.version',
-            '4C': 'public.hap.characteristic.pairing.pair-setup',               # new for BLE, homekit spec page 57
-            '4E': 'public.hap.characteristic.pairing.pair-verify',              # new for BLE, homekit spec page 57
-            '4F': 'public.hap.characteristic.pairing.features',                 # new for BLE, homekit spec page 58
-            '50': 'public.hap.characteristic.pairing.pairings',                 # new for BLE, homekit spec page 58
+            '4C': 'public.hap.characteristic.pairing.pair-setup',  # new for BLE, homekit spec page 57
+            '4E': 'public.hap.characteristic.pairing.pair-verify',  # new for BLE, homekit spec page 57
+            '4F': 'public.hap.characteristic.pairing.features',  # new for BLE, homekit spec page 58
+            '50': 'public.hap.characteristic.pairing.pairings',  # new for BLE, homekit spec page 58
             # new for BLE, homekit spec page 127
             'e604e95d-a759-4817-87d3-aa005083a0d1'.upper(): 'public.hap.service.protocol.service-id',
             '52': 'public.hap.characteristic.firmware.revision',
@@ -278,8 +278,8 @@ class _CharacteristicsTypes(object):
         :param uuid: the UUID in long form or the shortened version as defined in chapter 5.6.1 page 72.
         :return: the textual representation
         """
-        uuid = uuid.upper()
         orig_item = uuid
+        uuid = uuid.upper()
         if uuid.endswith(self.baseUUID):
             uuid = uuid.split('-', 1)[0]
             uuid = uuid.lstrip('0')
@@ -301,13 +301,19 @@ class _CharacteristicsTypes(object):
         :raises KeyError: if the input is neither a UUID nor a type name. Specific error is given in the message.
         """
         orig_item = item_name
-        if item_name.endswith(self.baseUUID):
+        if item_name.upper().endswith(self.baseUUID):
+            item_name = item_name.upper()
             item_name = item_name.split('-', 1)[0]
             return item_name.lstrip('0')
-        if item_name in self._characteristics:
+
+        if item_name.upper() in self._characteristics:
+            item_name = item_name.upper()
             return item_name
-        if item_name in self._characteristics_rev:
+
+        if item_name.lower() in self._characteristics_rev:
+            item_name = item_name.lower()
             return self._characteristics_rev[item_name]
+
         try:
             uuid.UUID('{{{s}}}'.format(s=item_name))
             return item_name
@@ -329,15 +335,18 @@ class _CharacteristicsTypes(object):
         """
         orig_item = item_name
         # if we get a full length uuid with the proper base and a known short one, this should also work.
-        if item_name.endswith(self.baseUUID):
+        if item_name.upper().endswith(self.baseUUID):
+            item_name = item_name.upper()
             item_name = item_name.split('-', 1)[0]
             item_name = item_name.lstrip('0')
-        if item_name in self._characteristics_rev:
-            short = self._characteristics_rev[item_name]
-        elif item_name in self._characteristics:
-            short = item_name
+
+        if item_name.lower() in self._characteristics_rev:
+            short = self._characteristics_rev[item_name.lower()]
+        elif item_name.upper() in self._characteristics:
+            short = item_name.upper()
         else:
             raise KeyError('No UUID found for Item {item}'.format(item=orig_item))
+
         medium = '0' * (8 - len(short)) + short
         long = medium + self.baseUUID
         return long

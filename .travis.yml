@@ -20,4 +20,4 @@ script:
     - flake8 homekit
     - coverage run -m unittest -v
 after_success:
-- coveralls
+    - coveralls

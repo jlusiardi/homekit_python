@@ -127,7 +127,7 @@ python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -a 
 
 The option `-d` specifies the device id of the accessory to pair. Can be obtained via discovery.
 
-The option `-p` specifies the HomeKit Setup Code. Can be obtained from the accessory.
+The option `-p` specifies the HomeKit Setup Code. Can be obtained from the accessory. This must look like `XXX-XX-XXX` (X is a single digit and the dashes are important).
 
 The option `-f` specifies the file that contains the pairing data.
 
@@ -275,3 +275,4 @@ Users have tried (and succeeded, not checked by the author) to use the following
  * Leviton DH6HD-1BZ ([Issue #16](https://github.com/jlusiardi/homekit_python/issues/16))
  * Lutron Caseta (Smart Bridge 2 / [Issue #17](https://github.com/jlusiardi/homekit_python/issues/17))
  * iHome iSP5 ([Issue #18](https://github.com/jlusiardi/homekit_python/issues/18))
+ * Xiaomi Mi Bedside Lamp 2 ([Issue #116](https://github.com/jlusiardi/homekit_python/issues/116))

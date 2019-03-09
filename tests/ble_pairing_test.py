@@ -16,11 +16,16 @@
 
 import unittest
 
-from homekit.controller.ble_impl import BlePairing
 from homekit.exceptions import FormatError
 from homekit.protocol.tlv import TLV
 
+from homekit.tools import BLE_TRANSPORT_SUPPORTED
 
+if BLE_TRANSPORT_SUPPORTED:
+    from homekit.controller.ble_impl import BlePairing
+
+
+@unittest.skipIf(not BLE_TRANSPORT_SUPPORTED, 'BLE no supported')
 class TestBLEPairing(unittest.TestCase):
     def _create_pairing_data(self):
         return {

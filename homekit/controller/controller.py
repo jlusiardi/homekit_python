@@ -20,11 +20,8 @@ import logging
 import random
 import uuid
 
-from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
-from homekit.controller.ip_implementation import IpPairing, IpSession
-from homekit.controller.ble_impl import BlePairing, BleSession, find_characteristic_by_uuid, create_ble_pair_setup_write
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
-    AuthenticationError, ConfigSavingError, AlreadyPairedError
+    AuthenticationError, ConfigSavingError, AlreadyPairedError, TransportNotSupportedError
 from homekit.protocol.tlv import TLV
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.protocol.statuscodes import HapStatusCodes
@@ -32,8 +29,16 @@ from homekit.protocol import perform_pair_setup, create_ip_pair_setup_write
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
+from homekit.tools import IP_TRANSPORT_SUPPORTED, BLE_TRANSPORT_SUPPORTED
 
-from .ble_impl.discovery import DiscoveryDeviceManager
+if BLE_TRANSPORT_SUPPORTED:
+    from homekit.controller.ble_impl import BlePairing, BleSession, find_characteristic_by_uuid, \
+        create_ble_pair_setup_write
+    from .ble_impl.discovery import DiscoveryDeviceManager
+
+if IP_TRANSPORT_SUPPORTED:
+    from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
+    from homekit.controller.ip_implementation import IpPairing, IpSession
 
 
 class Controller(object):
@@ -78,6 +83,8 @@ class Controller(object):
                             more details
         :return: a list of dicts as described above
         """
+        if not IP_TRANSPORT_SUPPORTED:
+            raise TransportNotSupportedError('IP')
         return discover_homekit_devices(max_seconds)
 
     @staticmethod
@@ -101,6 +108,8 @@ class Controller(object):
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
         :return: a list of dicts as described above
         """
+        if not BLE_TRANSPORT_SUPPORTED:
+            raise TransportNotSupportedError('BLE')
         manager = DiscoveryDeviceManager(adapter)
         manager.start_discovery()
         manager.set_timeout(max_seconds * 1000)
@@ -125,7 +134,7 @@ class Controller(object):
         return result
 
     @staticmethod
-    def identify(accessory_id, adapter='hci0'):
+    def identify(accessory_id):
         """
         This call can be used to trigger the identification of an accessory, that was not yet paired. A successful call
         should cause the accessory to perform some specific action by which it can be distinguished from others (blink a
@@ -137,6 +146,8 @@ class Controller(object):
         :raises AccessoryNotFoundError: if the accessory could not be looked up via Bonjour
         :raises AlreadyPairedError: if the accessory is already paired
         """
+        if not IP_TRANSPORT_SUPPORTED:
+            raise TransportNotSupportedError('IP')
         connection_data = find_device_ip_and_port(accessory_id)
         if connection_data is None:
             raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
@@ -170,6 +181,8 @@ class Controller(object):
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
         :raises AlreadyPairedError: if the accessory is already paired
         """
+        if not BLE_TRANSPORT_SUPPORTED:
+            raise TransportNotSupportedError('BLE')
         from .ble_impl.device import DeviceManager
         manager = DeviceManager(adapter)
         device = manager.make_device(accessory_mac)
@@ -249,8 +262,12 @@ class Controller(object):
                             'Loaded pairing for %s with missing connection type. Assume this is IP based.', pairing_id)
 
                     if data[pairing_id]['Connection'] == 'IP':
+                        if not IP_TRANSPORT_SUPPORTED:
+                            raise TransportNotSupportedError('IP')
                         self.pairings[pairing_id] = IpPairing(data[pairing_id])
                     elif data[pairing_id]['Connection'] == 'BLE':
+                        if not BLE_TRANSPORT_SUPPORTED:
+                            raise TransportNotSupportedError('BLE')
                         self.pairings[pairing_id] = BlePairing(data[pairing_id], self.ble_adapter)
                     else:
                         # ignore anything else, issue warning
@@ -306,6 +323,8 @@ class Controller(object):
         :raises MaxPeersError: if the device cannot accept an additional pairing
         :raises UnavailableError: on wrong pin
         """
+        if not IP_TRANSPORT_SUPPORTED:
+            raise TransportNotSupportedError('IP')
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
 
@@ -340,6 +359,8 @@ class Controller(object):
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
         # TODO add raised exceptions
         """
+        if not BLE_TRANSPORT_SUPPORTED:
+            raise TransportNotSupportedError('BLE')
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
 
@@ -388,6 +409,8 @@ class Controller(object):
         ])
 
         if connection_type == 'IP':
+            if not IP_TRANSPORT_SUPPORTED:
+                raise TransportNotSupportedError('IP')
             session = IpSession(pairing_data)
             # decode is required because post needs a string representation
             response = session.post('/pairings', request_tlv.decode())
@@ -395,6 +418,8 @@ class Controller(object):
             data = response.read()
             data = TLV.decode_bytes(data)
         elif connection_type == 'BLE':
+            if not BLE_TRANSPORT_SUPPORTED:
+                raise TransportNotSupportedError('BLE')
             inner = TLV.encode_list([
                 (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
                 (TLV.kTLVHAPParamValue, request_tlv)

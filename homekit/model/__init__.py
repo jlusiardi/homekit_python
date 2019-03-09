@@ -16,7 +16,7 @@
 
 __all__ = [
     'AccessoryInformationService', 'BHSLightBulbService', 'FanService', 'LightBulbService', 'ThermostatService',
-    'Categories', 'CharacteristicPermissions', 'CharacteristicFormats', 'FeatureFlags'
+    'Categories', 'CharacteristicPermissions', 'CharacteristicFormats', 'FeatureFlags', 'Accessory'
 ]
 
 import json
@@ -45,8 +45,10 @@ class Accessory(ToDictMixin):
 
         :param func: a function without any parameters and without return type.
         """
+
         def tmp(x):
             func()
+
         for service in self.services:
             if isinstance(service, AccessoryInformationService):
                 for characteristic in service.characteristics:

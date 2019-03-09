@@ -15,7 +15,7 @@
 #
 
 __all__ = [
-    'Device'
+    'Device', 'BlePairing', 'BleSession', 'find_characteristic_by_uuid', 'create_ble_pair_setup_write'
 ]
 
 import time
@@ -38,7 +38,14 @@ from homekit.model.characteristics.characteristic_formats import BleCharacterist
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
 from homekit.exceptions import FormatError, RequestRejected, AccessoryDisconnectedError
 
-from .device import DeviceManager, Device
+from homekit.tools import BLE_TRANSPORT_SUPPORTED
+
+if BLE_TRANSPORT_SUPPORTED:
+    from .device import DeviceManager, Device
+else:
+    # this empty class is required to be inherited by ResolvingManager
+    class DeviceManager:
+        pass
 
 # the uuid of the ble descriptors that hold the characteristic instance id as value (see page 128)
 CharacteristicInstanceID = 'dc46f0fe-81d2-4616-b5d9-6abdd796939a'

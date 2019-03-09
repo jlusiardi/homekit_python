@@ -32,6 +32,7 @@ import logging
 import ed25519
 
 from cryptography.hazmat.primitives.asymmetric import x25519
+from cryptography.hazmat.primitives import serialization
 
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.crypto.srp import SrpServer
@@ -667,7 +668,10 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
             # 1) generate new curve25519 key pair
             accessory_session_key = x25519.X25519PrivateKey.generate()
-            accessory_spk = accessory_session_key.public_key().public_bytes()
+            accessory_spk = accessory_session_key.public_key().public_bytes(
+                encoding=serialization.Encoding.Raw,
+                format=serialization.PublicFormat.Raw
+            )
             self.server.sessions[self.session_id]['accessory_pub_key'] = accessory_spk
 
             # 2) generate shared secret

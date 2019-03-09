@@ -40,7 +40,7 @@ import gatt
 from gatt.gatt_linux import _error_from_dbus_error
 from gi.repository import GObject
 
-from homekit.controller.tools import hci_adapter_exists_and_supports_bluetooth_le
+from homekit.controller.ble_impl.tools import hci_adapter_exists_and_supports_bluetooth_le
 from homekit.exceptions import BluetoothAdapterError
 
 

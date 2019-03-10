@@ -64,9 +64,19 @@ if __name__ == '__main__':
 
     controller = Controller(args.adapter)
     if args.device:
-        controller.identify(args.device)
+        try:
+            controller.identify(args.device)
+        except Exception as e:
+            print(e)
+            logging.debug(e, exc_info=True)
+            sys.exit(-1)
     elif args.mac:
-        controller.identify_ble(args.mac)
+        try:
+            controller.identify_ble(args.mac)
+        except Exception as e:
+            print(e)
+            logging.debug(e, exc_info=True)
+            sys.exit(-1)
     else:
         controller.load_data(args.file)
         if args.alias not in controller.get_pairings():

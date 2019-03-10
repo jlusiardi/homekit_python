@@ -21,7 +21,7 @@ import os
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit initialize storage')
+    parser = argparse.ArgumentParser(description='HomeKit initialize controller storage app')
     parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     return parser.parse_args()
 

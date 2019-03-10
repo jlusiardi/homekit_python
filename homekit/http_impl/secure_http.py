@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-import io
 import threading
 import select
 
@@ -71,8 +70,8 @@ class SecureHttp:
             len_bytes = len(data).to_bytes(2, byteorder='little')
             cnt_bytes = self.c2a_counter.to_bytes(8, byteorder='little')
             self.c2a_counter += 1
-            ciper_and_mac = chacha20_aead_encrypt(len_bytes, self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]), data.encode())
-
+            ciper_and_mac = chacha20_aead_encrypt(len_bytes, self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]),
+                                                  data.encode())
             try:
                 self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
                 return self._read_response(self.timeout)
@@ -83,7 +82,6 @@ class SecureHttp:
         # following the information from page 71 about HTTP Message splitting:
         # The blocks start with 2 byte little endian defining the length of the encrypted data (max 1024 bytes)
         # followed by 16 byte authTag
-        blocks = []
         tmp = bytearray()
         exp_len = 1024
         response = HttpResponse()

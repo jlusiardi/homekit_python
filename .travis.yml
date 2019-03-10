@@ -1,19 +1,23 @@
-dist: xenial
 language: python
-python:
-    - "3.5"
-    - "3.6"
+matrix:
+    include:
+        - os: linux
+          dist: xenial
+          python: 3.5
+        - os: linux
+          dist: xenial
+          python: 3.6
+        - os: linux
+          dist: xenial
+          python: 3.7
+        - os: osx
+          language: generic
+          env: PYTHON=3.5.6
+
 before_install:
-    # update openssl to a version that is sufficient for cryptography 2.6 (openssl 1.1 is required since)
-    - wget http://launchpadlibrarian.net/400343104/libssl1.1_1.1.0g-2ubuntu4.3_amd64.deb
-    - sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4.3_amd64.deb
-    - wget http://launchpadlibrarian.net/367327834/openssl_1.1.0g-2ubuntu4_amd64.deb
-    - sudo dpkg -i openssl_1.1.0g-2ubuntu4_amd64.deb
-    - echo "-----------------------------------------"
-    - openssl version
-    - echo "-----------------------------------------"
-    - sudo apt-get update
-    - pip install coveralls
-script: coverage run -m unittest -v
+    - ./.travis/install.sh
+script:
+    - flake8 homekit
+    - coverage run -m unittest -v
 after_success:
     - coveralls

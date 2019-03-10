@@ -96,7 +96,7 @@ class TestTLV(unittest.TestCase):
         example = [(1, 'hello',), ]
         res = TLV.to_string(example)
         self.assertEqual(res, '[\n  1: (5 bytes) hello\n]\n')
-        example = [(1, 'hello',),(2, 'world',), ]
+        example = [(1, 'hello',), (2, 'world',), ]
         res = TLV.to_string(example)
         self.assertEqual(res, '[\n  1: (5 bytes) hello\n  2: (5 bytes) world\n]\n')
 
@@ -104,9 +104,19 @@ class TestTLV(unittest.TestCase):
         example = {1: 'hello'}
         res = TLV.to_string(example)
         self.assertEqual(res, '{\n  1: (5 bytes) hello\n}\n')
-        example = {1: 'hello',2: 'world'}
+        example = {1: 'hello', 2: 'world'}
         res = TLV.to_string(example)
         self.assertEqual(res, '{\n  1: (5 bytes) hello\n  2: (5 bytes) world\n}\n')
+
+    def test_to_string_for_dict_bytearray(self):
+        example = {1: bytearray([0x42, 0x23])}
+        res = TLV.to_string(example)
+        self.assertEqual(res, '{\n  1: (2 bytes) 0x4223\n}\n')
+
+    def test_to_string_for_list_bytearray(self):
+        example = [[1, bytearray([0x42, 0x23])]]
+        res = TLV.to_string(example)
+        self.assertEqual(res, '[\n  1: (2 bytes) 0x4223\n]\n')
 
     def test_separator_list(self):
         val = [
@@ -162,3 +172,12 @@ class TestTLV(unittest.TestCase):
         self.assertEqual(tmp[0][1], TLV.M3)
         self.assertEqual(tmp[1][0], TLV.kTLVType_Salt)
         self.assertEqual(tmp[1][1], (16 * 'a').encode())
+
+    def test_filter(self):
+        example = bytes(bytearray.fromhex('060103' + '010203'))
+        expected = [
+            [6, bytearray(b'\x03')],
+        ]
+
+        data = TLV.decode_bytes(example, expected=[6])
+        self.assertListEqual(data, expected)

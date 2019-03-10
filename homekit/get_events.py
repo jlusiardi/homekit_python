@@ -18,7 +18,10 @@
 
 import argparse
 import sys
+import logging
+
 from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
@@ -31,7 +34,9 @@ def setup_args_parser():
                         default=-1, type=int)
     parser.add_argument('-s', action='store', required=False, dest='secondsCount', default=-1, type=int,
                         help='max number of seconds before end')
-
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
+    add_log_arguments(parser)
     return parser.parse_args()
 
 
@@ -42,11 +47,15 @@ def func(events):
 
 if __name__ == '__main__':
     args = setup_args_parser()
-    controller = Controller()
+
+    setup_logging(args.loglevel)
+
+    controller = Controller(args.adapter)
     try:
         controller.load_data(args.file)
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)
 
     if args.alias not in controller.get_pairings():
@@ -57,11 +66,13 @@ if __name__ == '__main__':
         pairing = controller.get_pairings()[args.alias]
         characteristics = [(int(c.split('.')[0]), int(c.split('.')[1])) for c in args.characteristics]
         results = pairing.get_events(characteristics, func, max_events=args.eventCount, max_seconds=args.secondsCount)
-    except KeyboardInterrupt as e:
+    except KeyboardInterrupt:
         sys.exit(-1)
     except Exception as e:
         print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)
+
     for key, value in results.items():
         aid = key[0]
         iid = key[1]

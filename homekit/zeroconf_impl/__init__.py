@@ -151,8 +151,8 @@ def discover_homekit_devices(max_seconds=10):
 def find_device_ip_and_port(device_id: str, max_seconds=10):
     """
     Try to find a HomeKit Accessory via Bonjour. The process is time boxed by the second parameter which sets an upper
-    limit of `max_seconds` before it times out. The runtime of the function may be longer because of the Bonjour handling
-    code.
+    limit of `max_seconds` before it times out. The runtime of the function may be longer because of the Bonjour
+    handling code.
 
     :param device_id: the Accessory's pairing id
     :param max_seconds: the number of seconds to wait for the accessory to be found

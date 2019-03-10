@@ -21,9 +21,18 @@ import time
 
 from homekit import Controller
 from homekit import AccessoryServer
-from homekit.exceptions import AccessoryNotFoundError, AlreadyPairedError, UnavailableError, FormatError
+from homekit.exceptions import AccessoryNotFoundError, AlreadyPairedError, UnavailableError, FormatError, \
+    ConfigLoadingError, ConfigSavingError
 from homekit.model import Accessory
 from homekit.model.services import LightBulbService
+from homekit.model import mixin as model_mixin
+from homekit.tools import BLE_TRANSPORT_SUPPORTED, IP_TRANSPORT_SUPPORTED
+
+if BLE_TRANSPORT_SUPPORTED:
+    from homekit.controller.ble_impl import BlePairing
+
+if IP_TRANSPORT_SUPPORTED:
+    from homekit.controller.ip_implementation import IpPairing
 
 
 class T(threading.Thread):
@@ -50,7 +59,7 @@ def set_value(new_value):
     value = new_value
 
 
-class TestControllerUnpaired(unittest.TestCase):
+class TestControllerIpUnpaired(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # prepare config file for unpaired accessory server
@@ -70,6 +79,9 @@ class TestControllerUnpaired(unittest.TestCase):
               "unsuccessful_tries": 0
             }""".encode())
         cls.config_file.flush()
+
+        # Make sure get_id() numbers are stable between tests
+        model_mixin.id_counter = 0
 
         cls.httpd = AccessoryServer(cls.config_file.name, None)
         cls.httpd.set_identify_callback(identify_callback)
@@ -121,7 +133,7 @@ class TestControllerUnpaired(unittest.TestCase):
         """Try to pair the test accessory"""
         self.controller.perform_pairing('alias', '12:34:56:00:01:0B', '010-22-020')
         pairings = self.controller.get_pairings()
-        self.controller.save_data(TestControllerUnpaired.controller_file.name)
+        self.controller.save_data(self.controller_file.name)
         self.assertIn('alias', pairings)
 
     def test_02_pair_accessory_not_found(self):
@@ -135,7 +147,7 @@ class TestControllerUnpaired(unittest.TestCase):
                           '010-22-021')
 
 
-class TestControllerPaired(unittest.TestCase):
+class TestControllerIpPaired(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.config_file = tempfile.NamedTemporaryFile()
@@ -159,6 +171,9 @@ class TestControllerPaired(unittest.TestCase):
         }""".encode())
         cls.config_file.flush()
 
+        # Make sure get_id() numbers are stable between tests
+        model_mixin.id_counter = 0
+
         cls.httpd = AccessoryServer(cls.config_file.name, None)
         cls.httpd.set_identify_callback(identify_callback)
         accessory = Accessory('Testlicht', 'lusiardi.de', 'Demoserver', '0001', '0.1')
@@ -173,6 +188,7 @@ class TestControllerPaired(unittest.TestCase):
         cls.controller_file = tempfile.NamedTemporaryFile()
         cls.controller_file.write("""{
             "alias": {
+                "Connection": "IP",
                 "iOSDeviceLTPK": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8",
                 "iOSPairingId": "decc6fa3-de3e-41c9-adba-ef7409821bfc",
                 "AccessoryLTPK": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
@@ -209,15 +225,16 @@ class TestControllerPaired(unittest.TestCase):
 
     def test_02_pair_alias_exists(self):
         """Try to pair the test accessory"""
-        self.controller.load_data(TestControllerPaired.controller_file.name)
-        self.assertRaises(AlreadyPairedError, self.controller.perform_pairing, 'alias', '12:34:56:00:01:0B', '010-22-020')
+        self.controller.load_data(self.controller_file.name)
+        self.assertRaises(AlreadyPairedError, self.controller.perform_pairing, 'alias', '12:34:56:00:01:0B',
+                          '010-22-020')
 
     def test_02_paired_identify_wrong_method(self):
         """Try to identify an already paired accessory via the controller's method for unpaired accessories."""
         self.assertRaises(AlreadyPairedError, self.controller.identify, '12:34:56:00:01:0A')
 
     def test_03_get_accessories(self):
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.list_accessories_and_characteristics()
         for characteristic in result[0]['services'][0]['characteristics']:
@@ -230,7 +247,7 @@ class TestControllerPaired(unittest.TestCase):
         self.assertIn('services', result)
 
     def test_04_1_get_characteristic(self):
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4)])
         self.assertIn((1, 4), result)
@@ -239,7 +256,7 @@ class TestControllerPaired(unittest.TestCase):
         self.assertEqual(['value'], list(result[(1, 4)].keys()))
 
     def test_04_2_get_characteristics(self):
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4), (1, 10)])
         self.assertIn((1, 4), result)
@@ -251,7 +268,7 @@ class TestControllerPaired(unittest.TestCase):
 
     def test_04_3_get_characteristic_with_events(self):
         """This tests the include_events flag on get_characteristics"""
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4)], include_events=True)
         self.assertIn((1, 4), result)
@@ -261,7 +278,7 @@ class TestControllerPaired(unittest.TestCase):
 
     def test_04_4_get_characteristic_with_type(self):
         """This tests the include_type flag on get_characteristics"""
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4)], include_type=True)
         self.assertIn((1, 4), result)
@@ -272,7 +289,7 @@ class TestControllerPaired(unittest.TestCase):
 
     def test_04_5_get_characteristic_with_perms(self):
         """This tests the include_perms flag on get_characteristics"""
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4)], include_perms=True)
         self.assertIn((1, 4), result)
@@ -285,7 +302,7 @@ class TestControllerPaired(unittest.TestCase):
 
     def test_04_4_get_characteristic_with_meta(self):
         """This tests the include_meta flag on get_characteristics"""
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.get_characteristics([(1, 4)], include_meta=True)
         self.assertIn((1, 4), result)
@@ -299,7 +316,7 @@ class TestControllerPaired(unittest.TestCase):
     def test_05_1_put_characteristic(self):
         """"""
         global value
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.put_characteristics([(1, 10, 'On')])
         self.assertEqual(result, {})
@@ -311,7 +328,7 @@ class TestControllerPaired(unittest.TestCase):
     def test_05_2_put_characteristic_do_conversion(self):
         """"""
         global value
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.put_characteristics([(1, 10, 'On')], do_conversion=True)
         self.assertEqual(result, {})
@@ -322,13 +339,13 @@ class TestControllerPaired(unittest.TestCase):
 
     def test_05_2_put_characteristic_do_conversion_wrong_value(self):
         """Tests that values that are not convertible to boolean cause a HomeKitTypeException"""
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         self.assertRaises(FormatError, pairing.put_characteristics, [(1, 10, 'Hallo Welt')], do_conversion=True)
 
     def test_06_list_pairings(self):
         """Gets the listing of registered controllers of the device. Count must be 1."""
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.list_pairings()
         self.assertEqual(1, len(result))
@@ -343,7 +360,7 @@ class TestControllerPaired(unittest.TestCase):
     def test_07_paired_identify(self):
         """Tests the paired variant of the identify method."""
         global identify
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.identify()
         self.assertTrue(result)
@@ -352,7 +369,110 @@ class TestControllerPaired(unittest.TestCase):
 
     def test_99_remove_pairing(self):
         """Tests that a removed pairing is not present in the list of pairings anymore."""
-        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.load_data(self.controller_file.name)
         self.controller.remove_pairing('alias')
         pairings = self.controller.get_pairings()
         self.assertNotIn('alias', pairings)
+
+
+class TestController(unittest.TestCase):
+    def __init__(self, methodName='runTest'):
+        unittest.TestCase.__init__(self, methodName)
+
+    def setUp(self):
+        self.controller = Controller()
+
+    @unittest.skipIf(not BLE_TRANSPORT_SUPPORTED, 'BLE no supported')
+    def test_load_pairings_both_type(self):
+        controller_file = tempfile.NamedTemporaryFile()
+        controller_file.write("""{
+            "alias_ip": {
+                "Connection": "IP",
+                "iOSDeviceLTPK": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8",
+                "iOSPairingId": "decc6fa3-de3e-41c9-adba-ef7409821bfc",
+                "AccessoryLTPK": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
+                "AccessoryPairingID": "12:34:56:00:01:0A",
+                "AccessoryPort": 51842,
+                "AccessoryIP": "127.0.0.1",
+                "iOSDeviceLTSK": "fa45f082ef87efc6c8c8d043d74084a3ea923a2253e323a7eb9917b4090c2fcc"
+            },
+            "alias_ble": {
+                "Connection": "BLE",
+                "iOSDeviceLTPK": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8",
+                "iOSPairingId": "decc6fa3-de3e-41c9-adba-ef7409821bfc",
+                "AccessoryLTPK": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
+                "AccessoryPairingID": "12:34:56:00:01:0A",
+                "AccessoryMAC": "FD:3C:D4:13:02:59",
+                "iOSDeviceLTSK": "fa45f082ef87efc6c8c8d043d74084a3ea923a2253e323a7eb9917b4090c2fcc"
+            }
+        }""".encode())
+        controller_file.flush()
+        self.controller.load_data(controller_file.name)
+        self.assertIsInstance(self.controller.get_pairings()['alias_ip'], IpPairing)
+        self.assertEquals(self.controller.get_pairings()['alias_ip'].pairing_data['Connection'], 'IP')
+        self.assertIsInstance(self.controller.get_pairings()['alias_ble'], BlePairing)
+        controller_file.close()
+
+    @unittest.skipIf(not BLE_TRANSPORT_SUPPORTED, 'BLE no supported')
+    def test_load_pairings_missing_type(self):
+        controller_file = tempfile.NamedTemporaryFile()
+        controller_file.write("""{
+            "alias_ip": {
+                "iOSDeviceLTPK": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8",
+                "iOSPairingId": "decc6fa3-de3e-41c9-adba-ef7409821bfc",
+                "AccessoryLTPK": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
+                "AccessoryPairingID": "12:34:56:00:01:0A",
+                "AccessoryPort": 51842,
+                "AccessoryIP": "127.0.0.1",
+                "iOSDeviceLTSK": "fa45f082ef87efc6c8c8d043d74084a3ea923a2253e323a7eb9917b4090c2fcc"
+            },
+            "alias_ble": {
+                "Connection": "BLE",
+                "iOSDeviceLTPK": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8",
+                "iOSPairingId": "decc6fa3-de3e-41c9-adba-ef7409821bfc",
+                "AccessoryLTPK": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
+                "AccessoryPairingID": "12:34:56:00:01:0A",
+                "AccessoryMAC": "FD:3C:D4:13:02:59",
+                "iOSDeviceLTSK": "fa45f082ef87efc6c8c8d043d74084a3ea923a2253e323a7eb9917b4090c2fcc"
+            }
+        }""".encode())
+        controller_file.flush()
+        self.controller.load_data(controller_file.name)
+        self.assertIsInstance(self.controller.get_pairings()['alias_ip'], IpPairing)
+        self.assertIsInstance(self.controller.get_pairings()['alias_ble'], BlePairing)
+        controller_file.close()
+
+    def test_load_pairings_unknown_type(self):
+        controller_file = tempfile.NamedTemporaryFile()
+        controller_file.write("""{
+             "alias_unknown": {
+                 "Connection": "UNKNOWN"
+             }
+         }""".encode())
+        controller_file.flush()
+        self.controller.load_data(controller_file.name)
+        self.assertEqual(0, len(self.controller.get_pairings()))
+        controller_file.close()
+
+    def test_load_pairings_invalid_json(self):
+        controller_file = tempfile.NamedTemporaryFile()
+        controller_file.write("""{
+             "alias_unknown": {
+                 "Connection": "UNKNOWN",
+             }
+         }""".encode())
+        controller_file.flush()
+        self.assertRaises(ConfigLoadingError, self.controller.load_data, controller_file.name)
+        controller_file.close()
+
+    def test_load_pairings_missing_file(self):
+        self.assertRaises(ConfigLoadingError, self.controller.load_data, 'test')
+
+    def test_load_pairings_permissions(self):
+        self.assertRaises(ConfigLoadingError, self.controller.load_data, '/etc/shadow')
+
+    def test_save_pairings_permissions(self):
+        self.assertRaises(ConfigSavingError, self.controller.save_data, '/root/shadow')
+
+    def test_save_pairings_missing_file(self):
+        self.assertRaises(ConfigSavingError, self.controller.save_data, '/tmp/shadow/foo')

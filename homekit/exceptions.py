@@ -27,6 +27,10 @@ class HomeKitException(Exception):
     pass
 
 
+class BluetoothAdapterError(HomeKitException):
+    pass
+
+
 class ProtocolError(HomeKitException):
     """
     Class to represent an abstraction layer for all errors that are defined in the Error Codes table 4-5 page 60 of the
@@ -134,6 +138,7 @@ class ConfigurationError(HomeKitException):
     """
     Used if any configuration in the HomeKit AccessoryServer's context was wrong.
     """
+
     def __init__(self, message):
         Exception.__init__(self, message)
 
@@ -142,6 +147,7 @@ class FormatError(HomeKitException):
     """
     Used if any format conversion fails or is impossible.
     """
+
     def __init__(self, message):
         Exception.__init__(self, message)
 
@@ -151,6 +157,7 @@ class CharacteristicPermissionError(HomeKitException):
     Used if the characteristic's permissions do not allow the action. This includes reads on write only characteristics
     and writes on read only characteristics.
     """
+
     def __init__(self, message):
         Exception.__init__(self, message)
 
@@ -160,6 +167,7 @@ class AccessoryNotFoundError(HomeKitException):
     Used if a HomeKit Accessory's IP and port could not be received via Bonjour / Zeroconf. This might be a temporary
     issue due to the way Bonjour / Zeroconf works.
     """
+
     def __init__(self, message):
         Exception.__init__(self, message)
 
@@ -175,8 +183,10 @@ class EncryptionError(HomeKitException):
 class AccessoryDisconnectedError(HomeKitException):
     """
     Used if a HomeKit disconnects part way through an operation or series of operations.
+
     It may be possible to reconnect and retry the request.
     """
+
     def __init__(self, message):
         Exception.__init__(self, message)
 
@@ -188,6 +198,7 @@ class ConfigLoadingError(HomeKitException):
      * the file could not be found
      * the file does not contain parseable JSON
     """
+
     def __init__(self, message):
         Exception.__init__(self, message)
 
@@ -198,6 +209,7 @@ class ConfigSavingError(HomeKitException):
      * problems with file permissions (file not writable)
      * the file could not be found (occurs if the path does not exist)
     """
+
     def __init__(self, message):
         Exception.__init__(self, message)
 
@@ -206,6 +218,7 @@ class UnpairedError(HomeKitException):
     """
     This should be raised if a paired accessory is expected but the accessory is still unpaired.
     """
+
     def __init__(self, message):
         Exception.__init__(self, message)
 
@@ -214,5 +227,23 @@ class AlreadyPairedError(HomeKitException):
     """
     This should be raised if an unpaired accessory is expected but the accessory is already paired.
     """
+
     def __init__(self, message):
         Exception.__init__(self, message)
+
+
+class RequestRejected(HomeKitException):
+    """
+    Raised when a request fails with a HAP error code
+    """
+
+    def __init__(self, message, error_code):
+        self.error_code = error_code
+        self.message = message
+        Exception.__init__(message)
+
+
+class TransportNotSupportedError(HomeKitException):
+    def __init__(self, transport):
+        Exception.__init__(self,
+                           'Transport {t} not supported. See setup.py for required dependencies.'.format(t=transport))

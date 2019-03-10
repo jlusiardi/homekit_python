@@ -16,6 +16,7 @@
 
 from homekit.exceptions import HttpException
 
+
 class HttpResponse(object):
     STATE_PRE_STATUS = 0
     STATE_HEADERS = 1

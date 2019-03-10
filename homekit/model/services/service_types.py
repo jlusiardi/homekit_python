@@ -19,6 +19,10 @@ class _ServicesTypes(object):
     """
     This data is taken from chapter 9 page 216 onwards.
     """
+    INFORMATION_SERVICE = 'A2'  # new for ble, homekit spec page 126
+    PAIRING_SERVICE = '55'      # new for ble, homekit spec page 57
+    ACCESSORY_INFORMATION_SERVICE = '3E'
+    BATTERY_SERVICE = '96'
 
     def __init__(self):
         self.baseUUID = '-0000-1000-8000-0026BB765291'
@@ -32,6 +36,7 @@ class _ServicesTypes(object):
             '47': 'public.hap.service.outlet',
             '49': 'public.hap.service.switch',
             '4A': 'public.hap.service.thermostat',
+            '55': 'public.hap.service.pairing',                             # new for ble, homekit spec page 57
             '7E': 'public.hap.service.security-system',
             '7F': 'public.hap.service.sensor.carbon-monoxide',
             '80': 'public.hap.service.sensor.contact',
@@ -49,7 +54,7 @@ class _ServicesTypes(object):
             '8D': 'public.hap.service.sensor.air-quality',
             '96': 'public.hap.service.battery',
             '97': 'public.hap.service.sensor.carbon-dioxide',
-            'A2': 'public.hap.service.protocol.information.service',
+            'A2': 'public.hap.service.protocol.information.service',        # new for ble, homekit spec page 126
             'B7': 'public.hap.service.fanv2',
             'B9': 'public.hap.service.vertical-slat',
             'BA': 'public.hap.service.filter-maintenance',
@@ -108,14 +113,14 @@ class _ServicesTypes(object):
             item_name = item_name.upper()
             item_name = item_name.split('-', 1)[0]
             item_name = item_name.lstrip('0')
-            
+
         if item_name.lower() in self._services_rev:
             short = self._services_rev[item_name.lower()]
         elif item_name.upper() in self._services:
             short = item_name.upper()
         else:
             raise KeyError('No UUID found for Item {item}'.format(item=orig_item))
-            
+
         medium = '0' * (8 - len(short)) + short
         long = medium + self.baseUUID
         return long

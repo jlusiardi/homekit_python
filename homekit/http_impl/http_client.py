@@ -23,8 +23,8 @@ class HomeKitHTTPConnection(HTTPConnection):
 
     def _send_output(self, message_body=None, encode_chunked=False):
         """
-        Acts like the original HTTPConnection._send_output but makes sure the 
-        headers and the body are sent in one packet. This fixes issues with 
+        Acts like the original HTTPConnection._send_output but makes sure the
+        headers and the body are sent in one packet. This fixes issues with
         some homekit devices. See for more details:
          * https://github.com/jlusiardi/homekit_python/issues/12
          * https://github.com/jlusiardi/homekit_python/issues/16

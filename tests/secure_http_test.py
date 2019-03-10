@@ -17,10 +17,11 @@
 import unittest
 from unittest import mock
 import socket
+import threading
 
-from homekit.http_impl.secure_http import *
+from homekit.http_impl.secure_http import SecureHttp
 from homekit.exceptions import AccessoryDisconnectedError, EncryptionError
-from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
+from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt
 
 
 class ResponseProvider(threading.Thread):
@@ -65,7 +66,7 @@ class ResponseProvider(threading.Thread):
 
 class TestSecureHttp(unittest.TestCase):
     def test_get_on_disconnected_device(self):
-        with mock.patch('homekit.controller.Session') as session:
+        with mock.patch('homekit.controller.ip_implementation.IpSession') as session:
             session.sock = socket.socket()
             session.a2c_key = b'\x00' * 32
             session.c2a_key = b'\x00' * 32
@@ -74,7 +75,7 @@ class TestSecureHttp(unittest.TestCase):
             self.assertRaises(AccessoryDisconnectedError, sh.get, '/')
 
     def test_put_on_disconnected_device(self):
-        with mock.patch('homekit.controller.Session') as session:
+        with mock.patch('homekit.controller.ip_implementation.IpSession') as session:
             session.sock = socket.socket()
             session.a2c_key = b'\x00' * 32
             session.c2a_key = b'\x00' * 32
@@ -83,7 +84,7 @@ class TestSecureHttp(unittest.TestCase):
             self.assertRaises(AccessoryDisconnectedError, sh.put, '/', 'data')
 
     def test_post_on_disconnected_device(self):
-        with mock.patch('homekit.controller.Session') as session:
+        with mock.patch('homekit.controller.ip_implementation.IpSession') as session:
             session.sock = socket.socket()
             session.a2c_key = b'\x00' * 32
             session.c2a_key = b'\x00' * 32
@@ -92,7 +93,7 @@ class TestSecureHttp(unittest.TestCase):
             self.assertRaises(AccessoryDisconnectedError, sh.post, '/', 'data')
 
     def test_get_on_connected_device_timeout(self):
-        with mock.patch('homekit.controller.Session') as session:
+        with mock.patch('homekit.controller.ip_implementation.IpSession') as session:
             controller_socket, accessory_socket = socket.socketpair()
 
             session.sock = controller_socket
@@ -115,7 +116,7 @@ class TestSecureHttp(unittest.TestCase):
         tthread = ResponseProvider(accessory_socket, key_c2a, key_a2c)
         tthread.start()
 
-        with mock.patch('homekit.controller.Session') as session:
+        with mock.patch('homekit.controller.ip_implementation.IpSession') as session:
             session.sock = controller_socket
             session.a2c_key = key_a2c
             session.c2a_key = key_c2a
@@ -137,7 +138,7 @@ class TestSecureHttp(unittest.TestCase):
         tthread = ResponseProvider(accessory_socket, key_c2a, key_a2c, encryption_fail=True)
         tthread.start()
 
-        with mock.patch('homekit.controller.Session') as session:
+        with mock.patch('homekit.controller.ip_implementation.IpSession') as session:
             session.sock = controller_socket
             session.a2c_key = key_a2c
             session.c2a_key = key_c2a

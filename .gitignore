@@ -89,6 +89,7 @@ celerybeat-schedule
 .venv
 venv/
 ENV/
+*_env/
 
 # Spyder project settings
 .spyderproject
@@ -113,3 +114,5 @@ ENV/
 *.json
 MANIFEST
 Tests.md
+/ip_env
+/*_env

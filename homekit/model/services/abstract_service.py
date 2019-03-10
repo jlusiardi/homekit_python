@@ -34,12 +34,12 @@ class AbstractService(ToDictMixin):
         self.characteristics.append(characteristic)
 
     def to_accessory_and_service_list(self):
-        l = []
+        characteristics_list = []
         for c in self.characteristics:
-            l.append(c.to_accessory_and_service_list())
+            characteristics_list.append(c.to_accessory_and_service_list())
         d = {
             'iid': self.iid,
             'type': self.type,
-            'characteristics': l
+            'characteristics': characteristics_list
         }
         return d

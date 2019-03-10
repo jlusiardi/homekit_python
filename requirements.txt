@@ -1,4 +1,10 @@
 zeroconf
 hkdf
 ed25519
-cryptography
+dbus-python
+pycairo
+PyGObject
+gatt
+cryptography>=2.5
+coverage
+flake8

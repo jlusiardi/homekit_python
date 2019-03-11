@@ -3,10 +3,6 @@
 With this code it is possible to implement either a HomeKit Accessory or simulate a
 HomeKit Controller.
 
-**Limitations**
-
- * No reaction to events whatsoever.
-
 The code presented in this repository was created based on release R1 from 2017-06-07.
 
 # Contributors

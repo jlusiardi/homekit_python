@@ -23,12 +23,12 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setuptools.setup(
     name='homekit',
     packages=setuptools.find_packages(exclude=['tests']),
-    version='0.12.3',
+    version='0.13.0',
     description='Python code to interface HomeKit Accessories and Controllers',
     author='Joachim Lusiardi',
     author_email='pypi@lusiardi.de',
     url='https://github.com/jlusiardi/homekit_python',
-    download_url='https://github.com/jlusiardi/homekit_python/archive/0.12.3.tar.gz',
+    download_url='https://github.com/jlusiardi/homekit_python/archive/0.13.0.tar.gz',
     keywords=['HomeKit'],
     classifiers=[
         'License :: OSI Approved :: Apache Software License',

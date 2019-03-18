@@ -656,7 +656,7 @@ class TestBLEController(unittest.TestCase):
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             m.return_value = manager
             c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
-            self.assertRaises(exceptions.MalformedPinError, self.controller.perform_pairing_ble, 'alias2',
+            self.assertRaises(exceptions.MalformedPinError, c.perform_pairing_ble, 'alias2',
                               '12:34:56:00:01:0B', '01022021')
 
     def test_pair_unpair(self):

@@ -66,17 +66,22 @@ class SecureHttp:
     def _handle_request(self, data):
         with self.lock:
             data = data.replace("\n", "\r\n")
-            assert len(data) < 1024
-            len_bytes = len(data).to_bytes(2, byteorder='little')
-            cnt_bytes = self.c2a_counter.to_bytes(8, byteorder='little')
-            self.c2a_counter += 1
-            ciper_and_mac = chacha20_aead_encrypt(len_bytes, self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]),
-                                                  data.encode())
-            try:
-                self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
-                return self._read_response(self.timeout)
-            except OSError as e:
-                raise exceptions.AccessoryDisconnectedError(str(e))
+            while len(data) > 0:
+                len_data = min(len(data), 1024)
+                tmp_data = data[:len_data]
+                data = data[len_data:]
+                len_bytes = len_data.to_bytes(2, byteorder='little')
+                cnt_bytes = self.c2a_counter.to_bytes(8, byteorder='little')
+                self.c2a_counter += 1
+                ciper_and_mac = chacha20_aead_encrypt(len_bytes, self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]),
+                                                      tmp_data.encode())
+
+                try:
+                    self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
+                except OSError as e:
+                    raise exceptions.AccessoryDisconnectedError(str(e))
+
+            return self._read_response(self.timeout)
 
     def _read_response(self, timeout=10):
         # following the information from page 71 about HTTP Message splitting:
@@ -105,6 +110,13 @@ class SecureHttp:
                 break
 
             self.sock.settimeout(0.1)
+
+            if len(tmp) == 0:
+                data = self.sock.recv(2)
+                tmp += data
+                continue
+
+            exp_len = int.from_bytes(tmp[0:2], 'little') - len(tmp) + 18
             data = self.sock.recv(exp_len)
 
             # ready but no data => continue
@@ -134,10 +146,6 @@ class SecureHttp:
                 except OSError:
                     pass
                 raise exceptions.EncryptionError('Error during transmission.')
-
-            # check how long next block will be
-            if int.from_bytes(tmp[0:2], 'little') < 1024:
-                exp_len = int.from_bytes(tmp[0:2], 'little') - len(tmp) + 18
 
         return response
 

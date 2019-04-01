@@ -74,7 +74,8 @@ if __name__ == '__main__':
         pin_function = pin_from_keyboard()
 
     try:
-        controller.perform_pairing(args.alias, args.device, pin_function)
+        finish_pairing = controller.start_pairing(args.alias, args.device)
+        finish_pairing(pin_function())
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()
         controller.save_data(args.file)

@@ -64,7 +64,8 @@ if __name__ == '__main__':
 
     try:
         logging.debug('start pairing')
-        controller.perform_pairing_ble(args.alias, args.mac, pin_function, args.adapter)
+        finish_pairing = controller.start_pairing_ble(args.alias, args.mac, args.adapter)
+        finish_pairing(pin_function())
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()
         controller.save_data(args.file)

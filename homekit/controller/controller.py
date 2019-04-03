@@ -25,7 +25,7 @@ from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, Unkno
 from homekit.protocol.tlv import TLV
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.protocol.statuscodes import HapStatusCodes
-from homekit.protocol import perform_pair_setup, create_ip_pair_setup_write
+from homekit.protocol import perform_pair_setup_part1, perform_pair_setup_part2, create_ip_pair_setup_write
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
@@ -313,7 +313,34 @@ class Controller(object):
 
         :param alias: the alias for the accessory in the controllers data
         :param accessory_id: the accessory's id
-        :param pin: the accessory's pin
+        :param pin: function to return the accessory's pin
+        :raises AccessoryNotFoundError: if no accessory with the given id can be found
+        :raises AlreadyPairedError: if the alias was already used
+        :raises UnavailableError: if the device is already paired
+        :raises MaxTriesError: if the device received more than 100 unsuccessful attempts
+        :raises BusyError: if a parallel pairing is ongoing
+        :raises AuthenticationError: if the verification of the device's SRP proof fails
+        :raises MaxPeersError: if the device cannot accept an additional pairing
+        :raises UnavailableError: on wrong pin
+        """
+        finish_pairing = self.start_pairing(alias, accessory_id)
+        return finish_pairing(pin)
+
+    def start_pairing(self, alias, accessory_id):
+        """
+        This starts a pairing attempt with the IP accessory identified by its id.
+        It returns a callable (finish_pairing) which you must call with the pairing pin.
+
+        Accessories can be found via the discover method. The id field is the accessory's id for the second parameter.
+
+        The required pin is either printed on the accessory or displayed. Must be a string of the form 'XXX-YY-ZZZ'.
+
+        Important: no automatic saving of the pairing data is performed. If you don't do this, the information is lost
+            and you have to reset the accessory!
+
+        :param alias: the alias for the accessory in the controllers data
+        :param accessory_id: the accessory's id
+        :param pin: function to return the accessory's pin
         :raises AccessoryNotFoundError: if no accessory with the given id can be found
         :raises AlreadyPairedError: if the alias was already used
         :raises UnavailableError: if the device is already paired
@@ -332,15 +359,25 @@ class Controller(object):
         if connection_data is None:
             raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
         conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
+
         try:
             write_fun = create_ip_pair_setup_write(conn)
-            pairing = perform_pair_setup(pin, str(uuid.uuid4()), write_fun)
-        finally:
+            salt, pub_key = perform_pair_setup_part1(write_fun)
+        except Exception:
             conn.close()
-        pairing['AccessoryIP'] = connection_data['ip']
-        pairing['AccessoryPort'] = connection_data['port']
-        pairing['Connection'] = 'IP'
-        self.pairings[alias] = IpPairing(pairing)
+            raise
+
+        def finish_pairing(pin):
+            try:
+                pairing = perform_pair_setup_part2(pin, str(uuid.uuid4()), write_fun, salt, pub_key)
+            finally:
+                conn.close()
+            pairing['AccessoryIP'] = connection_data['ip']
+            pairing['AccessoryPort'] = connection_data['port']
+            pairing['Connection'] = 'IP'
+            self.pairings[alias] = IpPairing(pairing)
+
+        return finish_pairing
 
     def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0'):
         """
@@ -355,7 +392,27 @@ class Controller(object):
 
         :param alias: the alias for the accessory in the controllers data
         :param accessory_mac: the accessory's mac address
-        :param pin: the accessory's pin
+        :param pin: function to return the accessory's pin
+        :param adapter: the bluetooth adapter to be used (defaults to hci0)
+        # TODO add raised exceptions
+        """
+        finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter)
+        return finish_pairing(pin)
+
+    def start_pairing_ble(self, alias, accessory_mac, adapter='hci0'):
+        """
+        This starts a pairing attempt with the Bluetooth LE accessory identified by its mac address.
+        It returns a callable (finish_pairing) which you must call with the pairing pin.
+
+        Accessories can be found via the discover method. The mac field is the accessory's mac for the second parameter.
+
+        The required pin is either printed on the accessory or displayed. Must be a string of the form 'XXX-YY-ZZZ'.
+
+        Important: no automatic saving of the pairing data is performed. If you don't do this, the information is lost
+            and you have to reset the accessory!
+
+        :param alias: the alias for the accessory in the controllers data
+        :param accessory_mac: the accessory's mac address
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
         # TODO add raised exceptions
         """
@@ -377,12 +434,17 @@ class Controller(object):
         logging.debug('setup char: %s %s', pair_setup_char, pair_setup_char.service.device)
 
         write_fun = create_ble_pair_setup_write(pair_setup_char, pair_setup_char_id)
-        pairing = perform_pair_setup(pin, str(uuid.uuid4()), write_fun)
+        salt, pub_key = perform_pair_setup_part1(write_fun)
 
-        pairing['AccessoryMAC'] = accessory_mac
-        pairing['Connection'] = 'BLE'
+        def finish_pairing(pin):
+            pairing = perform_pair_setup_part2(pin, str(uuid.uuid4()), write_fun, salt, pub_key)
 
-        self.pairings[alias] = BlePairing(pairing, adapter)
+            pairing['AccessoryMAC'] = accessory_mac
+            pairing['Connection'] = 'BLE'
+
+            self.pairings[alias] = BlePairing(pairing, adapter)
+
+        return finish_pairing
 
     def remove_pairing(self, alias):
         """

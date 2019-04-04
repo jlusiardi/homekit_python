@@ -68,7 +68,7 @@ def get_from_properties(props, key, default=None, case_sensitive=True):
         tmp_key = key.lower()
 
     if tmp_key in tmp_props:
-        return tmp_props[tmp_key].decode()
+        return tmp_props[tmp_key]
     else:
         if default:
             return str(default)
@@ -95,7 +95,9 @@ def discover_homekit_devices(max_seconds=10):
             'port': info.port
         }
 
-        d.update(parse_discovery_properties(info.properties))
+        d.update(parse_discovery_properties(decode_discovery_properties(
+            info.properties
+        )))
 
         if 'c#' not in d or 'md' not in d:
             continue
@@ -106,15 +108,22 @@ def discover_homekit_devices(max_seconds=10):
     return tmp
 
 
+def decode_discovery_properties(props):
+    out = {}
+    for k, v in props.items():
+        out[k.decode('utf-8')] = v.decode('utf-8')
+    return out
+
+
 def parse_discovery_properties(props):
     d = {}
 
     # stuff taken from the Bonjour TXT record (see table 5-7 on page 69)
-    conf_number = get_from_properties(props, b'c#', case_sensitive=False)
+    conf_number = get_from_properties(props, 'c#', case_sensitive=False)
     if conf_number:
         d['c#'] = conf_number
 
-    ff = get_from_properties(props, b'ff', case_sensitive=False)
+    ff = get_from_properties(props, 'ff', case_sensitive=False)
     if ff:
         flags = int(ff)
     else:
@@ -122,30 +131,30 @@ def parse_discovery_properties(props):
     d['ff'] = flags
     d['flags'] = FeatureFlags[flags]
 
-    id = get_from_properties(props, b'id', case_sensitive=False)
+    id = get_from_properties(props, 'id', case_sensitive=False)
     if id:
         d['id'] = id
 
-    md = get_from_properties(props, b'md', case_sensitive=False)
+    md = get_from_properties(props, 'md', case_sensitive=False)
     if md:
         d['md'] = md
 
-    pv = get_from_properties(props, b'pv', case_sensitive=False, default='1.0')
+    pv = get_from_properties(props, 'pv', case_sensitive=False, default='1.0')
     if pv:
         d['pv'] = pv
 
-    s = get_from_properties(props, b's#', case_sensitive=False)
+    s = get_from_properties(props, 's#', case_sensitive=False)
     if s:
         d['s#'] = s
 
-    sf = get_from_properties(props, b'sf', case_sensitive=False)
+    sf = get_from_properties(props, 'sf', case_sensitive=False)
     if sf:
         d['sf'] = sf
         d['statusflags'] = IpStatusFlags[int(sf)]
 
-    ci = get_from_properties(props, b'ci', case_sensitive=False)
+    ci = get_from_properties(props, 'ci', case_sensitive=False)
     if ci:
-        category = props[b'ci'].decode()
+        category = props['ci']
         d['ci'] = category
         d['category'] = Categories[int(category)]
 

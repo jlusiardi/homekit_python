@@ -95,57 +95,61 @@ def discover_homekit_devices(max_seconds=10):
             'port': info.port
         }
 
-        props = info.properties
+        d.update(parse_discovery_properties(info.properties))
 
-        # stuff taken from the Bonjour TXT record (see table 5-7 on page 69)
-        conf_number = get_from_properties(props, b'c#', case_sensitive=False)
-        if conf_number:
-            d['c#'] = conf_number
-        else:
+        if 'c#' not in d or 'md' not in d:
             continue
 
-        ff = get_from_properties(props, b'ff', case_sensitive=False)
-        if ff:
-            flags = int(ff)
-        else:
-            flags = 0
-        d['ff'] = flags
-        d['flags'] = FeatureFlags[flags]
-
-        id = get_from_properties(props, b'id', case_sensitive=False)
-        if id:
-            d['id'] = id
-
-        md = get_from_properties(props, b'md', case_sensitive=False)
-        if md:
-            d['md'] = md
-        else:
-            continue
-
-        pv = get_from_properties(props, b'pv', case_sensitive=False, default='1.0')
-        if pv:
-            d['pv'] = pv
-
-        s = get_from_properties(props, b's#', case_sensitive=False)
-        if s:
-            d['s#'] = s
-
-        sf = get_from_properties(props, b'sf', case_sensitive=False)
-        if sf:
-            d['sf'] = sf
-        d['statusflags'] = IpStatusFlags[int(sf)]
-
-        ci = get_from_properties(props, b'ci', case_sensitive=False)
-        if ci:
-            category = info.properties[b'ci'].decode()
-            d['ci'] = category
-            d['category'] = Categories[int(category)]
-
-        # append device, it has all data
         tmp.append(d)
 
     zeroconf.close()
     return tmp
+
+
+def parse_discovery_properties(props):
+    d = {}
+
+    # stuff taken from the Bonjour TXT record (see table 5-7 on page 69)
+    conf_number = get_from_properties(props, b'c#', case_sensitive=False)
+    if conf_number:
+        d['c#'] = conf_number
+
+    ff = get_from_properties(props, b'ff', case_sensitive=False)
+    if ff:
+        flags = int(ff)
+    else:
+        flags = 0
+    d['ff'] = flags
+    d['flags'] = FeatureFlags[flags]
+
+    id = get_from_properties(props, b'id', case_sensitive=False)
+    if id:
+        d['id'] = id
+
+    md = get_from_properties(props, b'md', case_sensitive=False)
+    if md:
+        d['md'] = md
+
+    pv = get_from_properties(props, b'pv', case_sensitive=False, default='1.0')
+    if pv:
+        d['pv'] = pv
+
+    s = get_from_properties(props, b's#', case_sensitive=False)
+    if s:
+        d['s#'] = s
+
+    sf = get_from_properties(props, b'sf', case_sensitive=False)
+    if sf:
+        d['sf'] = sf
+        d['statusflags'] = IpStatusFlags[int(sf)]
+
+    ci = get_from_properties(props, b'ci', case_sensitive=False)
+    if ci:
+        category = props[b'ci'].decode()
+        d['ci'] = category
+        d['category'] = Categories[int(category)]
+
+    return d
 
 
 def find_device_ip_and_port(device_id: str, max_seconds=10):

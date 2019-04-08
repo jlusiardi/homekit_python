@@ -333,7 +333,9 @@ class Controller(object):
         :raises AuthenticationError: if the verification of the device's SRP proof fails
         :raises MaxPeersError: if the device cannot accept an additional pairing
         :raises UnavailableError: on wrong pin
+        :raises MalformedPinError: if the pin is malformed
         """
+        Controller.check_pin_format(pin)
         finish_pairing = self.start_pairing(alias, accessory_id)
         return finish_pairing(pin)
 
@@ -344,7 +346,8 @@ class Controller(object):
 
         Accessories can be found via the discover method. The id field is the accessory's id for the second parameter.
 
-        The required pin is either printed on the accessory or displayed. Must be a string of the form 'XXX-YY-ZZZ'.
+        The required pin is either printed on the accessory or displayed. Must be a string of the form 'XXX-YY-ZZZ'. If
+        this format is not used, a MalformedPinError is raised.
 
         Important: no automatic saving of the pairing data is performed. If you don't do this, the information is lost
             and you have to reset the accessory!
@@ -360,13 +363,11 @@ class Controller(object):
         :raises AuthenticationError: if the verification of the device's SRP proof fails
         :raises MaxPeersError: if the device cannot accept an additional pairing
         :raises UnavailableError: on wrong pin
-        :raises MalformedPinError: if the pin is malformed
         """
         if not IP_TRANSPORT_SUPPORTED:
             raise TransportNotSupportedError('IP')
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
-        Controller.check_pin_format(pin)
 
         connection_data = find_device_ip_and_port(accessory_id)
         if connection_data is None:
@@ -381,6 +382,7 @@ class Controller(object):
             raise
 
         def finish_pairing(pin):
+            Controller.check_pin_format(pin)
             try:
                 pairing = perform_pair_setup_part2(pin, str(uuid.uuid4()), write_fun, salt, pub_key)
             finally:
@@ -398,7 +400,8 @@ class Controller(object):
 
         Accessories can be found via the discover method. The mac field is the accessory's mac for the second parameter.
 
-        The required pin is either printed on the accessory or displayed. Must be a string of the form 'XXX-YY-ZZZ'.
+        The required pin is either printed on the accessory or displayed. Must be a string of the form 'XXX-YY-ZZZ'. If
+        this format is not used, a MalformedPinError is raised.
 
         Important: no automatic saving of the pairing data is performed. If you don't do this, the information is lost
             and you have to reset the accessory!
@@ -407,8 +410,10 @@ class Controller(object):
         :param accessory_mac: the accessory's mac address
         :param pin: function to return the accessory's pin
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
+        :raises MalformedPinError: if the pin is malformed
         # TODO add raised exceptions
         """
+        Controller.check_pin_format(pin)
         finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter)
         return finish_pairing(pin)
 
@@ -428,13 +433,11 @@ class Controller(object):
         :param accessory_mac: the accessory's mac address
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
         # TODO add raised exceptions
-        :raises MalformedPinError: if the pin is malformed
         """
         if not BLE_TRANSPORT_SUPPORTED:
             raise TransportNotSupportedError('BLE')
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
-        Controller.check_pin_format(pin)
 
         from .ble_impl.device import DeviceManager
         manager = DeviceManager(adapter_name=adapter)
@@ -452,6 +455,7 @@ class Controller(object):
         salt, pub_key = perform_pair_setup_part1(write_fun)
 
         def finish_pairing(pin):
+            Controller.check_pin_format(pin)
             pairing = perform_pair_setup_part2(pin, str(uuid.uuid4()), write_fun, salt, pub_key)
 
             pairing['AccessoryMAC'] = accessory_mac

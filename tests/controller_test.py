@@ -22,7 +22,7 @@ import time
 from homekit import Controller
 from homekit import AccessoryServer
 from homekit.exceptions import AccessoryNotFoundError, AlreadyPairedError, UnavailableError, FormatError, \
-    ConfigLoadingError, ConfigSavingError
+    ConfigLoadingError, ConfigSavingError, MalformedPinError
 from homekit.model import Accessory
 from homekit.model.services import LightBulbService
 from homekit.model import mixin as model_mixin
@@ -145,6 +145,11 @@ class TestControllerIpUnpaired(unittest.TestCase):
         """"""
         self.assertRaises(UnavailableError, self.controller.perform_pairing, 'alias2', '12:34:56:00:01:0B',
                           '010-22-021')
+
+    def test_02_pair_malformed_pin(self):
+        """"""
+        self.assertRaises(MalformedPinError, self.controller.perform_pairing, 'alias2', '12:34:56:00:01:0B',
+                          '01022021')
 
 
 class TestControllerIpPaired(unittest.TestCase):

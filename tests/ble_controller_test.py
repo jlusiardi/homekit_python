@@ -42,7 +42,6 @@ if BLE_TRANSPORT_SUPPORTED:
 
 
 class DeviceManager:
-
     """
     This is a fake version of gatt.DeviceManager
     """
@@ -67,7 +66,6 @@ class DeviceManager:
 
 
 class Device:
-
     """
     This is a fake version of a gatt.Device
     """
@@ -200,7 +198,6 @@ class PairingServiceHandler(Service):
 
 
 class Characteristic:
-
     """
     This is a fake version of gatt.Characteristic
 
@@ -322,7 +319,6 @@ class Characteristic:
 
 
 class ServiceInstanceId(Characteristic):
-
     """
     This is a fake gatt.Characteristic.
 
@@ -342,7 +338,6 @@ class ServiceInstanceId(Characteristic):
 
 
 class AccessoryRequestHandler(accessoryserver.AccessoryRequestHandler):
-
     """
     This extends the HTTP AccessoryRequestHandler object for use from a BLE
     Fake device.
@@ -409,7 +404,6 @@ class CharacteristicEntry(AbstractCharacteristic):
 
 
 class PairingSetupCharacteristicHandler(Characteristic):
-
     """
     This is a fake gatt.Characteristic.
 
@@ -444,7 +438,6 @@ class PairingSetupCharacteristicHandler(Characteristic):
 
 
 class PairingVerifyCharacteristicHandler(Characteristic):
-
     """
     This is a fake gatt.Characteristic.
 
@@ -479,7 +472,6 @@ class PairingVerifyCharacteristicHandler(Characteristic):
 
 
 class PairingPairingsCharacteristicHandler(Characteristic):
-
     """
     This is a fake gatt.Characteristic.
 
@@ -526,7 +518,6 @@ class PairingPairingsCharacteristicHandler(Characteristic):
 
 
 class Descriptor:
-
     """
     A fake gatt.Descriptor
 
@@ -545,7 +536,6 @@ class Descriptor:
 
 @unittest.skipIf(not BLE_TRANSPORT_SUPPORTED, 'BLE no supported')
 class TestBLEController(unittest.TestCase):
-
     def test_discovery(self):
         model_mixin.id_counter = 0
 
@@ -646,6 +636,28 @@ class TestBLEController(unittest.TestCase):
             c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
 
         self.assertEqual(c.pairings['test-pairing'].pairing_data['Connection'], 'BLE')
+
+    def test_pair_malformed_pin(self):
+        model_mixin.id_counter = 0
+        c = Controller()
+
+        a = Accessory(
+            'test-dev-123',
+            'TestCo',
+            'Test Dev Pro',
+            '00000',
+            1
+        )
+        a.add_service(LightBulbService())
+
+        manager = DeviceManager()
+        manager._devices['00:00:00:00:00'] = Device(a)
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            m.return_value = manager
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+            self.assertRaises(exceptions.MalformedPinError, c.perform_pairing_ble, 'alias2',
+                              '12:34:56:00:01:0B', '01022021')
 
     def test_pair_unpair(self):
         model_mixin.id_counter = 0
@@ -991,7 +1003,6 @@ class TestBLEController(unittest.TestCase):
 
 @unittest.skipIf(not BLE_TRANSPORT_SUPPORTED, 'BLE no supported')
 class TestMfrData(unittest.TestCase):
-
     def test_1(self):
         value = b'\x06\xcd\x00\x99\x99\x99\x99\x99\x99\t\x00\x91\x0f\x02\x02'
         self.assertEqual(parse_manufacturer_specific(value), {

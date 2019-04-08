@@ -31,6 +31,13 @@ class BluetoothAdapterError(HomeKitException):
     pass
 
 
+class MalformedPinError(HomeKitException):
+    """
+    Class to represent a malformed pin (not following the form DDD-DD-DDD)
+    """
+    pass
+
+
 class ProtocolError(HomeKitException):
     """
     Class to represent an abstraction layer for all errors that are defined in the Error Codes table 4-5 page 60 of the

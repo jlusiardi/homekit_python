@@ -19,9 +19,10 @@ from json.decoder import JSONDecodeError
 import logging
 import random
 import uuid
+import re
 
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
-    AuthenticationError, ConfigSavingError, AlreadyPairedError, TransportNotSupportedError
+    AuthenticationError, ConfigSavingError, AlreadyPairedError, TransportNotSupportedError, MalformedPinError
 from homekit.protocol.tlv import TLV
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.protocol.statuscodes import HapStatusCodes
@@ -300,6 +301,16 @@ class Controller(object):
             raise ConfigSavingError(
                 'Could not write "{f}" because it (or the folder) does not exist'.format(f=filename))
 
+    @staticmethod
+    def check_pin_format(pin):
+        """
+        Checks the format of the given pin: XXX-XX-XXX with X being a digit from 0 to 9
+
+        :raises MalformedPinError: if the validation fails
+        """
+        if not re.match(r'^\d\d\d-\d\d-\d\d\d$', pin):
+            raise MalformedPinError('The pin must be of the following XXX-XX-XXX where X is a digit between 0 and 9.')
+
     def perform_pairing(self, alias, accessory_id, pin):
         """
         This performs a pairing attempt with the IP accessory identified by its id.
@@ -349,11 +360,13 @@ class Controller(object):
         :raises AuthenticationError: if the verification of the device's SRP proof fails
         :raises MaxPeersError: if the device cannot accept an additional pairing
         :raises UnavailableError: on wrong pin
+        :raises MalformedPinError: if the pin is malformed
         """
         if not IP_TRANSPORT_SUPPORTED:
             raise TransportNotSupportedError('IP')
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
+        Controller.check_pin_format(pin)
 
         connection_data = find_device_ip_and_port(accessory_id)
         if connection_data is None:
@@ -415,11 +428,13 @@ class Controller(object):
         :param accessory_mac: the accessory's mac address
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
         # TODO add raised exceptions
+        :raises MalformedPinError: if the pin is malformed
         """
         if not BLE_TRANSPORT_SUPPORTED:
             raise TransportNotSupportedError('BLE')
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
+        Controller.check_pin_format(pin)
 
         from .ble_impl.device import DeviceManager
         manager = DeviceManager(adapter_name=adapter)

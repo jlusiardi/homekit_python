@@ -109,6 +109,13 @@ def discover_homekit_devices(max_seconds=10):
 
 
 def decode_discovery_properties(props):
+    """
+    This method decodes unicode bytes in _hap._tcp Bonjour TXT record keys to python strings.
+
+    :params: a dictionary of key/value TXT records from Bonjour discovery. These are assumed
+    to be bytes type.
+    :return: A dictionary of key/value TXT records from Bonjour discovery. These are now str.
+    """
     out = {}
     for k, v in props.items():
         out[k.decode('utf-8')] = v.decode('utf-8')
@@ -116,6 +123,17 @@ def decode_discovery_properties(props):
 
 
 def parse_discovery_properties(props):
+    """
+    This method normalizes and parses _hap._tcp Bonjour TXT record keys.
+
+    This is done automatically if you are using the discovery features built in to the library. If you are
+    integrating into an existing system it may already do its own Bonjour discovery. In that case you can
+    call this function to normalize the properties it has discovered.
+
+    :param props: a dictionary of key/value TXT records from doing Bonjour discovery. These should be
+    decoded as strings already. Byte data should be decoded with decode_discovery_properties.
+    :return: A dictionary contained the parsed and normalized data.
+    """
     d = {}
 
     # stuff taken from the Bonjour TXT record (see table 5-7 on page 69)

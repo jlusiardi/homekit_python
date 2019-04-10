@@ -103,33 +103,33 @@ class TestZeroconf(unittest.TestCase):
         self.assertIsNone(test_device)
 
     def test_existing_key(self):
-        props = {b'c#': b'259'}
-        val = get_from_properties(props, b'c#')
+        props = {'c#': '259'}
+        val = get_from_properties(props, 'c#')
         self.assertEqual('259', val)
 
     def test_non_existing_key_no_default(self):
-        props = {b'c#': b'259'}
-        val = get_from_properties(props, b's#')
+        props = {'c#': '259'}
+        val = get_from_properties(props, 's#')
         self.assertEqual(None, val)
 
     def test_non_existing_key_case_insensitive(self):
-        props = {b'C#': b'259', b'heLLo': b'World'}
-        val = get_from_properties(props, b'c#')
+        props = {'C#': '259', 'heLLo': 'World'}
+        val = get_from_properties(props, 'c#')
         self.assertEqual(None, val)
-        val = get_from_properties(props, b'c#', case_sensitive=True)
+        val = get_from_properties(props, 'c#', case_sensitive=True)
         self.assertEqual(None, val)
-        val = get_from_properties(props, b'c#', case_sensitive=False)
+        val = get_from_properties(props, 'c#', case_sensitive=False)
         self.assertEqual('259', val)
 
-        val = get_from_properties(props, b'HEllo', case_sensitive=False)
+        val = get_from_properties(props, 'HEllo', case_sensitive=False)
         self.assertEqual('World', val)
 
     def test_non_existing_key_with_default(self):
-        props = {b'c#': b'259'}
-        val = get_from_properties(props, b's#', default='1')
+        props = {'c#': '259'}
+        val = get_from_properties(props, 's#', default='1')
         self.assertEqual('1', val)
 
     def test_non_existing_key_with_default_non_string(self):
-        props = {b'c#': b'259'}
-        val = get_from_properties(props, b's#', default=1)
+        props = {'c#': '259'}
+        val = get_from_properties(props, 's#', default=1)
         self.assertEqual('1', val)

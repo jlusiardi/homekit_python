@@ -68,7 +68,7 @@ def get_from_properties(props, key, default=None, case_sensitive=True):
         tmp_key = key.lower()
 
     if tmp_key in tmp_props:
-        return tmp_props[tmp_key].decode()
+        return tmp_props[tmp_key]
     else:
         if default:
             return str(default)
@@ -95,57 +95,88 @@ def discover_homekit_devices(max_seconds=10):
             'port': info.port
         }
 
-        props = info.properties
+        d.update(parse_discovery_properties(decode_discovery_properties(
+            info.properties
+        )))
 
-        # stuff taken from the Bonjour TXT record (see table 5-7 on page 69)
-        conf_number = get_from_properties(props, b'c#', case_sensitive=False)
-        if conf_number:
-            d['c#'] = conf_number
-        else:
+        if 'c#' not in d or 'md' not in d:
             continue
 
-        ff = get_from_properties(props, b'ff', case_sensitive=False)
-        if ff:
-            flags = int(ff)
-        else:
-            flags = 0
-        d['ff'] = flags
-        d['flags'] = FeatureFlags[flags]
-
-        id = get_from_properties(props, b'id', case_sensitive=False)
-        if id:
-            d['id'] = id
-
-        md = get_from_properties(props, b'md', case_sensitive=False)
-        if md:
-            d['md'] = md
-        else:
-            continue
-
-        pv = get_from_properties(props, b'pv', case_sensitive=False, default='1.0')
-        if pv:
-            d['pv'] = pv
-
-        s = get_from_properties(props, b's#', case_sensitive=False)
-        if s:
-            d['s#'] = s
-
-        sf = get_from_properties(props, b'sf', case_sensitive=False)
-        if sf:
-            d['sf'] = sf
-        d['statusflags'] = IpStatusFlags[int(sf)]
-
-        ci = get_from_properties(props, b'ci', case_sensitive=False)
-        if ci:
-            category = info.properties[b'ci'].decode()
-            d['ci'] = category
-            d['category'] = Categories[int(category)]
-
-        # append device, it has all data
         tmp.append(d)
 
     zeroconf.close()
     return tmp
+
+
+def decode_discovery_properties(props):
+    """
+    This method decodes unicode bytes in _hap._tcp Bonjour TXT record keys to python strings.
+
+    :params: a dictionary of key/value TXT records from Bonjour discovery. These are assumed
+    to be bytes type.
+    :return: A dictionary of key/value TXT records from Bonjour discovery. These are now str.
+    """
+    out = {}
+    for k, v in props.items():
+        out[k.decode('utf-8')] = v.decode('utf-8')
+    return out
+
+
+def parse_discovery_properties(props):
+    """
+    This method normalizes and parses _hap._tcp Bonjour TXT record keys.
+
+    This is done automatically if you are using the discovery features built in to the library. If you are
+    integrating into an existing system it may already do its own Bonjour discovery. In that case you can
+    call this function to normalize the properties it has discovered.
+
+    :param props: a dictionary of key/value TXT records from doing Bonjour discovery. These should be
+    decoded as strings already. Byte data should be decoded with decode_discovery_properties.
+    :return: A dictionary contained the parsed and normalized data.
+    """
+    d = {}
+
+    # stuff taken from the Bonjour TXT record (see table 5-7 on page 69)
+    conf_number = get_from_properties(props, 'c#', case_sensitive=False)
+    if conf_number:
+        d['c#'] = conf_number
+
+    ff = get_from_properties(props, 'ff', case_sensitive=False)
+    if ff:
+        flags = int(ff)
+    else:
+        flags = 0
+    d['ff'] = flags
+    d['flags'] = FeatureFlags[flags]
+
+    id = get_from_properties(props, 'id', case_sensitive=False)
+    if id:
+        d['id'] = id
+
+    md = get_from_properties(props, 'md', case_sensitive=False)
+    if md:
+        d['md'] = md
+
+    pv = get_from_properties(props, 'pv', case_sensitive=False, default='1.0')
+    if pv:
+        d['pv'] = pv
+
+    s = get_from_properties(props, 's#', case_sensitive=False)
+    if s:
+        d['s#'] = s
+
+    sf = get_from_properties(props, 'sf', case_sensitive=False)
+    if sf:
+        d['sf'] = sf
+        d['statusflags'] = IpStatusFlags[int(sf)]
+
+    ci = get_from_properties(props, 'ci', case_sensitive=False)
+    if ci:
+        category = props['ci']
+        d['ci'] = category
+        d['category'] = Categories[int(category)]
+
+    return d
 
 
 def find_device_ip_and_port(device_id: str, max_seconds=10):

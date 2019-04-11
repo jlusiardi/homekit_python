@@ -24,6 +24,7 @@ import random
 import sys
 import uuid
 import struct
+import threading
 from distutils.util import strtobool
 
 from homekit.controller.tools import AbstractPairing
@@ -84,9 +85,43 @@ class BlePairing(AbstractPairing):
         # TODO implementation still missing
         pass
 
-    def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
+    def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1,
+                   stop_event: threading.Event = None):
+        """
+        This function is called to register for events on characteristics and receive them. Each time events are
+        received a call back function is invoked. By that the caller gets information about the events.
+
+        The characteristics are identified via their proper accessory id (aid) and instance id (iid).
+
+        The call back function takes a list of 3-tupels of aid, iid and the value, e.g.:
+          [(1, 9, 26.1), (1, 10, 30.5)]
+
+        If the input contains characteristics without the event permission or any other error, the function will return
+        a dict containing tupels of aid and iid for each requested characteristic with error. Those who would have
+        worked are not in the result.
+
+        :param characteristics: a list of 2-tuples of accessory id (aid) and instance id (iid)
+        :param callback_fun: a function that is called each time events were received
+        :param max_events: number of reported events, default value -1 means unlimited
+        :param max_seconds: number of seconds to wait for events, default value -1 means unlimited
+        :param stop_event: a threading.Event instance that when set commands this function to clean up and return
+        :return: a dict mapping 2-tuples of aid and iid to dicts with status and description, e.g.
+                 {(1, 37): {'description': 'Notification is not supported for characteristic.', 'status': -70406}}
+        """
         # TODO implementation still missing
         pass
+
+    def stop_events(self, characteristics):
+        """
+        This functions sets the events to False so that the accessory no longer sends events to the controller
+
+        The characteristics are identified via their proper accessory id (aid) and instance id (iid).
+
+        :param characteristics: a list of 2-tuples of accessory id (aid) and instance id (iid)
+        :return: a dict from (aid, iid) onto {status, description}
+        """
+        # TODO implementation still missing
+        return {}
 
     def identify(self):
         """
@@ -296,14 +331,16 @@ class BlePairing(AbstractPairing):
                             return c
         return None
 
-    def put_characteristics(self, characteristics, do_conversion=False):
+    def put_characteristics(self, characteristics, do_conversion=False, field='value', default_value=None):
         """
         Update the values of writable characteristics. The characteristics have to be identified by accessory id (aid),
         instance id (iid). If do_conversion is False (the default), the value must be of proper format for the
         characteristic since no conversion is done. If do_conversion is True, the value is converted.
 
-        :param characteristics: a list of 3-tupels of accessory id, instance id and the value
+        :param characteristics: a list of tupels of accessory id, instance id and optional the value
         :param do_conversion: select if conversion is done (False is default)
+        :param field: the name of the field to write the values to
+        :param default_value: this value is taken if no value was given in the characteristics list
         :return: a dict from (aid, iid) onto {status, description}
         :raises FormatError: if the input value could not be converted to the target type and conversion was
                              requested

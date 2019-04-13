@@ -58,11 +58,10 @@ def error_handler(error, stage):
 def create_ip_pair_setup_write(connection):
     def write_http(request, expected):
         logging.debug('write message: %s', TLV.to_string(TLV.decode_bytes(request)))
-        headers = {
-            'Content-Type': 'application/pairing+tlv8'
-        }
-
-        connection.request('POST', '/pair-setup', request, headers)
+        connection.putrequest('POST', '/pair-setup', skip_accept_encoding=True)
+        connection.putheader('Content-Type', 'application/pairing+tlv8')
+        connection.putheader('Content-Length', len(request))
+        connection.endheaders(request, encode_chunked=False)
         resp = connection.getresponse()
         response_tlv = TLV.decode_bytes(resp.read(), expected)
         logging.debug('response: %s', TLV.to_string(response_tlv))
@@ -74,11 +73,10 @@ def create_ip_pair_setup_write(connection):
 def create_ip_pair_verify_write(connection):
     def write_http(request, expected):
         logging.debug('write message: %s', TLV.to_string(TLV.decode_bytes(request)))
-        headers = {
-            'Content-Type': 'application/pairing+tlv8'
-        }
-
-        connection.request('POST', '/pair-verify', request, headers)
+        connection.putrequest('POST', '/pair-verify', skip_accept_encoding=True)
+        connection.putheader('Content-Type', 'application/pairing+tlv8')
+        connection.putheader('Content-Length', len(request))
+        connection.endheaders(request, encode_chunked=False)
         resp = connection.getresponse()
         response_tlv = TLV.decode_bytes(resp.read(), expected)
         logging.debug('response: %s', TLV.to_string(response_tlv))

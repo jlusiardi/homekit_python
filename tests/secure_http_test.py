@@ -21,8 +21,7 @@ import threading
 
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.exceptions import AccessoryDisconnectedError, EncryptionError
-from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt
-
+from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 
 class ResponseProvider(threading.Thread):
     """
@@ -41,16 +40,18 @@ class ResponseProvider(threading.Thread):
         self.encryption_fail = encryption_fail
 
     def run(self):
-        # tmp = self.sock.recv(1024)
-        # length = int.from_bytes(tmp[0:2], 'little')
-        # tmp = tmp[2:]
-        # block = tmp[0:length]
-        # tmp = tmp[length:]
-        # tag = tmp[0:16]
-        # request = chacha20_aead_decrypt(length.to_bytes(2, byteorder='little'),
-        #                                 self.c2a_key,
-        #                                 self.c2a_counter.to_bytes(8, byteorder='little'),
-        #                                 bytes([0, 0, 0, 0]), block + tag)
+        tmp = self.sock.recv(1024)
+        length = int.from_bytes(tmp[0:2], 'little')
+        tmp = tmp[2:]
+        block = tmp[0:length]
+        tmp = tmp[length:]
+        tag = tmp[0:16]
+        request = chacha20_aead_decrypt(length.to_bytes(2, byteorder='little'),
+                                        self.c2a_key,
+                                        self.c2a_counter.to_bytes(8, byteorder='little'),
+                                        bytes([0, 0, 0, 0]), block + tag)
+
+        assert b'Host:' in request
 
         self.c2a_counter += 1
 

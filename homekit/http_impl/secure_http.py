@@ -38,6 +38,8 @@ class SecureHttp:
         :param c2a_key: the key used for the communication between controller and accessory
         """
         self.sock = session.sock
+        self.host = session.pairing_data['AccessoryIP']
+        self.port = session.pairing_data['AccessoryPort']
         self.a2c_key = session.a2c_key
         self.c2a_key = session.c2a_key
         self.c2a_counter = 0
@@ -46,18 +48,20 @@ class SecureHttp:
         self.lock = threading.Lock()
 
     def get(self, target):
-        data = 'GET {tgt} HTTP/1.1\n\n'.format(tgt=target)
+        data = 'GET {tgt} HTTP/1.1\nHost: {host}:{port}\n\n'.format(tgt=target, host=self.host, port=self.port)
 
         return self._handle_request(data)
 
     def put(self, target, body, content_type=HttpContentTypes.JSON):
-        headers = 'Content-Type: {ct}\n'.format(ct=content_type) + \
+        headers = 'Host: {host}:{port}\n'.format(host=self.host, port=self.port) + \
+                  'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'PUT {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
         return self._handle_request(data)
 
     def post(self, target, body, content_type=HttpContentTypes.TLV):
-        headers = 'Content-Type: {ct}\n'.format(ct=content_type) + \
+        headers = 'Host: {host}:{port}\n'.format(host=self.host, port=self.port) + \
+                  'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'POST {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
 

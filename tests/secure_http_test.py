@@ -21,8 +21,7 @@ import threading
 
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.exceptions import AccessoryDisconnectedError, EncryptionError
-from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt
-
+from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 
 class ResponseProvider(threading.Thread):
     """
@@ -41,16 +40,18 @@ class ResponseProvider(threading.Thread):
         self.encryption_fail = encryption_fail
 
     def run(self):
-        # tmp = self.sock.recv(1024)
-        # length = int.from_bytes(tmp[0:2], 'little')
-        # tmp = tmp[2:]
-        # block = tmp[0:length]
-        # tmp = tmp[length:]
-        # tag = tmp[0:16]
-        # request = chacha20_aead_decrypt(length.to_bytes(2, byteorder='little'),
-        #                                 self.c2a_key,
-        #                                 self.c2a_counter.to_bytes(8, byteorder='little'),
-        #                                 bytes([0, 0, 0, 0]), block + tag)
+        tmp = self.sock.recv(1024)
+        length = int.from_bytes(tmp[0:2], 'little')
+        tmp = tmp[2:]
+        block = tmp[0:length]
+        tmp = tmp[length:]
+        tag = tmp[0:16]
+        request = chacha20_aead_decrypt(length.to_bytes(2, byteorder='little'),
+                                        self.c2a_key,
+                                        self.c2a_counter.to_bytes(8, byteorder='little'),
+                                        bytes([0, 0, 0, 0]), block + tag)
+
+        assert b'Host:' in request
 
         self.c2a_counter += 1
 
@@ -76,6 +77,10 @@ class TestSecureHttp(unittest.TestCase):
             session.sock = socket.socket()
             session.a2c_key = b'\x00' * 32
             session.c2a_key = b'\x00' * 32
+            session.pairing_data = {
+                'AccessoryIP': '10.0.0.2',
+                'AccessoryPort': 3000,
+            }
 
             sh = SecureHttp(session)
             self.assertRaises(AccessoryDisconnectedError, sh.get, '/')
@@ -85,6 +90,10 @@ class TestSecureHttp(unittest.TestCase):
             session.sock = socket.socket()
             session.a2c_key = b'\x00' * 32
             session.c2a_key = b'\x00' * 32
+            session.pairing_data = {
+                'AccessoryIP': '10.0.0.2',
+                'AccessoryPort': 3000,
+            }
 
             sh = SecureHttp(session)
             self.assertRaises(AccessoryDisconnectedError, sh.put, '/', 'data')
@@ -94,6 +103,10 @@ class TestSecureHttp(unittest.TestCase):
             session.sock = socket.socket()
             session.a2c_key = b'\x00' * 32
             session.c2a_key = b'\x00' * 32
+            session.pairing_data = {
+                'AccessoryIP': '10.0.0.2',
+                'AccessoryPort': 3000,
+            }
 
             sh = SecureHttp(session)
             self.assertRaises(AccessoryDisconnectedError, sh.post, '/', 'data')
@@ -106,6 +119,10 @@ class TestSecureHttp(unittest.TestCase):
 
             session.a2c_key = b'\x00' * 32
             session.c2a_key = b'\x00' * 32
+            session.pairing_data = {
+                'AccessoryIP': '10.0.0.2',
+                'AccessoryPort': 3000,
+            }
 
             sh = SecureHttp(session, timeout=1)
             result = sh.get('/')
@@ -126,6 +143,10 @@ class TestSecureHttp(unittest.TestCase):
             session.sock = controller_socket
             session.a2c_key = key_a2c
             session.c2a_key = key_c2a
+            session.pairing_data = {
+                'AccessoryIP': '10.0.0.2',
+                'AccessoryPort': 3000,
+            }
 
             sh = SecureHttp(session, timeout=10)
             result = sh.get('/')
@@ -148,6 +169,10 @@ class TestSecureHttp(unittest.TestCase):
             session.sock = controller_socket
             session.a2c_key = key_a2c
             session.c2a_key = key_c2a
+            session.pairing_data = {
+                'AccessoryIP': '10.0.0.2',
+                'AccessoryPort': 3000,
+            }
 
             sh = SecureHttp(session, timeout=10)
             self.assertRaises(EncryptionError, sh.get, '/')
@@ -171,6 +196,10 @@ class TestSecureHttp(unittest.TestCase):
             session.sock = controller_socket
             session.a2c_key = key_a2c
             session.c2a_key = key_c2a
+            session.pairing_data = {
+                'AccessoryIP': '10.0.0.2',
+                'AccessoryPort': 3000,
+            }
 
             sh = SecureHttp(session, timeout=10)
             result = sh.get('/')

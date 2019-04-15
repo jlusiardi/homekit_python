@@ -23,6 +23,7 @@ from homekit.http_impl.secure_http import SecureHttp
 from homekit.exceptions import AccessoryDisconnectedError, EncryptionError
 from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 
+
 class ResponseProvider(threading.Thread):
     """
 
@@ -208,25 +209,3 @@ class TestSecureHttp(unittest.TestCase):
         accessory_socket.close()
         self.assertEqual(200, result.code)
         self.assertEqual(bytearray(b' ' * 1025), result.body)
-
-    def test_get_large_request(self):
-        controller_socket, accessory_socket = socket.socketpair()
-
-        key_c2a = b'S2}\xb1}-l\n\x83\xe5}\'U\xc0\x1b\x0f\x08%X\xfdu\x1f\x9el/\x9bZ"\xec5\xa5P'
-        key_a2c = b'\x16\xab\xd3\xfe\x95{\xe56\x1fH\x81\xfd\x914\xa0@\xaa\x0e\xa6\xebw\xf2\xe3w:\x11/\x01\xbb;,\x1d'
-
-        tthread = ResponseProvider(accessory_socket, key_c2a, key_a2c)
-        tthread.start()
-
-        with mock.patch('homekit.controller.ip_implementation.IpSession') as session:
-            session.sock = controller_socket
-            session.a2c_key = key_a2c
-            session.c2a_key = key_c2a
-
-            sh = SecureHttp(session, timeout=10)
-            result = sh.get('/' + 1024 * 'a')
-
-        controller_socket.close()
-        accessory_socket.close()
-        self.assertEqual(200, result.code)
-        self.assertEqual(b'', result.body)

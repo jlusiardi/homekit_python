@@ -49,7 +49,6 @@ class SecureHttp:
 
     def get(self, target):
         data = 'GET {tgt} HTTP/1.1\nHost: {host}:{port}\n\n'.format(tgt=target, host=self.host, port=self.port)
-
         return self._handle_request(data)
 
     def put(self, target, body, content_type=HttpContentTypes.JSON):
@@ -71,6 +70,7 @@ class SecureHttp:
         with self.lock:
             data = data.replace("\n", "\r\n")
             while len(data) > 0:
+                # split the data to max 1024 bytes (see page 71)
                 len_data = min(len(data), 1024)
                 tmp_data = data[:len_data]
                 data = data[len_data:]

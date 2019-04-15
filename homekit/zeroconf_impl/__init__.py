@@ -16,6 +16,7 @@
 
 from _socket import inet_ntoa
 from time import sleep
+import logging
 
 from zeroconf import Zeroconf, ServiceBrowser
 
@@ -101,7 +102,7 @@ def discover_homekit_devices(max_seconds=10):
 
         if 'c#' not in d or 'md' not in d:
             continue
-
+        logging.debug('device %s', d)
         tmp.append(d)
 
     zeroconf.close()

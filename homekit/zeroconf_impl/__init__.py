@@ -96,13 +96,15 @@ def discover_homekit_devices(max_seconds=10):
             'port': info.port
         }
 
+        logging.debug('candidate data %s', info.properties)
+
         d.update(parse_discovery_properties(decode_discovery_properties(
             info.properties
         )))
 
         if 'c#' not in d or 'md' not in d:
             continue
-        logging.debug('device %s', d)
+        logging.debug('found Homekit IP accessory %s', d)
         tmp.append(d)
 
     zeroconf.close()

@@ -1,0 +1,271 @@
+@startuml
+
+package homekit {
+    class AccessoryServer {
+        + __init__(self, config_file, logger)
+        + publish_device()
+        + unpublish_device()
+        + shutdown()
+        + add_accessory()
+        + serve_forever()
+    }
+    package model {
+        package services {
+            note as n1
+                This package contains all
+                services as defined in the
+                spec chapter 9.
+            end note
+            class AbstractService {
+                + iid
+                + append_characteristic()
+            }
+
+
+            class AccessoryInformationService {
+            }
+
+            class LightBulbService {
+            }
+
+            AccessoryInformationService -up-|> AbstractService
+            LightBulbService -up-|> AbstractService
+            GenericService -up-|> AbstractService
+        }
+        package characteristics {
+            note as n2
+                This package contains all
+                characteristics as defined in the
+                spec chapter 8.
+            end note
+
+            class AbstractCharacteristic {
+                + iid
+                + type
+                + perms
+                + format
+                + value
+                + ev
+                + description
+                + unit
+                + minValue
+                + maxValue
+                + minStep
+                + maxLen
+                + maxDataLen
+                + valid_values
+                + valid_values_range
+                - _set_value_callback
+                - _get_value_callback
+                + set_set_value_callback(callback)
+                + set_get_value_callback(callback)
+                + set_events(value)
+                + set_value(value)
+                + get_value(value)
+            }
+
+            class OnCharacteristicMixin {
+                + set_on_set_callback()
+                + set_on_get_callback()
+            }
+
+            OnCharacteristic -up-|> AbstractCharacteristic
+
+            OnCharacteristicMixin -up-> OnCharacteristic : _onCharacteristic
+
+            GenericCharacteristic -up-|> AbstractCharacteristic
+            NameCharacteristic -up-|> AbstractCharacteristic
+        }
+
+        AccessoryInformationService --> NameCharacteristic
+        LightBulbService -up-|> OnCharacteristicMixin
+
+        class Accessory {
+            + aid
+            + add_service()
+        }
+    }
+
+    AccessoryServer --> "*" Accessory : accessories
+    AbstractService -right-> "1..*" AbstractCharacteristic : characteristics
+    Accessory -down-> "*" AbstractService: services
+
+    package exceptions {
+        class HomeKitException
+        FormatException -up-|> HomeKitException
+        class AuthenticationError
+        AuthenticationError -up-|> HomeKitException
+        class AccessoryNotFoundException
+        class UnknownError
+        class ConfigSavingException
+        ConfigSavingException -up-|> HomeKitException
+        class ConfigLoadingException
+        ConfigLoadingException -up-|> HomeKitException
+        class AlreadyPairedException
+        ConfigurationException  -up-|> HomeKitException
+        HttpException -up-|> HomeKitException
+    }
+}
+
+class homekit.AbstractPairing {
+    + close()
+    + list_accessories_and_characteristics()
+    + get_accessories()
+    + get_characteristics(characteristics[], include_meta, include_perms, include_type, include_events)
+    + get_events(characteristics[], callback_fun, max_events=-1, max_seconds=-1)
+    + list_pairings()
+    + put_characteristics(characteristics_and_values[], do_conversion)
+    + identify()
+}
+
+class homekit.Controller {
+    + __init__(self, data)
+    + get_pairings()
+    + load_data(filename)
+    + perform_pairing(alias, id, pin, type='IP')
+    + remove_pairing(alias)
+    + save_data(filename)
+    + {static}discover(max_seconds)
+    + {static}identify(id, type='IP')
+}
+
+package homekit {
+note as n3
+    The <b>type</b> marks whether the
+    transport is IP or Bluetooth LE.
+    Depending on the type the <b>id</b>
+    is either the device ID for IP
+    Accessories or the MAC for
+    Bluetooth LE Accessories.
+end note
+}
+
+n3 .right. homekit.Controller
+
+
+class homekit.IpPairing {
+}
+
+class homekit.BlePairing {
+}
+
+homekit.IpPairing  -up-|> homekit.AbstractPairing
+
+homekit.BlePairing  -up-|> homekit.AbstractPairing
+
+homekit.AbstractPairing "*" <-down- "1" homekit.Controller
+
+
+homekit.BleSession <-left- homekit.BlePairing
+
+homekit.IpSession <-right- homekit.IpPairing
+
+class homekit.discover <<(E,#FF7700) executable>> {
+    + timeout
+}
+
+homekit.discover --> homekit.Controller
+
+class homekit.get_accessories <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
+    + output_format
+}
+
+homekit.get_accessories --> homekit.Controller
+
+class homekit.get_characteristics <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
+    + characteristics[]
+    + meta
+    + permissions
+    + type
+    + events
+}
+
+homekit.get_characteristics --> homekit.Controller
+
+class homekit.get_events <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
+    + characteristics[]
+}
+
+homekit.get_events --> homekit.Controller
+
+class homekit.list_pairings <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
+}
+
+homekit.list_pairings--> homekit.Controller
+
+class homekit.pair <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
+    + accessory_id
+    + pin
+}
+
+homekit.pair--> homekit.Controller
+
+class homekit.put_characteristics <<(E,#FF7700) executable>> {
+}
+
+homekit.put_characteristics--> homekit.Controller
+
+class homekit.unpair <<(E,#FF7700) executable>> {
+    + pairing_data_file
+    + alias
+}
+
+homekit.unpair --> homekit.Controller
+
+
+hide <<executable>> methods
+hide <<executable>> circle
+
+@enduml
+
+
+class homekit.IpSession {
+    + {static} create_from_pairing_data(data)
+    + {static} create_from_file(file)
+    + get(self, url)
+    + put(self, url, body, content_type=HttpContentTypes.JSON)
+    + post(self, url, body, content_type=HttpContentTypes.JSON)
+    + get_from_pairing_data(self, key)
+    + set_in_pairing_data(self, key, value)
+}
+
+    package exceptions {
+        class AuthenticationError
+        class HomeKitTypeException
+        class AccessoryNotFoundException
+        class UnknownError
+        class ConfigSavingException
+        class AlreadyPairedException
+        class ConfigurationException
+    }
+
+
+    Note "Table 5-12 page 80" as N1
+    homekit.HapStatusCodes .. N1
+
+class homekit.TLV {
+    + {static} encode_dict(data)
+    + {static} decode_bytes(data)
+}
+
+class homekit.CharacteristicsTypes {
+    + __getitem__(self, item)
+    + get_short(self, uuid)
+    + get_uuid(self, item_name)
+}
+
+class homekit.HapStatusCodes {
+}
+
+class homekit.Categories {
+}

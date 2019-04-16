@@ -17,39 +17,32 @@
 #
 
 import argparse
-import os
 
-from homekit import create_session, SecureHttp, load_pairing
-from homekit.tlv import TLV
+from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit list pairings app')
+    parser = argparse.ArgumentParser(description='HomeKit remove pairing app')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
-    parser.add_argument('-d', action='store_true', dest='delete', help='Delete file with the pairing data')
+    parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
+    add_log_arguments(parser)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
 
-    conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
-    sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
-    pairing_data = load_pairing(args.file)
-    pairingId = pairing_data['iOSPairingId']
+    setup_logging(args.loglevel)
 
-    request_tlv = TLV.encode_dict({
-        TLV.kTLVType_State: TLV.M1,
-        TLV.kTLVType_Method: TLV.RemovePairing,
-        TLV.kTLVType_Identifier: pairingId.encode()
-    })
+    controller = Controller(args.adapter)
+    controller.load_data(args.file)
+    if args.alias not in controller.get_pairings():
+        print('"{a}" is no known alias'.format(a=args.alias))
+        exit(-1)
 
-    response = sec_http.post('/pairings', request_tlv.decode())
-    data = response.read()
-    data = TLV.decode_bytes_to_list(data)
-    if data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2:
-        print('Pairing removed')
-        if args.delete:
-            os.remove(args.file)
-    else:
-        print('Remove pairing failed')
+    controller.remove_pairing(args.alias)
+    controller.save_data(args.file)
+    print('Pairing for "{a}" was removed.'.format(a=args.alias))

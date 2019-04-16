@@ -17,38 +17,59 @@
 #
 
 import json
+import sys
 import argparse
+import logging
 
-from homekit import SecureHttp, load_pairing, CharacteristicsTypes, ServicesTypes, save_pairing, create_session
+from homekit.controller import Controller
+from homekit.model.characteristics import CharacteristicsTypes
+from homekit.model.services import ServicesTypes
+from homekit.log_support import setup_logging, add_log_arguments
 
-  
+
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit perform app - performs operations on paired devices')
+    parser = argparse.ArgumentParser(description='HomeKit get accessories app')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
-    parser.add_argument('-o', action='store', dest='output', default='compact', choices=['json', 'compact'], help='Specify output format')
-    return parser
+    parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
+    parser.add_argument('-o', action='store', dest='output', default='compact', choices=['json', 'compact'],
+                        help='Specify output format')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
+    add_log_arguments(parser)
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
-    parser = setup_args_parser()
-    args = parser.parse_args()
+    args = setup_args_parser()
 
-    conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
+    setup_logging(args.loglevel)
 
-    sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
-    response = sec_http.get('/accessories')
-    data = json.loads(response.read().decode())
+    controller = Controller(args.adapter)
+    try:
+        controller.load_data(args.file)
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
+        sys.exit(-1)
 
-    # save accessories data to pairing file
-    pairing_data = load_pairing(args.file)
-    pairing_data['accessories'] = data['accessories']
-    save_pairing(args.file, pairing_data)
+    if args.alias not in controller.get_pairings():
+        print('"{a}" is no known alias'.format(a=args.alias))
+        sys.exit(-1)
 
+    try:
+        pairing = controller.get_pairings()[args.alias]
+        data = pairing.list_accessories_and_characteristics()
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
+        sys.exit(-1)
+
+    # prepare output
     if args.output == 'json':
         print(json.dumps(data, indent=4))
 
     if args.output == 'compact':
-        for accessory in data['accessories']:
+        for accessory in data:
             aid = accessory['aid']
             for service in accessory['services']:
                 s_type = service['type']
@@ -61,9 +82,10 @@ if __name__ == '__main__':
                     c_type = characteristic['type']
                     perms = ','.join(characteristic['perms'])
                     desc = characteristic.get('description', '')
-
-                    print('  {aid}.{iid}: {value} ({description}) >{ctype}< [{perms}]'.format(aid=aid, iid=c_iid, value=value,
-                                                                              ctype=CharacteristicsTypes.get_short(c_type),
-                                                                              perms=perms, description = desc))
-
-    conn.close()
+                    c_type = CharacteristicsTypes.get_short(c_type)
+                    print('  {aid}.{iid}: {value} ({description}) >{ctype}< [{perms}]'.format(aid=aid,
+                                                                                              iid=c_iid,
+                                                                                              value=value,
+                                                                                              ctype=c_type,
+                                                                                              perms=perms,
+                                                                                              description=desc))

@@ -17,45 +17,44 @@
 #
 
 import argparse
+import sys
+import logging
 
-from homekit import create_session, SecureHttp
-from homekit.tlv import TLV
+from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit list pairings app')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
+    parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
+    add_log_arguments(parser)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
 
-    conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
-    sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
+    setup_logging(args.loglevel)
 
-    request_tlv = TLV.encode_dict({
-        TLV.kTLVType_State: TLV.M1,
-        TLV.kTLVType_Method: TLV.ListPairings
-    })
+    controller = Controller(args.adapter)
+    controller.load_data(args.file)
+    if args.alias not in controller.get_pairings():
+        print('"{a}" is no known alias'.format(a=args.alias))
+        exit(-1)
 
-    response = sec_http.post('/pairings', request_tlv.decode())
-    data = response.read()
-    data = TLV.decode_bytes_to_list(data)
+    pairing = controller.get_pairings()[args.alias]
+    try:
+        pairings = pairing.list_pairings()
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
+        sys.exit(-1)
 
-    if not (data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2):
-        print('Illegal reply.')
-    elif data[1][0] == TLV.kTLVType_Error and data[1][1] == TLV.kTLVError_Authentication:
-        print('Device not paired.')
-    else:
-        for d in data[1:]:
-            if d[0] == TLV.kTLVType_Identifier:
-                print('Pairing Id: {id}'.format(id=d[1].decode()))
-            if d[0] == TLV.kTLVType_PublicKey:
-                print('\tPublic Key: 0x{key}'.format(key=d[1].hex()))
-            if d[0] == TLV.kTLVType_Permissions:
-                user_type = 'regular user'
-                if d[1] == b'\x01':
-                    user_type = 'admin user'
-                print('\tPermissions: {perm} ({type})'.format(perm=int.from_bytes(d[1], byteorder='little'),
-                                                              type=user_type))
+    for pairing in pairings:
+        print('Pairing Id: {id}'.format(id=pairing['pairingId']))
+        print('\tPublic Key: 0x{key}'.format(key=pairing['publicKey']))
+        print('\tPermissions: {perm} ({type})'.format(perm=pairing['permissions'],
+                                                      type=pairing['controllerType']))

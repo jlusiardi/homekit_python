@@ -15,8 +15,8 @@
 #
 
 from homekit.model import get_id
-from homekit.model.characteristics import OnCharacteristicMixin, BrightnessCharacteristicMixin, HueCharacteristicMixin, \
-    SaturationCharacteristicMixin
+from homekit.model.characteristics import OnCharacteristicMixin, BrightnessCharacteristicMixin, \
+    HueCharacteristicMixin, SaturationCharacteristicMixin
 from homekit.model.services import ServicesTypes, AbstractService
 
 

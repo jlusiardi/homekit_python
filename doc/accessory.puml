@@ -1,0 +1,18 @@
+@startuml
+
+!include overview.puml
+
+hide homekit.Pairing
+hide homekit.Controller
+hide homekit.unpair
+hide homekit.pair
+hide homekit.list_pairings
+hide homekit.discover
+hide homekit.get_accessories
+hide homekit.get_events
+hide homekit.get_characteristics
+hide homekit.put_characteristics
+hide homekit.get_accessories
+hide exceptions
+
+@enduml

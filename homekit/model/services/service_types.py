@@ -17,8 +17,12 @@
 
 class _ServicesTypes(object):
     """
-    This data is taken from Table 12-3 Accessory Categories on page 254. Values above 19 are reserved.
+    This data is taken from chapter 9 page 216 onwards.
     """
+    INFORMATION_SERVICE = 'A2'  # new for ble, homekit spec page 126
+    PAIRING_SERVICE = '55'      # new for ble, homekit spec page 57
+    ACCESSORY_INFORMATION_SERVICE = '3E'
+    BATTERY_SERVICE = '96'
 
     def __init__(self):
         self.baseUUID = '-0000-1000-8000-0026BB765291'
@@ -32,6 +36,7 @@ class _ServicesTypes(object):
             '47': 'public.hap.service.outlet',
             '49': 'public.hap.service.switch',
             '4A': 'public.hap.service.thermostat',
+            '55': 'public.hap.service.pairing',                             # new for ble, homekit spec page 57
             '7E': 'public.hap.service.security-system',
             '7F': 'public.hap.service.sensor.carbon-monoxide',
             '80': 'public.hap.service.sensor.contact',
@@ -49,6 +54,7 @@ class _ServicesTypes(object):
             '8D': 'public.hap.service.sensor.air-quality',
             '96': 'public.hap.service.battery',
             '97': 'public.hap.service.sensor.carbon-dioxide',
+            'A2': 'public.hap.service.protocol.information.service',        # new for ble, homekit spec page 126
             'B7': 'public.hap.service.fanv2',
             'B9': 'public.hap.service.vertical-slat',
             'BA': 'public.hap.service.filter-maintenance',
@@ -73,7 +79,15 @@ class _ServicesTypes(object):
         return 'Unknown Service: {i}'.format(i=item)
 
     def get_short(self, item):
+        """
+        get the short version of the service name (aka the last segment of the name) or if this is not in the list of
+        services it returns 'Unknown Service: XX'.
+
+        :param item: the items full UUID
+        :return: the last segment of the service name or a hint that it is unknown
+        """
         orig_item = item
+        item = item.upper()
         if item.endswith(self.baseUUID):
             item = item.split('-', 1)[0]
             item = item.lstrip('0')
@@ -83,9 +97,30 @@ class _ServicesTypes(object):
         return 'Unknown Service: {i}'.format(i=orig_item)
 
     def get_uuid(self, item_name):
-        if item_name not in self._services_rev:
-            raise Exception('Unknown service name')
-        short = self._services_rev[item_name]
+        """
+        Returns the full length UUID for either a shorted UUID or textual characteristic type name. For information on
+        full and short UUID consult chapter 5.6.1 page 72 of the specification. It also supports to pass through full
+        HomeKit UUIDs.
+
+        :param item_name: either the type name (e.g. "public.hap.characteristic.position.current") or the short UUID or
+                          a HomeKit specific full UUID.
+        :return: the full UUID (e.g. "0000006D-0000-1000-8000-0026BB765291")
+        :raises KeyError: if the input is neither a short UUID nor a type name. Specific error is given in the message.
+        """
+        orig_item = item_name
+        # if we get a full length uuid with the proper base and a known short one, this should also work.
+        if item_name.upper().endswith(self.baseUUID):
+            item_name = item_name.upper()
+            item_name = item_name.split('-', 1)[0]
+            item_name = item_name.lstrip('0')
+
+        if item_name.lower() in self._services_rev:
+            short = self._services_rev[item_name.lower()]
+        elif item_name.upper() in self._services:
+            short = item_name.upper()
+        else:
+            raise KeyError('No UUID found for Item {item}'.format(item=orig_item))
+
         medium = '0' * (8 - len(short)) + short
         long = medium + self.baseUUID
         return long

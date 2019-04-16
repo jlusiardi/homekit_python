@@ -14,24 +14,26 @@
 # limitations under the License.
 #
 
-import homekit.feature_flags
-import homekit.model.categories
-import homekit.model.characteristics
-import homekit.model.services
-import homekit.statuscodes
-import homekit.zeroconf_
-from homekit.http_impl import HomeKitHTTPConnection, HttpStatusCodes, HttpContentTypes, SecureHttp
-from homekit.protocol import perform_pair_setup, get_session_keys
-from homekit.server import HomeKitServer, HomeKitServerData
-from homekit.tlv import TLV
-from homekit.tools import load_pairing, save_pairing, create_session
+__all__ = [
+    'Controller', 'BluetoothAdapterError', 'AccessoryDisconnectedError', 'AccessoryNotFoundError',
+    'AlreadyPairedError', 'AuthenticationError', 'BackoffError', 'BusyError', 'CharacteristicPermissionError',
+    'ConfigLoadingError', 'ConfigSavingError', 'ConfigurationError', 'FormatError', 'HomeKitException',
+    'HttpException', 'IncorrectPairingIdError', 'InvalidAuthTagError', 'InvalidError', 'InvalidSignatureError',
+    'MaxPeersError', 'MaxTriesError', 'ProtocolError', 'RequestRejected', 'UnavailableError', 'UnknownError',
+    'UnpairedError'
+]
 
-# Init lookup objects
-FeatureFlags = homekit.feature_flags.FeatureFlags
-Categories = homekit.model.categories.Categories
-HapStatusCodes = homekit.statuscodes.HapStatusCodes
-CharacteristicsTypes = homekit.model.characteristics.CharacteristicsTypes
-ServicesTypes = homekit.model.services.ServicesTypes
+from homekit.controller import Controller
+from homekit.exceptions import BluetoothAdapterError, AccessoryDisconnectedError, AccessoryNotFoundError, \
+    AlreadyPairedError, AuthenticationError, BackoffError, BusyError, CharacteristicPermissionError, \
+    ConfigLoadingError, ConfigSavingError, ConfigurationError, FormatError, HomeKitException, HttpException, \
+    IncorrectPairingIdError, InvalidAuthTagError, InvalidError, InvalidSignatureError, MaxPeersError, MaxTriesError, \
+    ProtocolError, RequestRejected, UnavailableError, UnknownError, UnpairedError
 
-discover_homekit_devices = homekit.zeroconf_.discover_homekit_devices
-find_device_ip_and_port = homekit.zeroconf_.find_device_ip_and_port
+from homekit.tools import IP_TRANSPORT_SUPPORTED
+
+if IP_TRANSPORT_SUPPORTED:
+    # TODO: change import and let it be imported from its specific file
+    from homekit.accessoryserver import AccessoryServer  # noqa: F401
+
+    __all__ += 'AccessoryServer'

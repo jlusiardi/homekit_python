@@ -19,11 +19,10 @@
 import os.path
 import logging
 import argparse
-import sys
 
-from homekit import HomeKitServer, HomeKitServerData
-from homekit.exception import ConfigurationException
-from homekit.model import Accessory, LightBulbService
+from homekit import AccessoryServer
+from homekit.model import Accessory
+from homekit.model.services import LightBulbService
 
 
 def light_switched(new_value):
@@ -48,25 +47,17 @@ if __name__ == '__main__':
     logger.addHandler(ch)
     logger.info('starting')
 
-    # load and check configuration
     config_file = os.path.expanduser(args.file)
-    try:
-        logger.info('using %s as config file', config_file)
-        HomeKitServerData(config_file).check()
-    except ConfigurationException as e:
-        logger.error('Error in config file %s: %s', config_file, e)
-        sys.exit(-1)
 
+    # create a server and an accessory an run it unless ctrl+c was hit
     try:
-        httpd = HomeKitServer(config_file, logger)
+        httpd = AccessoryServer(config_file, logger)
 
         accessory = Accessory('Testlicht', 'lusiardi.de', 'Demoserver', '0001', '0.1')
         lightBulbService = LightBulbService()
         lightBulbService.set_on_set_callback(light_switched)
         accessory.services.append(lightBulbService)
-        httpd.accessories.add_accessory(accessory)
-
-        logger.info('offering: %s', httpd.accessories.__str__())
+        httpd.add_accessory(accessory)
 
         httpd.publish_device()
         logger.info('published device and start serving')

@@ -24,3 +24,22 @@ class AbstractService(ToDictMixin):
         self.type = service_type
         self.iid = iid
         self.characteristics = []
+
+    def append_characteristic(self, characteristic):
+        """
+        Append the given characteristic to the service.
+
+        :param characteristic: a subclass of AbstractCharacteristic
+        """
+        self.characteristics.append(characteristic)
+
+    def to_accessory_and_service_list(self):
+        characteristics_list = []
+        for c in self.characteristics:
+            characteristics_list.append(c.to_accessory_and_service_list())
+        d = {
+            'iid': self.iid,
+            'type': self.type,
+            'characteristics': characteristics_list
+        }
+        return d

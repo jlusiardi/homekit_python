@@ -16,101 +16,68 @@
 # limitations under the License.
 #
 
-import json
 import argparse
 import sys
+import logging
 
-from homekit import SecureHttp, load_pairing, HapStatusCodes, save_pairing, create_session
-from homekit.tools import check_convert_value
-from homekit.exception import FormatException
+from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit put_characteristic app - change values of characteristics ' +
+    parser = argparse.ArgumentParser(description='HomeKit put_characteristic app - change values of characteristics '
                                                  'on paired HomeKit accessories.')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
+    parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-c', action='append', required=False, dest='characteristics', nargs=2,
                         help='Use aid.iid value to change the value. Repeat to change multiple characteristics.')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
+    add_log_arguments(parser)
 
-    tmp_args = parser.parse_args()
-
-    if 'characteristics' not in tmp_args or not tmp_args.characteristics:
+    args = parser.parse_args()
+    if 'characteristics' not in args or not args.characteristics:
         parser.print_help()
         sys.exit(-1)
-    return tmp_args
-
-
-def get_format(pairing_data, aid, iid):
-    format = None
-    for d in pairing_data['accessories']:
-        if 'aid' in d and d['aid'] == aid:
-            for s in d['services']:
-                for c in s['characteristics']:
-                    if 'iid' in c and c['iid'] == iid:
-                        format = c['format']
-    return format
+    return args
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
 
+    setup_logging(args.loglevel)
 
-    conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
-    sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
+    controller = Controller(args.adapter)
+    try:
+        controller.load_data(args.file)
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
+        sys.exit(-1)
 
-    pairing_data = load_pairing(args.file)
+    if args.alias not in controller.get_pairings():
+        print('"{a}" is no known alias'.format(a=args.alias))
+        sys.exit(-1)
 
-    # args.characteristics contains a list of lists like [['1.10', 'on'], ['1.11', '50']]
-    characteristics_set = set()
-    characteristics = []
-    for characteristic in args.characteristics:
-        # extract aid, iid and value from cli params
-        tmp = characteristic[0].split('.')
-        aid = int(tmp[0])
-        iid = int(tmp[1])
-        value = characteristic[1]
+    try:
+        pairing = controller.get_pairings()[args.alias]
 
-        # first check if the accessories data is in the paring data
-        characteristic_type = None
-        if 'accessories' not in pairing_data or not get_format(pairing_data, aid, iid):
-            # nope, so get it via /accessories and save it
-            response = sec_http.get('/accessories')
-            data = json.loads(response.read().decode())
-            pairing_data['accessories'] = data['accessories']
-            save_pairing(args.file, pairing_data)
-        # after loading the accessories data the aid.iid should be there...
-        characteristic_type = get_format(pairing_data, aid, iid)
-        if not characteristic_type:
-            print('Characteristic {aid}.{iid} not found'.format(aid=aid, iid=iid))
-            sys.exit(-1)
+        characteristics = [(int(c[0].split('.')[0]),  # the first part is the aid, must be int
+                            int(c[0].split('.')[1]),  # the second part is the iid, must be int
+                            c[1]) for c in args.characteristics]
+        results = pairing.put_characteristics(characteristics, do_conversion=True)
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
+        sys.exit(-1)
 
-        # reformat the value to fit the required format
-        try:
-            value = check_convert_value(value, characteristic_type)
-        except FormatException as e:
-            print(e)
-            sys.exit(-1)
-
-        # Nothing to do for CharacteristicFormats.string!
-
-        characteristics.append({'aid': aid, 'iid': iid, 'value': value})
-        characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
-
-    body = json.dumps({'characteristics': characteristics})
-    response = sec_http.put('/characteristics', body)
-    if response.code != 204:
-        data = response.read().decode()
-        data = json.loads(data)
-        for characteristic in data['characteristics']:
-            status = characteristic['status']
-            if status == 0:
-                continue
-            aid = characteristic['aid']
-            iid = characteristic['iid']
-            characteristics_set.remove('{a}.{i}'.format(a=aid, i=iid))
-            print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.
-                  format(aid=aid, iid=iid, reason=HapStatusCodes[status], code=status))
-    if len(characteristics_set):
-        print('put_characteristics succeeded for {chars}'.format(chars=', '.join(characteristics_set)))
-
-    conn.close()
+    for key, value in results.items():
+        aid = key[0]
+        iid = key[1]
+        status = value['status']
+        desc = value['description']
+        # used to be < 0 but bluetooth le errors are > 0 and only success (= 0) needs to be checked
+        if status != 0:
+            print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.format(aid=aid, iid=iid,
+                                                                                                reason=desc,
+                                                                                                code=status))

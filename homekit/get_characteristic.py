@@ -18,14 +18,18 @@
 
 import json
 import argparse
+import sys
+import logging
 
-from homekit import create_session, SecureHttp
+from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit get_characteristic - retrieve values of characteristics ' +
+    parser = argparse.ArgumentParser(description='HomeKit get_characteristic - retrieve values of characteristics '
                                                  'and other information from paired HomeKit accessories.')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
+    parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-c', action='append', required=True, dest='characteristics',
                         help='Read characteristics, multiple characteristics can be given by repeating the option')
     parser.add_argument('-m', action='store_true', required=False, dest='meta',
@@ -36,30 +40,41 @@ def setup_args_parser():
                         help='read out the types for the characteristics as well')
     parser.add_argument('-e', action='store_true', required=False, dest='events',
                         help='read out the events for the characteristics as well')
-    return parser
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
+    add_log_arguments(parser)
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
-    parser = setup_args_parser()
-    args = parser.parse_args()
+    args = setup_args_parser()
 
-    conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
+    setup_logging(args.loglevel)
 
-    sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
+    controller = Controller(args.adapter)
+    controller.load_data(args.file)
+    if args.alias not in controller.get_pairings():
+        print('"{a}" is no known alias'.format(a=args.alias))
+        sys.exit(-1)
 
-    # create URL from multiple characteristics
-    url = '/characteristics?id=' + ','.join(args.characteristics)
-    if args.meta:
-        url += '&meta=1'
-    if args.perms:
-        url += '&perms=1'
-    if args.type:
-        url += '&type=1'
-    if args.events:
-        url += '&ev=1'
-    response = sec_http.get(url)
+    pairing = controller.get_pairings()[args.alias]
 
-    data = json.loads(response.read().decode())
-    print(json.dumps(data, indent=4))
+    # convert the command line parameters to the required form
+    characteristics = [(int(c.split('.')[0]), int(c.split('.')[1])) for c in args.characteristics]
 
-    conn.close()
+    # get the data
+    try:
+        data = pairing.get_characteristics(characteristics, include_meta=args.meta, include_perms=args.perms,
+                                           include_type=args.type, include_events=args.events)
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
+        sys.exit(-1)
+
+    # print the data
+    tmp = {}
+    for k in data:
+        nk = str(k[0]) + '.' + str(k[1])
+        tmp[nk] = data[k]
+
+    print(json.dumps(tmp, indent=4))

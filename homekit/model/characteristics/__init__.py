@@ -13,12 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+__all__ = [
+    'CharacteristicsTypes', 'CharacteristicPermissions', 'AbstractCharacteristic', 'BatteryLevelCharacteristic',
+    'BatteryLevelCharacteristicMixin', 'BrightnessCharacteristic', 'BrightnessCharacteristicMixin',
+    'CharacteristicFormats', 'CharacteristicUnits', 'CurrentHeatingCoolingStateCharacteristic',
+    'CurrentHeatingCoolingStateCharacteristicMixin', 'CurrentTemperatureCharacteristic',
+    'CurrentTemperatureCharacteristicMixin', 'FirmwareRevisionCharacteristic', 'HardwareRevisionCharacteristic',
+    'HueCharacteristic', 'HueCharacteristicMixin', 'IdentifyCharacteristic', 'ManufacturerCharacteristic',
+    'ModelCharacteristic', 'NameCharacteristic', 'OnCharacteristic', 'OnCharacteristicMixin',
+    'OutletInUseCharacteristic', 'OutletInUseCharacteristicMixin', 'SaturationCharacteristic',
+    'SaturationCharacteristicMixin', 'SerialNumberCharacteristic', 'TargetHeatingCoolingStateCharacteristic',
+    'TargetHeatingCoolingStateCharacteristicMixin', 'TargetTemperatureCharacteristic',
+    'TargetTemperatureCharacteristicMixin', 'TemperatureDisplayUnitCharacteristic', 'TemperatureDisplayUnitsMixin',
+    'VolumeCharacteristic', 'VolumeCharacteristicMixin'
+]
+
 from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.model.characteristics.characteristic_units import CharacteristicUnits
 from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
 
 from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic
+from homekit.model.characteristics.battery_level import BatteryLevelCharacteristic, BatteryLevelCharacteristicMixin
 from homekit.model.characteristics.brightness import BrightnessCharacteristicMixin, BrightnessCharacteristic
 from homekit.model.characteristics.current_heating_cooling_state import CurrentHeatingCoolingStateCharacteristicMixin, \
     CurrentHeatingCoolingStateCharacteristic
@@ -41,3 +58,4 @@ from homekit.model.characteristics.target_temperature import TargetTemperatureCh
     TargetTemperatureCharacteristic
 from homekit.model.characteristics.temperature_display_unit import TemperatureDisplayUnitsMixin, \
     TemperatureDisplayUnitCharacteristic
+from homekit.model.characteristics.volume import VolumeCharacteristic, VolumeCharacteristicMixin

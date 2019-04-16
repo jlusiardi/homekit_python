@@ -29,3 +29,36 @@ class CharacteristicFormats(object):
     string = 'string'
     tlv8 = 'tlv8'
     data = 'data'
+
+
+class _BleCharacteristicFormats(object):
+    """
+    Mapping taken from Table 6-36 page 129 and
+    https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v4.x.x/doc/html/group___b_l_e___g_a_t_t___c_p_f___f_o_r_m_a_t_s.html
+    """
+    def __init__(self):
+        self._formats = {
+            0x01: 'bool',
+            0x04: 'uint8',
+            0x06: 'uint16',
+            0x08: 'uint32',
+            0x0A: 'uint64',
+            0x10: 'int',
+            0x14: 'float',
+            0x19: 'string',
+            0x1b: 'data'
+        }
+
+        self._formats_rev = {v: k for (k, v) in self._formats.items()}
+
+    def get(self, key, default):
+        return self._formats.get(key, default)
+
+    def get_reverse(self, key, default):
+        return self._formats_rev.get(key, default)
+
+
+#
+#   Have a singleton to avoid overhead
+#
+BleCharacteristicFormats = _BleCharacteristicFormats()

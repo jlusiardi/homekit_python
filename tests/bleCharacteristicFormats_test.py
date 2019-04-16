@@ -14,23 +14,15 @@
 # limitations under the License.
 #
 
+import unittest
 
-class _FeatureFlags(object):
-    """
-    Data taken form table 5-8 Bonjour TXT Record Feature Flags on page 69.
-    """
-
-    def __init__(self):
-        self._data = {
-            0: 'Paired',
-            1: 'Supports Pairing'
-        }
-
-    def __getitem__(self, item):
-        if item in self._data:
-            return self._data[item]
-
-        raise KeyError('Item {item} not found'.format(item=item))
+from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
 
 
-FeatureFlags = _FeatureFlags()
+class BleCharacteristicFormatsTest(unittest.TestCase):
+
+    def test_get_unknown_key(self):
+        self.assertEqual('unknown', BleCharacteristicFormats.get(-0xC0FFEE, 'unknown'))
+
+    def test_get_known_key(self):
+        self.assertEqual('bool', BleCharacteristicFormats.get(1, 'unknown'))

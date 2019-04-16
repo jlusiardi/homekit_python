@@ -14,24 +14,38 @@
 # limitations under the License.
 #
 
-from distutils.core import setup
+import setuptools
 
-setup(
+
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
+setuptools.setup(
     name='homekit',
-    packages=['homekit', 'homekit.crypto', 'homekit.http_impl', 'homekit.model', 'homekit.model.services', 'homekit.model.characteristics'],
-    version='0.10',
+    packages=setuptools.find_packages(exclude=['tests']),
+    version='0.13.0',
     description='Python code to interface HomeKit Accessories and Controllers',
     author='Joachim Lusiardi',
     author_email='pypi@lusiardi.de',
-    url='https://github.com/jlusiardi/homekit_python',  
-    download_url='https://github.com/jlusiardi/homekit_python/archive/0.10.tar.gz',
-    keywords=['HomeKit'],  
-    classifiers=[],
+    url='https://github.com/jlusiardi/homekit_python',
+    download_url='https://github.com/jlusiardi/homekit_python/archive/0.13.0.tar.gz',
+    keywords=['HomeKit'],
+    classifiers=[
+        'License :: OSI Approved :: Apache Software License',
+        'Topic :: Home Automation',
+        'Intended Audience :: Developers',
+        'Intended Audience :: End Users/Desktop'
+    ],
     install_requires=[
-        'zeroconf',
-        'gmpy2',
-        'py25519',
         'hkdf',
         'ed25519',
+        'cryptography>=2.5',
     ],
+    extras_require={
+        'IP': ['zeroconf'],
+        'BLE': ['dbus-python', 'gatt', 'pygobject']
+    },
+    license='Apache License 2.0',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
 )

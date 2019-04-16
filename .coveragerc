@@ -1,0 +1,16 @@
+[run]
+omit =
+    */.local/*
+    */virtualenv/*
+    /usr/*
+    staging/*
+    tests/*
+
+[report]
+omit =
+    */.local/*
+    */virtualenv/*
+    /usr/*
+    staging/*
+    tests/*
+    tests_env/*

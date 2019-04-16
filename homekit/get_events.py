@@ -16,67 +16,69 @@
 # limitations under the License.
 #
 
-import json
 import argparse
 import sys
+import logging
 
-from homekit import SecureHttp, HapStatusCodes, create_session
+from homekit.controller import Controller
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit get_events app - listens to events from accessories')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
-    parser.add_argument('-c', action='append', required=False, dest='characteristics',
+    parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
+    parser.add_argument('-c', action='append', required=True, dest='characteristics',
                         help='Use aid.iid value to change the value. Repeat to change multiple characteristics.')
+    parser.add_argument('-e', action='store', required=False, dest='eventCount', help='max number of events before end',
+                        default=-1, type=int)
+    parser.add_argument('-s', action='store', required=False, dest='secondsCount', default=-1, type=int,
+                        help='max number of seconds before end')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
+    add_log_arguments(parser)
+    return parser.parse_args()
 
-    return parser
+
+def func(events):
+    for event in events:
+        print('event for {aid}.{iid}: {event}'.format(aid=event[0], iid=event[1], event=event[2]))
 
 
 if __name__ == '__main__':
-    parser = setup_args_parser()
-    args = parser.parse_args()
+    args = setup_args_parser()
 
-    if not args.characteristics:
-        parser.print_help()
+    setup_logging(args.loglevel)
+
+    controller = Controller(args.adapter)
+    try:
+        controller.load_data(args.file)
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
         sys.exit(-1)
 
-    conn, controllerToAccessoryKey, accessoryToControllerKey = create_session(args.file)
-    sec_http = SecureHttp(conn.sock, accessoryToControllerKey, controllerToAccessoryKey)
+    if args.alias not in controller.get_pairings():
+        print('"{a}" is no known alias'.format(a=args.alias))
+        sys.exit(-1)
 
-    characteristics_set = set()
-    characteristics = []
-    for characteristic in args.characteristics:
-        tmp = characteristic.split('.')
-        aid = int(tmp[0])
-        iid = int(tmp[1])
-        characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
-        characteristics.append({'aid': aid, 'iid': iid, 'ev': True})
-
-    body = json.dumps({'characteristics': characteristics})
-    response = sec_http.put('/characteristics', body)
-    data = response.read().decode()
-    if response.code != 204:
-        data = json.loads(data)
-        for characteristic in data['characteristics']:
-            status = characteristic['status']
-            if status == 0:
-                continue
-            aid = characteristic['aid']
-            iid = characteristic['iid']
-            characteristics_set.remove('{a}.{i}'.format(a=aid, i=iid))
-            print('register failed on {aid}.{iid} because: {reason} ({code})'.
-                  format(aid=aid, iid=iid, reason=HapStatusCodes[status], code=status))
-
-    print('waiting on events for {chars}'.format(chars=', '.join(characteristics_set)))
     try:
-        while True:
-            r = sec_http.handle_event_response()
-            body = r.read().decode()
-            if len(body) > 0:
-                r = json.loads(body)
-                for c in r['characteristics']:
-                    print('event for {aid}.{iid}: {event}'.format(aid=c['aid'], iid=c['iid'], event=c['value']))
+        pairing = controller.get_pairings()[args.alias]
+        characteristics = [(int(c.split('.')[0]), int(c.split('.')[1])) for c in args.characteristics]
+        results = pairing.get_events(characteristics, func, max_events=args.eventCount, max_seconds=args.secondsCount)
     except KeyboardInterrupt:
-        pass
+        sys.exit(-1)
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
+        sys.exit(-1)
 
-    conn.close()
+    for key, value in results.items():
+        aid = key[0]
+        iid = key[1]
+        status = value['status']
+        desc = value['description']
+        if status < 0:
+            print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.format(aid=aid, iid=iid,
+                                                                                                reason=desc,
+                                                                                                code=status))

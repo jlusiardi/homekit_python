@@ -38,6 +38,7 @@ class _Categories(object):
     IP_CAMERA = 17
     VIDEO_DOOR_BELL = 18
     AIR_PURIFIER = 19
+    HUMIDIFIER = 22
 
     def __init__(self):
         self._categories = {
@@ -59,7 +60,8 @@ class _Categories(object):
             _Categories.RANGE_EXTENDER: 'Range Extender',
             _Categories.IP_CAMERA: 'IP Camera',
             _Categories.VIDEO_DOOR_BELL: 'Video Door Bell',
-            _Categories.AIR_PURIFIER: 'Air Purifier'
+            _Categories.AIR_PURIFIER: 'Air Purifier',
+            _Categories.HUMIDIFIER: 'Humidifier'
         }
 
         self._categories_rev = {self._categories[k]: k for k in self._categories.keys()}

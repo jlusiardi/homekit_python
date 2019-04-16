@@ -173,20 +173,12 @@ class IpPairing(AbstractPairing):
         url = '/characteristics?id=' + ','.join([str(x[0]) + '.' + str(x[1]) for x in characteristics])
         if include_meta:
             url += '&meta=1'
-        else:
-            url += '&meta=0'
         if include_perms:
             url += '&perms=1'
-        else:
-            url += '&perms=0'
         if include_type:
             url += '&type=1'
-        else:
-            url += '&type=0'
         if include_events:
             url += '&ev=1'
-        else:
-            url += '&ev=0'
 
         try:
             response = self.session.get(url)

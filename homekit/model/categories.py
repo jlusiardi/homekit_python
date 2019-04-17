@@ -18,6 +18,8 @@
 class _Categories(object):
     """
     This data is taken from Table 12-3 Accessory Categories on page 254. Values above 19 are reserved.
+    Additional categories ( 20-23 pulled from
+    https://github.com/abedinpour/HAS/blob/master/src/categories.ts )
     """
     OTHER = 1
     BRIDGE = 2

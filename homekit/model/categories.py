@@ -40,7 +40,7 @@ class _Categories(object):
     IP_CAMERA = 17
     VIDEO_DOOR_BELL = 18
     AIR_PURIFIER = 19
-    #new categories referenced from https://github.com/abedinpour/HAS/blob/master/src/categories.ts
+    # new categories referenced from https://github.com/abedinpour/HAS/blob/master/src/categories.ts
     HEATER = 20
     AIRCONDITIONER = 21
     HUMIDIFIER = 22

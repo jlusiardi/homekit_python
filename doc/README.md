@@ -5,6 +5,10 @@ This project started after Apple released the HomeKit Accessory Protocol Specifi
  1. have some python code to act as a HomeKit Controller (which would usually be your iOS device). See [HomeKit Controller API](./HomeKit-Controller-API.md) for more information.
  2. coding an accessory in python to be controlled by an iOS device (and therefore by Siri). See [HomeKit Accessory API](./HomeKit-Accessory-API.md) for more information.
 
+## Test a HomeKit Accessory
+
+To help with testing new devices, please have a look at [HomeKit Device Testing](./HomeKit-Accessory-Testing-Guide.md).
+
 ## Supported operations while controlling HomeKit Accesories
 
 |   | IP Transport | Bluetooth LE Transport |

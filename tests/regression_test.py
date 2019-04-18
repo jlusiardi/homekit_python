@@ -13,7 +13,10 @@ possible we aim to do what an iOS device would do.
 import unittest
 from unittest import mock
 
+from homekit.controller.ip_implementation import IpPairing
+from homekit.http_impl import HomeKitHTTPConnection
 from homekit.http_impl.secure_http import SecureHttp
+from homekit.protocol import create_ip_pair_setup_write, create_ip_pair_verify_write
 
 
 class TestHTTPPairing(unittest.TestCase):
@@ -25,7 +28,7 @@ class TestHTTPPairing(unittest.TestCase):
     non-working device via WireShark.
     """
 
-    def test_pairing_doesnt_add_extra_headers(self):
+    def test_pair_setup_doesnt_add_extra_headers(self):
         """
         The tado internet bridge will fail if a pairing request has
         extraneous headers like `Accept-Encoding`.
@@ -33,6 +36,31 @@ class TestHTTPPairing(unittest.TestCase):
         https://github.com/home-assistant/home-assistant/issues/16971
         https://github.com/jlusiardi/homekit_python/pull/130
         """
+        connection = HomeKitHTTPConnection('localhost')
+        write_fun = create_ip_pair_setup_write(connection)                
+
+        with mock.patch.object(connection, 'response_class') as resp:
+            resp.return_value.read.return_value = b'\x00\x01\x01\x06\x01\x01'
+            with mock.patch.object(connection, 'send') as send:
+                write_fun(b'', [])
+                assert b'accept-encoding' not in send.call_args[0][0].lower()
+
+    def test_pair_verify_doesnt_add_extra_headers(self):
+        """
+        The tado internet bridge will fail if a pairing request has
+        extraneous headers like `Accept-Encoding`.
+
+        https://github.com/home-assistant/home-assistant/issues/16971
+        https://github.com/jlusiardi/homekit_python/pull/130
+        """
+        connection = HomeKitHTTPConnection('localhost')
+        write_fun = create_ip_pair_verify_write(connection)                
+
+        with mock.patch.object(connection, 'response_class') as resp:
+            resp.return_value.read.return_value = b'\x00\x01\x01\x06\x01\x01'
+            with mock.patch.object(connection, 'send') as send:
+                write_fun(b'', [])
+                assert b'accept-encoding' not in send.call_args[0][0].lower()
 
 
 class TestSecureSession(unittest.TestCase):
@@ -55,20 +83,20 @@ class TestSecureSession(unittest.TestCase):
 
         session = mock.Mock()
         session.pairing_data = {
-            'AccessoryIP': '192.168.1.2:8000',
-            'AccesoryPort': 8080,
+            'AccessoryIP': '192.168.1.2',
+            'AccessoryPort': 8080,
         }
         secure_http = SecureHttp(session)
 
-        with mock.patch.object(session, '_handle_request') as handle_req:
+        with mock.patch.object(secure_http, '_handle_request') as handle_req:
             secure_http.get('/characteristics')
-            assert b'\nHost: 192.168.1.2:8080\n' in handle_req.call_args[0][0]
+            assert '\nHost: 192.168.1.2:8080\n' in handle_req.call_args[0][0]
 
-            secure_http.post('/characteristics')
-            assert b'\nHost: 192.168.1.2:8080\n' in handle_req.call_args[0][0]
+            secure_http.post('/characteristics', '')
+            assert '\nHost: 192.168.1.2:8080\n' in handle_req.call_args[0][0]
 
-            secure_http.put('/characteristics')
-            assert b'\nHost: 192.168.1.2:8080\n' in handle_req.call_args[0][0]
+            secure_http.put('/characteristics', '')
+            assert '\nHost: 192.168.1.2:8080\n' in handle_req.call_args[0][0]
 
     def test_requests_only_send_params_for_true_case(self):
         """
@@ -81,3 +109,12 @@ class TestSecureSession(unittest.TestCase):
         https://github.com/home-assistant/home-assistant/issues/16971
         https://github.com/jlusiardi/homekit_python/pull/132
         """
+        pairing = IpPairing({})
+        with mock.patch.object(pairing, 'session') as session:
+            session.get.return_value.read.return_value = b'{"characteristics": []}'
+
+            pairing.get_characteristics([(1, 2)])
+            assert session.get.call_args[0][0] == '/characteristics?id=1.2'
+
+            pairing.get_characteristics([(1, 2)], include_meta=True)
+            assert session.get.call_args[0][0] == '/characteristics?id=1.2&meta=1'

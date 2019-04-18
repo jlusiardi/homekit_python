@@ -7,7 +7,7 @@ This project started after Apple released the HomeKit Accessory Protocol Specifi
 
 ## Test a HomeKit Accessory
 
-To help with testing new devices, please have a look at [HomeKit Device Testing](./HomeKit-Accessory-Testing-Guide.md).
+To help with testing new devices, please have a look at [HomeKit Device Testing](./HomeKit-Accessory-Testing-Guide.md). If the test was successful, please make a pull request for a new Markdown file to post the results. If the test fails, please open an issue.
 
 ## Supported operations while controlling HomeKit Accesories
 

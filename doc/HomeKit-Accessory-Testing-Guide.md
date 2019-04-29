@@ -101,10 +101,80 @@ Your output should look similar:
 
 # Step 7) - get characteristics
 
+[Documentation for the get_characteristic command](https://github.com/jlusiardi/homekit_python#get_characteristic)
+
+This step checks if characteristics can be read selectivly. For the example from above to read the current humidity and temperature:
+
+```bash
+python3 -m homekit.get_characteristic -f test_report.json -a deviceUnderTest -c 1.13 -c 1.10 
+```
+
+This should return some json like:
+```json
+{
+    "1.13": {
+        "value": 28.7999992370605
+    },
+    "1.10": {
+        "value": 30.1000003814697
+    }
+}
+```
+
+**Note**
+It might not be possible to read all characteristics with all possible options (`-m`, `-p`, `-t` and `-e`). So it is best to take the essential characteristics for the accessory and only work with them.
+
+
 # Step 8) - put characteristics
+
+[Documentation for the put_characteristic command](https://github.com/jlusiardi/homekit_python#put_characteristic)
+
+This step tries to manipulate one or more characteristic of an accessory.
+
+```bash
+python3 -m homekit.put_characteristic -f test_report.json -a deviceUnderTest -c 23.42 On
+```
+
+There should be no output generated and the accessory should react accordingly.
+
+**Note**
+Skip this step, if no characteristic is writable (**pr**) in the listing of `get_accessories`.
 
 # Step 9) - get events
 
-# Step XXX) - remove pairing
+[Documentation for the get_events command](https://github.com/jlusiardi/homekit_python#get_events)
+
+This step tests the capabilities to receive event notifications from accessories. For our example, this will wait for either 5 events or 5 seconds: 
+
+```bash
+python3 -m homekit.put_characteristic -f test_report.json -a deviceUnderTest -e 5 -s 5 -c 1.13 -c 1.10 
+```
+
+One line should be printed for every event:
+```json
+event for 1.13: 28.7999992370605
+event for 1.10: 30.1000003814697
+event for 1.13: 28.8999992370605
+event for 1.10: 30.0000003814697
+```
+
+**Note**
+Skip this step, if no characteristic offers events (**ev**) in the listing of `get_accessories`.
+
+# Step 10) - remove pairing
+
+[Documentation for the unpair command](https://github.com/jlusiardi/homekit_python#unpair)
+
+Finally the pairing to the accessory is removed. 
+
+```bash
+python3 -m homekit.unpair -f test_report.json -a deviceUnderTest
+```
+
+This should result in:
+```
+Pairing for "deviceUnderTest" was removed.
+```
+
 
 

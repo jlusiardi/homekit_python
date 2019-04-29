@@ -151,7 +151,7 @@ python3 -m homekit.put_characteristic -f test_report.json -a deviceUnderTest -e 
 ```
 
 One line should be printed for every event:
-```json
+```
 event for 1.13: 28.7999992370605
 event for 1.10: 30.1000003814697
 event for 1.13: 28.8999992370605

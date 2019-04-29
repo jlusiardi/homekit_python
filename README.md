@@ -446,24 +446,6 @@ event for 1.23: 0.16111
 event for 1.8: False
 ```
 
-## unpair
-
-This tool remove a pairing to an accessory. The accessory is ready to accept pairings again.
-
-Usage
-```bash
-python3 -m homekit.unpair -f ${PAIRINGDATAFILE} -a ${ALIAS} [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
-```
-
-The option `-f` specifies the file that contains the pairing data.
-
-The option `-a` specifies the alias for the device.
-
-The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only used if the paired device is using Bluetooth LE.
- 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
-
-
 # HomeKit Accessory
 
 # Devices Reported to work

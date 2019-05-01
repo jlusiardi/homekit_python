@@ -13,14 +13,21 @@ Please give detailed information on which device was tested. This should wheneve
  * type of used communication channel (Bluetooth LE or IP via Wifi etc.)
  * the version of the homekit library that was used to perform the test
 
-# Step 1) - discovery
+# Step 1) - discovery / disovery_ble
 
 [Documentation for the discover command](https://github.com/jlusiardi/homekit_python#discover)
 
+[Documentation for the discover command](https://github.com/jlusiardi/homekit_python#discover_ble)
+
 The first step is to check whether the accessory can be discovered:
 
+For IP based accessories:
 ```bash
 python3 -m homekit.discover
+```
+For Bluetooth LE based accessories:
+```bash
+python3 -m homekit.discover_ble
 ```
 
 Try to identify the block that corresponds to your accessory under test and attach the lines. This should look like this:
@@ -55,14 +62,21 @@ python3 -m homekit.identitfy -d  ${Device ID}
 
 Use this command to create a new storage for the controller's data. Currently this is basically a file containing an empty JSON hash (`{}`).
 
-# Step 4) - pairing
+# Step 4) - pairing / pairing_ble
 
 [Documentation for the pair command](https://github.com/jlusiardi/homekit_python#pair)
 
+[Documentation for the pair command](https://github.com/jlusiardi/homekit_python#pair_ble)
+
 The next step is to pair the accessory under test. Execute this command:
 
+For IP based accessories:
 ```bash
 python3 -m homekit.pair -d  ${Device ID} -p ${Device Setup Code} -f test_report.json -a deviceUnderTest
+```
+For Bluetooth LE based accessories:
+```bash
+python -m homekit.pair_ble -m ${Device MAC} -p ${Device Setup Code} -f test_report.json -a deviceUnderTest
 ```
 
 The output should be:

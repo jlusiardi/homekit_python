@@ -107,7 +107,7 @@ This tool initializes the HomeKit controller's storage file.
 
 Usage:
 ```bash
-python3 -m homekit.init_controller_storage
+python3 -m homekit.init_controller_storage -f ${PAIRINGDATAFILE}
 ```
 
 The option `-f` specifies the name of the file to contain the controller's data.

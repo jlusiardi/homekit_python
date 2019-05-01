@@ -98,7 +98,7 @@ Important Information:
 
 ## used command
 
-```bash
+```json
 
 ```
 

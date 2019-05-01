@@ -157,7 +157,7 @@ Skip this step, if no characteristic is writable (**pr**) in the listing of `get
 This step tests the capabilities to receive event notifications from accessories. For our example, this will wait for either 5 events or 5 seconds: 
 
 ```bash
-python3 -m homekit.put_characteristic -f test_report.json -a deviceUnderTest -e 5 -s 5 -c 1.13 -c 1.10 
+python3 -m homekit.get_events -f test_report.json -a deviceUnderTest -e 5 -s 5 -c 1.13 -c 1.10 
 ```
 
 One line should be printed for every event:

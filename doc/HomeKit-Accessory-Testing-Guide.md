@@ -3,6 +3,16 @@ This describes how to report a working HomeKit Accessory.
 **Important**
 Please inform yourself how to reset the HomeKit Accessory under test to factory settings just in case anything goes wrong with the testing.
 
+# Required Information
+
+Please give detailed information on which device was tested. This should whenever possible include:
+ * device manufacturer (can be taken from `accessory-information.manufacturer`)
+ * device model (can be taken from `accessory-information.model`)
+ * device firmware version (can be taken from `accessory-information.firmware.revision`)
+ * device hardware version (can be taken from `accessory-information.hardware.revision`)
+ * type of used communication channel (Bluetooth LE or IP via Wifi etc.)
+ * the version of the homekit library that was used to perform the test
+
 # Step 1) - discovery
 
 [Documentation for the discover command](https://github.com/jlusiardi/homekit_python#discover)

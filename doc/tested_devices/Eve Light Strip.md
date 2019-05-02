@@ -2,12 +2,24 @@
 
 [Product Page](https://www.evehome.com/en/eve-light-strip) 
 
+Python Homekit Library Version: 0.13.0
 
 # Step 1 Discovery
-Command - (venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$ python -m homekit.discover >  pairingtest.txt
+
+In this step we test whether or not the device can be discovered properly using the 
+homekit_python library.
+
+Command - 
+```
+(venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$ python -m homekit.discover >  pairingtest.txt
+```
 
 ## Output
 
+This is the output from the above command. In a network with multiple device, it is expected that
+ we filter so that only the device of interest is included in the test file.
+
+```
 Name: Eve Light Strip 8606._hap._tcp.local.
 Url: http_impl://10.101.0.175:80
 Configuration number (c#): 1
@@ -18,15 +30,26 @@ Protocol Version (pv): 1.1
 State Number (s#): 1
 Status Flags (sf): Accessory has not been paired with any controllers. (Flag: 1)
 Category Identifier (ci): Lightbulb (Id: 5)
+```
 
 # Step 2. unpaired identify
 
+In this step we will run the unpaired identify function using the Device ID (id) returned in step 1.
+
+```
 (venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$ python3 -m homekit.identify -d 1A:EA:89:9D:04:AF
+```
 
 ## Result:
-Eve Light strip flashes
+
+Please record the results of the identify function here. Specific device results will vary 
+between accessories. 
+
+Eve Light strip flashes: True
 
 # Step 3. Initialize Controller Storage
+
+We must initialize the Controller Storage before attempting to pair any devices.
 
 Created the file test_report.json
 Note: Must contain {} in the file to be a valid JSON syntax.
@@ -34,17 +57,24 @@ Note: Must contain {} in the file to be a valid JSON syntax.
 
 # Step 4. Pairing
 
+In this step, we will verify that the Homekit Accessory is able to be successfully paired to the 
+Homekit Python controller. 
+
 *Note ${Device Setup Code} is the Homekit pairing code in format XXX-XX-XXX where X is a digit
 between 0 and 9.*
 
-
+```
 (venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$ python3 -m homekit.pair -d
  1A:EA:89:9D:04:AF -p 555-55-555 -a Eve -f test_report.json
 Pairing for "Eve" was established.
+```
 
 
 
 ## Contents of test_report.json
+
+This is the output from the above command. In the event that there are multiple devices in the 
+network, please only include the JSON body for the specific device which we have paired above. 
 
 ```
 {
@@ -303,11 +333,15 @@ Run the following command to verify the paired identity.
 
 ## Results
 
-Eve Light Strip flashes
+Please record the results of the identify function here. Specific device results will vary 
+between accessories. 
+
+Eve Light Strip flashes: True
 
 
 # Step 6. Get Accessories
 
+In this step we wil perform the get_accessories function and record the results. 
 ```
 (venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$ python3 -m homekit.get_accessories -f test_report.json -a Eve
 1.1: >accessory-information<

@@ -3,6 +3,10 @@ This describes how to report a working HomeKit Accessory.
 **Important**
 Please inform yourself how to reset the HomeKit Accessory under test to factory settings just in case anything goes wrong with the testing.
 
+# Step 0) - use the template
+
+You can use the [template](./tested_devices/TEMPLATE.md) starting point for your own report for a HomeKit accessory support by this project.
+
 # Step 1) - discovery
 
 [Documentation for the discover command](https://github.com/jlusiardi/homekit_python#discover)

@@ -115,4 +115,4 @@ ENV/
 MANIFEST
 Tests.md
 /ip_env
-/*_env
+*.swp

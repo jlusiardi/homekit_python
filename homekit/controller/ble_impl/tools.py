@@ -6,13 +6,12 @@ import gatt
 from homekit.model import Categories
 
 
-def hci_adapter_exists_and_supports_bluetooth_le(adapter_name):
+def _get_hci_adapter(adapter_name):
     """
-    This checks via dbus if an bluez adapter with the given name exists and if so checks if there is an interface named
-    'org.bluez.LEAdvertisingManager1'. This seems to be a bit flaky but the best i've got.
-
-    :param adapter: the bluetooth adapter to be used (hci0, hci1, ...)
-    :return: True if the adapter exists and supports BLE, False otherwise
+    Returns the DBus interfaces of the given adapter (if the adapter exists). 
+    
+    :param adapter_name: the bluetooth adapter to be returned (hci0, hci1, ...)
+    :return: the existing interfaces into DBus, None if the adapter does not exist.
     """
     bus = dbus.SystemBus()
     manager = dbus.Interface(bus.get_object('org.bluez', '/'), 'org.freedesktop.DBus.ObjectManager')
@@ -23,7 +22,31 @@ def hci_adapter_exists_and_supports_bluetooth_le(adapter_name):
         if adapter is None:
             continue
         if not adapter_name or adapter_name == adapter['Address'] or path.endswith(adapter_name):
-            return 'org.bluez.LEAdvertisingManager1' in ifaces
+            return ifaces
+    return None
+
+
+def hci_adapter_exists(adapter_name):
+    """
+    This checks via dbus if an bluez adapter with the given name exists.
+
+    :param adapter_name: the bluetooth adapter to be used (hci0, hci1, ...)
+    :return: True if the adapter exists, False otherwise
+    """
+    return _get_hci_adapter(adapter_name) is not None
+
+
+def hci_adapter_exists_and_supports_bluetooth_le(adapter_name):
+    """
+    This checks via dbus if an bluez adapter with the given name exists and if so checks if there is an interface named
+    'org.bluez.LEAdvertisingManager1'. This seems to be a bit flaky but the best i've got.
+
+    :param adapter_name: the bluetooth adapter to be used (hci0, hci1, ...)
+    :return: True if the adapter exists and supports BLE, False otherwise
+    """
+    ifaces = _get_hci_adapter(adapter_name)
+    if ifaces:
+        return 'org.bluez.LEAdvertisingManager1' in ifaces
     return False
 
 

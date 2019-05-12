@@ -8,8 +8,8 @@ from homekit.model import Categories
 
 def _get_hci_adapter(adapter_name):
     """
-    Returns the DBus interfaces of the given adapter (if the adapter exists). 
-    
+    Returns the DBus interfaces of the given adapter (if the adapter exists).
+
     :param adapter_name: the bluetooth adapter to be returned (hci0, hci1, ...)
     :return: the existing interfaces into DBus, None if the adapter does not exist.
     """

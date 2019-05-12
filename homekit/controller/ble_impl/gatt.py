@@ -125,8 +125,9 @@ class DeviceManager(gatt.DeviceManager):
         if not hci_adapter_exists(adapter_name):
             raise BluetoothAdapterError('Adapter "{a}" does not exist!'.format(a=adapter_name))
         if not hci_adapter_exists_and_supports_bluetooth_le(adapter_name):
-            #self.logger.warning('Adapter "{a}" seems not to support Bluetooth LE'.format(a=adapter_name))
-            print('Adapter "{a}" seems not to support Bluetooth LE, the command might not function properly!'.format(a=adapter_name))
+            # self.logger.warning('Adapter "{a}" seems not to support Bluetooth LE'.format(a=adapter_name))
+            print('Adapter "{a}" seems not to support Bluetooth LE, the command might not function properly!'
+                  .format(a=adapter_name))
         super().__init__(adapter_name)
 
     def set_timeout(self, timeout):

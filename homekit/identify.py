@@ -72,7 +72,7 @@ if __name__ == '__main__':
             sys.exit(-1)
     elif args.mac:
         try:
-            controller.identify_ble(args.mac)
+            controller.identify_ble(args.mac, args.adapter)
         except Exception as e:
             print(e)
             logging.debug(e, exc_info=True)

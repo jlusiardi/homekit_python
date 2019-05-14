@@ -47,12 +47,7 @@ class DiscoveryDeviceManager(DeviceManager):
         function will be called every time a new device is discovered.
         """
         self.discover_callback = callback
-        powerstate = self.is_adapter_powered
-        if not powerstate:
-            self.is_adapter_powered = True
         tmp = super().start_discovery()
-        if not powerstate:
-            self.is_adapter_powered = powerstate
         return tmp
 
     def devices(self):

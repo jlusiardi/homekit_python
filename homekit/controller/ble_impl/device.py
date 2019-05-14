@@ -16,7 +16,7 @@
 
 import logging
 import time
-
+import atexit
 import dbus
 
 from homekit.exceptions import AccessoryNotFoundError
@@ -120,5 +120,19 @@ class DeviceManager(gatt.DeviceManager):
     discover_callback = None
     Device = Device
 
+    def __init__(self, adapter):
+        super().__init__(adapter)
+        atexit.register(self.cleanup)
+        self.old_powerstate = self.is_adapter_powered
+        self.adapter = adapter
+        if not self.old_powerstate:
+            logger.debug('Powering on adapter "%s"' % adapter)
+            self.is_adapter_powered = True
+
     def make_device(self, mac_address):
         return self.Device(mac_address=mac_address, manager=self)
+
+    def cleanup(self):
+        if not self.old_powerstate:
+            logger.debug('restoring power state adapter "%s"' % self.adapter)
+            self.is_adapter_powered = self.old_powerstate

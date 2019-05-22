@@ -35,7 +35,7 @@ python3 -m homekit.discover
 ## used command
 
 
-```python
+```
 python3 -m homekit.identify -d 19:9A:41:EA:25:CF
 ```
 
@@ -48,7 +48,7 @@ Eve Light Strip Flashes
 ## used command
 
 
-```python
+```
 python3 -m homekit.init_controller_storage -f eve_light_strip
 ```
 
@@ -59,7 +59,7 @@ python3 -m homekit.init_controller_storage -f eve_light_strip
 ## used command
 
 
-```python
+```
 python3 -m homekit.pair -d 19:9A:41:EA:25:CF -p 555-55-555 -a Eve -f eve_light_strip
 ```
 
@@ -320,7 +320,7 @@ python3 -m homekit.pair -d 19:9A:41:EA:25:CF -p 555-55-555 -a Eve -f eve_light_s
 ## used command
 
 
-```python
+```
 python3 -m homekit.identify -f eve_light_strip -a Eve
 ```
 
@@ -333,7 +333,7 @@ Eve Light Strip Flashes
 ## used command
 
 
-```python
+```
 python3 -m homekit.get_accessories -f eve_light_strip -a Eve
 ```
 
@@ -368,7 +368,7 @@ python3 -m homekit.get_accessories -f eve_light_strip -a Eve
 ## used command
 
 
-```python
+```
 python3 -m homekit.get_characteristic -f eve_light_strip -a Eve -c 1.4
 ```
 
@@ -386,7 +386,7 @@ python3 -m homekit.get_characteristic -f eve_light_strip -a Eve -c 1.4
 ## used command
 
 
-```python
+```
 python3 -m homekit.put_characteristic -f eve_light_strip -a Eve -c 1.14 50
 ```
 
@@ -401,7 +401,7 @@ Light lowered to 50% brightness
 Note: Ran *python3 -m homekit.put_characteristic -f eve_light_strip -a Eve -c 1.14 100* from a seperate terminal window to get output. 
 
 
-```python
+```
 python3 -m homekit.get_events -f eve_light_strip -a Eve -c 1.14
 ```
 
@@ -416,7 +416,7 @@ python3 -m homekit.get_events -f eve_light_strip -a Eve -c 1.14
 ## used command
 
 
-```python
+```
 python -m homekit.unpair -f eve_light_strip -a Eve
 ```
 

@@ -1,82 +1,90 @@
+# Device Name: Eve Light Strip
 
-# Device Name: **Eve Home Light Strip**
+[Product Page](https://www.evehome.com/en/eve-light-strip) 
 
-Important Information:
- * device manufacturer : **Eve Home**
- * device model : **Eve Light Strip**
- * device firmware version : **REPLACEME**
- * device hardware version : **REPLACEME**
- * communication channel : **IP**
- * version of *homekit* library: **0.13.0.**
+Python Homekit Library Version: 0.13.0
 
-# Step 1 - discovery
+# Step 1 Discovery
 
-## used command
+In this step we test whether or not the device can be discovered properly using the 
+homekit_python library.
 
-
-```python
-!python3 -m homekit.discover
-``` 
-    Name: Eve Light Strip BC58._hap._tcp.local.
-    Url: http_impl://10.101.0.181:80
-    Configuration number (c#): 1
-    Feature Flags (ff): Supports HAP Pairing (Flag: 1)
-    Device ID (id): 19:9A:41:EA:25:CF
-    Model Name (md): Eve Light Strip 20EAS9901
-    Protocol Version (pv): 1.1
-    State Number (s#): 1
-    Status Flags (sf): Accessory has not been paired with any controllers. (Flag: 1)
-    Category Identifier (ci): Lightbulb (Id: 5)
-    
-
-## result **✔**
-
-# Step 2 - unpaired identify
-## used command
-
-
-```python
-!python3 -m homekit.identify -d 19:9A:41:EA:25:CF
+Command - 
+```
+(venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$ python -m homekit.discover >  pairingtest.txt
 ```
 
-## result **✔ **
+## Output
 
-Eve Light Strip Flashes
+This is the output from the above command. In a network with multiple device, it is expected that
+ we filter so that only the device of interest is included in the test file.
 
-# Step 3 - initialize controller storage
-
-## used command
-
-
-```python
-!python3 -m homekit.init_controller_storage -f eve_light_strip
+```
+Name: Eve Light Strip 8606._hap._tcp.local.
+Url: http_impl://10.101.0.175:80
+Configuration number (c#): 1
+Feature Flags (ff): Supports HAP Pairing (Flag: 1)
+Device ID (id): 1A:EA:89:9D:04:AF
+Model Name (md): Eve Light Strip 20EAS9901
+Protocol Version (pv): 1.1
+State Number (s#): 1
+Status Flags (sf): Accessory has not been paired with any controllers. (Flag: 1)
+Category Identifier (ci): Lightbulb (Id: 5)
 ```
 
-## result **✔**
+# Step 2. unpaired identify
 
-# Step 4 - pairing
+In this step we will run the unpaired identify function using the Device ID (id) returned in step 1.
 
-## used command
-
-
-```python
-!python3 -m homekit.pair -d 19:9A:41:EA:25:CF -p 341-58-139 -a Eve -f eve_light_strip
+```
+(venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$ python3 -m homekit.identify -d 1A:EA:89:9D:04:AF
 ```
 
-    Pairing for "Eve" was established.
+## Result:
+
+Please record the results of the identify function here. Specific device results will vary 
+between accessories. 
+
+Eve Light strip flashes: True
+
+# Step 3. Initialize Controller Storage
+
+We must initialize the Controller Storage before attempting to pair any devices.
+
+Created the file test_report.json
+Note: Must contain {} in the file to be a valid JSON syntax.
 
 
-## result **✔**
+# Step 4. Pairing
 
-~~~
+In this step, we will verify that the Homekit Accessory is able to be successfully paired to the 
+Homekit Python controller. 
+
+*Note ${Device Setup Code} is the Homekit pairing code in format XXX-XX-XXX where X is a digit
+between 0 and 9.*
+
+```
+(venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$ python3 -m homekit.pair -d
+ 1A:EA:89:9D:04:AF -p 555-55-555 -a Eve -f test_report.json
+Pairing for "Eve" was established.
+```
+
+
+
+## Contents of test_report.json
+
+This is the output from the above command. In the event that there are multiple devices in the 
+network, please only include the JSON body for the specific device which we have paired above. 
+
+```
 {
   "Eve": {
-    "AccessoryPairingID": "19:9A:41:EA:25:CF",
-    "AccessoryLTPK": "9a4cd3f11d9e54fbf4aba2e3b21bb9f5953b509532b344c8808f8834da05b819",
-    "iOSPairingId": "b72b4703-896d-451f-89fd-e487a872591e",
-    "iOSDeviceLTSK": "3b44e492d2037e0e322330bec120de0ba4942e287f0caabcb165fdff46c11eb0",
-    "iOSDeviceLTPK": "07062ab39736c379b58c8ae11f468e25df54b81e0c35e475a838f2b805fb950b",
-    "AccessoryIP": "10.101.0.181",
+    "AccessoryPairingID": "1A:EA:89:9D:04:AF",
+    "AccessoryLTPK": "4abc5178fb710785ea00241cb85e0875e7ec21e3ec0149f6d24469c077c4b329",
+    "iOSPairingId": "2d1feb16-1f94-4048-92f3-bae4c3fedd31",
+    "iOSDeviceLTSK": "8748696d41490110155fd0f9807ac925f6947d441226581d30b1363b12c9ad76",
+    "iOSDeviceLTPK": "9999a484a03687cc3bd1d03d95e940ac9036a891c016f4d17abfcdde558ce91b",
+    "AccessoryIP": "10.101.0.175",
     "AccessoryPort": 80,
     "Connection": "IP",
     "accessories": [
@@ -116,7 +124,7 @@ Eve Light Strip Flashes
               {
                 "type": "00000023-0000-1000-8000-0026BB765291",
                 "iid": 5,
-                "value": "Eve Light Strip BC58",
+                "value": "Eve Light Strip 8606",
                 "perms": [
                   "pr"
                 ],
@@ -125,7 +133,7 @@ Eve Light Strip Flashes
               {
                 "type": "00000030-0000-1000-8000-0026BB765291",
                 "iid": 6,
-                "value": "HV40H1A00642",
+                "value": "HV40H1A00544",
                 "perms": [
                   "pr"
                 ],
@@ -134,7 +142,7 @@ Eve Light Strip Flashes
               {
                 "type": "00000052-0000-1000-8000-0026BB765291",
                 "iid": 7,
-                "value": "1.0.4",
+                "value": "1.0.5",
                 "perms": [
                   "pr"
                 ],
@@ -180,7 +188,7 @@ Eve Light Strip Flashes
                   "ev"
                 ],
                 "format": "bool",
-                "value": 1
+                "value": true
               },
               {
                 "type": "00000023-0000-1000-8000-0026BB765291",
@@ -230,7 +238,7 @@ Eve Light Strip Flashes
                   "ev"
                 ],
                 "format": "float",
-                "value": 3,
+                "value": 6,
                 "unit": "percentage",
                 "minValue": 0,
                 "maxValue": 100,
@@ -313,116 +321,52 @@ Eve Light Strip Flashes
     ]
   }
 }
-~~~
-
-# Step 5 - paired identify
-
-## used command
-
-
-```python
-!python3 -m homekit.identify -f eve_light_strip -a Eve
 ```
 
-## result  **✔**
+# Step 5. Paired Identity
 
-Eve Light Strip Flashes
+Run the following command to verify the paired identity.
 
-# Step 6 - get accessories
-
-## used command
-
-
-```python
-!python3 -m homekit.get_accessories -f eve_light_strip -a Eve
+```
+(venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$ python3 -m homekit.identify -f test_report.json -a Eve
 ```
 
-    1.1: >accessory-information<
-      1.2:  () >identify< [pw]
-      1.3: Eve Systems () >manufacturer< [pr]
-      1.4: Eve Light Strip 20EAS9901 () >model< [pr]
-      1.5: Eve Light Strip BC58 () >name< [pr]
-      1.6: HV40H1A00642 () >serial-number< [pr]
-      1.7: 1.0.4 () >firmware.revision< [pr]
-      1.8: 1 () >hardware.revision< [pr]
-    1.9: >service<
-      1.10: 1.1.0 () >version< [pr]
-    1.11: >lightbulb<
-      1.12: 1 () >on< [pw,pr,ev]
-      1.13: Eve Light Strip () >name< [pr]
-      1.14: 100 () >brightness< [pw,pr,ev]
-      1.15: 3 () >hue< [pw,pr,ev]
-      1.16: 3 () >saturation< [pw,pr,ev]
-      1.17: 0 () >Unknown Characteristic E863F11A-079E-48FF-8F27-9C2605A29F52< [pr]
-    1.18: >Unknown Service: E863F007-079E-48FF-8F27-9C2605A29F52<
-      1.19:  () >Unknown Characteristic E863F131-079E-48FF-8F27-9C2605A29F52< [pr]
-      1.20:  () >Unknown Characteristic E863F11D-079E-48FF-8F27-9C2605A29F52< [pw]
-      1.21:  () >Unknown Characteristic E863F11C-079E-48FF-8F27-9C2605A29F52< [pw]
-      1.22:  () >Unknown Characteristic E863F116-079E-48FF-8F27-9C2605A29F52< [pr]
-      1.23:  () >Unknown Characteristic E863F117-079E-48FF-8F27-9C2605A29F52< [pr]
-      1.24:  () >Unknown Characteristic E863F121-079E-48FF-8F27-9C2605A29F52< [pw]
+## Results
+
+Please record the results of the identify function here. Specific device results will vary 
+between accessories. 
+
+Eve Light Strip flashes: True
 
 
-# Step 7 - get characteristics
+# Step 6. Get Accessories
 
-## used command
-
-
-```python
-!python3 -m homekit.get_characteristic -f eve_light_strip -a Eve -c 1.4
+In this step we wil perform the get_accessories function and record the results. 
 ```
-
-    {
-        "1.4": {
-            "value": "Eve Light Strip 20EAS9901"
-        }
-    }
-
-
-## result  **✔**
-
-# Step 8 - put characteristics
-
-## used command
-
-
-```python
-!python3 -m homekit.put_characteristic -f eve_light_strip -a Eve -c 1.14 50
+(venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$ python3 -m homekit.get_accessories -f test_report.json -a Eve
+1.1: >accessory-information<
+  1.2:  () >identify< [pw]
+  1.3: Eve Systems () >manufacturer< [pr]
+  1.4: Eve Light Strip 20EAS9901 () >model< [pr]
+  1.5: Eve Light Strip 8606 () >name< [pr]
+  1.6: HV40H1A00544 () >serial-number< [pr]
+  1.7: 1.0.5 () >firmware.revision< [pr]
+  1.8: 1 () >hardware.revision< [pr]
+1.9: >service<
+  1.10: 1.1.0 () >version< [pr]
+1.11: >lightbulb<
+  1.12: True () >on< [pw,pr,ev]
+  1.13: Eve Light Strip () >name< [pr]
+  1.14: 100 () >brightness< [pw,pr,ev]
+  1.15: 3 () >hue< [pw,pr,ev]
+  1.16: 6 () >saturation< [pw,pr,ev]
+  1.17: 0 () >Unknown Characteristic E863F11A-079E-48FF-8F27-9C2605A29F52< [pr]
+1.18: >Unknown Service: E863F007-079E-48FF-8F27-9C2605A29F52<
+  1.19:  () >Unknown Characteristic E863F131-079E-48FF-8F27-9C2605A29F52< [pr]
+  1.20:  () >Unknown Characteristic E863F11D-079E-48FF-8F27-9C2605A29F52< [pw]
+  1.21:  () >Unknown Characteristic E863F11C-079E-48FF-8F27-9C2605A29F52< [pw]
+  1.22:  () >Unknown Characteristic E863F116-079E-48FF-8F27-9C2605A29F52< [pr]
+  1.23:  () >Unknown Characteristic E863F117-079E-48FF-8F27-9C2605A29F52< [pr]
+  1.24:  () >Unknown Characteristic E863F121-079E-48FF-8F27-9C2605A29F52< [pw]
+(venv) Christophers-MacBook-Air:HomekitPythonPlaying christopheryoung$
 ```
-
-## result  **✔**
-
-Light lowered to 50% brightness
-
-# Step 9 - get events
-
-## used command
-
-Note: Ran *python3 -m homekit.put_characteristic -f eve_light_strip -a Eve -c 1.14 100* from a seperate terminal window to get output. 
-
-
-```python
-!python3 -m homekit.get_events -f eve_light_strip -a Eve -c 1.14
-```
-
-    event for 1.14: 100
-    ^C
-
-
-## result  **✔**
-
-# Step 10 - remove pairing
-
-## used command
-
-
-```python
-!python -m homekit.unpair -f eve_light_strip -a Eve
-```
-
-    Pairing for "Eve" was removed.
-
-
-## result  **✔**
-
-

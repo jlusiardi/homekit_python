@@ -15,7 +15,7 @@ Important Information:
 
 
 ```python
-!python3 -m homekit.discover
+python3 -m homekit.discover
 ``` 
     Name: Eve Light Strip BC58._hap._tcp.local.
     Url: http_impl://10.101.0.181:80
@@ -36,7 +36,7 @@ Important Information:
 
 
 ```python
-!python3 -m homekit.identify -d 19:9A:41:EA:25:CF
+python3 -m homekit.identify -d 19:9A:41:EA:25:CF
 ```
 
 ## result **✔ **
@@ -49,7 +49,7 @@ Eve Light Strip Flashes
 
 
 ```python
-!python3 -m homekit.init_controller_storage -f eve_light_strip
+python3 -m homekit.init_controller_storage -f eve_light_strip
 ```
 
 ## result **✔**
@@ -60,7 +60,7 @@ Eve Light Strip Flashes
 
 
 ```python
-!python3 -m homekit.pair -d 19:9A:41:EA:25:CF -p 555-55-555 -a Eve -f eve_light_strip
+python3 -m homekit.pair -d 19:9A:41:EA:25:CF -p 555-55-555 -a Eve -f eve_light_strip
 ```
 
     Pairing for "Eve" was established.
@@ -321,7 +321,7 @@ Eve Light Strip Flashes
 
 
 ```python
-!python3 -m homekit.identify -f eve_light_strip -a Eve
+python3 -m homekit.identify -f eve_light_strip -a Eve
 ```
 
 ## result  **✔**
@@ -334,7 +334,7 @@ Eve Light Strip Flashes
 
 
 ```python
-!python3 -m homekit.get_accessories -f eve_light_strip -a Eve
+python3 -m homekit.get_accessories -f eve_light_strip -a Eve
 ```
 
     1.1: >accessory-information<
@@ -369,7 +369,7 @@ Eve Light Strip Flashes
 
 
 ```python
-!python3 -m homekit.get_characteristic -f eve_light_strip -a Eve -c 1.4
+python3 -m homekit.get_characteristic -f eve_light_strip -a Eve -c 1.4
 ```
 
     {
@@ -387,7 +387,7 @@ Eve Light Strip Flashes
 
 
 ```python
-!python3 -m homekit.put_characteristic -f eve_light_strip -a Eve -c 1.14 50
+python3 -m homekit.put_characteristic -f eve_light_strip -a Eve -c 1.14 50
 ```
 
 ## result  **✔**
@@ -402,7 +402,7 @@ Note: Ran *python3 -m homekit.put_characteristic -f eve_light_strip -a Eve -c 1.
 
 
 ```python
-!python3 -m homekit.get_events -f eve_light_strip -a Eve -c 1.14
+python3 -m homekit.get_events -f eve_light_strip -a Eve -c 1.14
 ```
 
     event for 1.14: 100
@@ -417,7 +417,7 @@ Note: Ran *python3 -m homekit.put_characteristic -f eve_light_strip -a Eve -c 1.
 
 
 ```python
-!python -m homekit.unpair -f eve_light_strip -a Eve
+python -m homekit.unpair -f eve_light_strip -a Eve
 ```
 
     Pairing for "Eve" was removed.

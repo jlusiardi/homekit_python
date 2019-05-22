@@ -4,8 +4,8 @@
 Important Information:
  * device manufacturer : **Eve Home**
  * device model : **Eve Light Strip**
- * device firmware version : **REPLACEME**
- * device hardware version : **REPLACEME**
+ * device firmware version : **1.04**
+ * device hardware version : **Eve Light Strip 20EAS9901**
  * communication channel : **IP**
  * version of *homekit* library: **0.13.0.**
 
@@ -60,7 +60,7 @@ Eve Light Strip Flashes
 
 
 ```python
-!python3 -m homekit.pair -d 19:9A:41:EA:25:CF -p 341-58-139 -a Eve -f eve_light_strip
+!python3 -m homekit.pair -d 19:9A:41:EA:25:CF -p 555-55-555 -a Eve -f eve_light_strip
 ```
 
     Pairing for "Eve" was established.

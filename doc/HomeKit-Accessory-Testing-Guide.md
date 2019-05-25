@@ -53,7 +53,7 @@ Note down the Device ID for further steps.
 This step is optional since no output should be provided. Take a short note if the accessory under test reacts to the call as it does with the iOS app.
 
 ```bash
-python3 -m homekit.identitfy -d  ${Device ID} 
+python3 -m homekit.identify -d  ${Device ID} 
 ```
 
 # Step 3) - initialize controller storage (optional)

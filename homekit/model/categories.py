@@ -18,6 +18,8 @@
 class _Categories(object):
     """
     This data is taken from Table 12-3 Accessory Categories on page 254. Values above 19 are reserved.
+    Additional categories ( 20-23 pulled from
+    https://github.com/abedinpour/HAS/blob/master/src/categories.ts )
     """
     OTHER = 1
     BRIDGE = 2
@@ -38,6 +40,11 @@ class _Categories(object):
     IP_CAMERA = 17
     VIDEO_DOOR_BELL = 18
     AIR_PURIFIER = 19
+    # new categories referenced from https://github.com/abedinpour/HAS/blob/master/src/categories.ts
+    HEATER = 20
+    AIRCONDITIONER = 21
+    HUMIDIFIER = 22
+    DEHUMIDIFER = 23
 
     def __init__(self):
         self._categories = {
@@ -59,7 +66,11 @@ class _Categories(object):
             _Categories.RANGE_EXTENDER: 'Range Extender',
             _Categories.IP_CAMERA: 'IP Camera',
             _Categories.VIDEO_DOOR_BELL: 'Video Door Bell',
-            _Categories.AIR_PURIFIER: 'Air Purifier'
+            _Categories.AIR_PURIFIER: 'Air Purifier',
+            _Categories.HEATER: "Heater",
+            _Categories.AIRCONDITIONER: "Air Conditioner",
+            _Categories.HUMIDIFIER: 'Humidifier',
+            _Categories.DEHUMIDIFER: "Dehumidifier"
         }
 
         self._categories_rev = {self._categories[k]: k for k in self._categories.keys()}

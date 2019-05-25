@@ -13,6 +13,10 @@ Please give detailed information on which device was tested. This should wheneve
  * type of used communication channel (Bluetooth LE or IP via Wifi etc.)
  * the version of the homekit library that was used to perform the test
 
+# Step 0) - use the template
+
+You can use the [template](./tested_devices/TEMPLATE.md) starting point for your own report for a HomeKit accessory support by this project.
+
 # Step 1) - discovery / disovery_ble
 
 [Documentation for the discover command](https://github.com/jlusiardi/homekit_python#discover)

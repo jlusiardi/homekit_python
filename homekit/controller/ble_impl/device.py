@@ -122,6 +122,9 @@ class DeviceManager(gatt.DeviceManager):
 
     def __init__(self, adapter):
         super().__init__(adapter)
+
+        # save the old power state of the Bluetooth LE adapter to be able to restore it after
+        # the program ends
         atexit.register(self.cleanup)
         self.old_powerstate = self.is_adapter_powered
         self.adapter = adapter
@@ -133,6 +136,7 @@ class DeviceManager(gatt.DeviceManager):
         return self.Device(mac_address=mac_address, manager=self)
 
     def cleanup(self):
+        # restore the old power state
         if not self.old_powerstate:
             logger.debug('restoring power state adapter "%s"' % self.adapter)
             self.is_adapter_powered = self.old_powerstate

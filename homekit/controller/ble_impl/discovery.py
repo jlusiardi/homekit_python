@@ -47,8 +47,7 @@ class DiscoveryDeviceManager(DeviceManager):
         function will be called every time a new device is discovered.
         """
         self.discover_callback = callback
-        tmp = super().start_discovery()
-        return tmp
+        return super().start_discovery()
 
     def devices(self):
         # The standard implementation of devices causes a fresh of the dbus

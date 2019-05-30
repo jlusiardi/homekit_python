@@ -30,6 +30,8 @@ def setup_args_parser():
                         help='Number of seconds to wait (defaults to 10)')
     parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
                         help='the bluetooth adapter to be used (defaults to hci0)')
+    parser.add_argument('-u', action='store_true', required=False, dest='unpaired_only',
+                        help='If activated, this option will show only unpaired HomeKit BLE Devices')
     add_log_arguments(parser)
     return parser.parse_args()
 
@@ -47,6 +49,8 @@ if __name__ == '__main__':
 
     print()
     for device in devices:
+        if args.unpaired_only and device['sf'] == 0:
+            continue
         print('Name: {name}'.format(name=device['name']))
         print('MAC: {mac}'.format(mac=device['mac']))
         print('Configuration number (cn): {conf}'.format(conf=device['cn']))

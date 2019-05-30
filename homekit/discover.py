@@ -28,6 +28,8 @@ def setup_args_parser():
                                                  ' list all HomeKit devices on the same IP network')
     parser.add_argument('-t', action='store', required=False, dest='timeout', type=int, default=10,
                         help='Number of seconds to wait')
+    parser.add_argument('-u', action='store_true', required=False, dest='unpaired_only',
+                        help='If activated, this option will show only unpaired HomeKit IP Devices')
     add_log_arguments(parser)
     return parser.parse_args()
 
@@ -48,6 +50,8 @@ if __name__ == '__main__':
 
     results = Controller.discover(args.timeout)
     for info in results:
+        if args.unpaired_only and info['sf'] == '0':
+            continue
         print('Name: {name}'.format(name=prepare_string(info['name'])))
         print('Url: http_impl://{ip}:{port}'.format(ip=info['address'], port=info['port']))
         print('Configuration number (c#): {conf}'.format(conf=info['c#']))

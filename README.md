@@ -118,10 +118,12 @@ This tool will list all available HomeKit IP Accessories within the local networ
 
 Usage:
 ```bash
-python3 -m homekit.discover [-t ${TIMEOUT}] [--log ${LOGLEVEL}]
+python3 -m homekit.discover [-t ${TIMEOUT}] [-u] [--log ${LOGLEVEL}]
 ```
 
 The option `-t` specifies the timeout for the inquiry. This is optional and 10s are the default.
+
+The option `-u` activates a filter to show only unpaired devices. This is optional and deactivated by default.
 
 The option `--log` specifies the loglevel for the command. Use `DEBUG` to get more output.
 
@@ -149,10 +151,12 @@ This tool will list all available HomeKit BLE Accessories within range of the Bl
 
 Usage:
 ```bash
-python3 -m homekit.discover_ble [-t ${TIMEOUT}] [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
+python3 -m homekit.discover_ble [-t ${TIMEOUT}] [-u] [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
 ```
 
 The option `-t` specifies the timeout for the inquiry. This is optional and 10s are the default.
+
+The option `-u` activates a filter to show only unpaired devices. This is optional and deactivated by default.
 
 The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default.
 

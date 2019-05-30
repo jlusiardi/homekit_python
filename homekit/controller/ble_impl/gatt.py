@@ -34,13 +34,13 @@ the classes in this module.
 """
 
 import re
-
+import logging
 import dbus
 import gatt
 from gatt.gatt_linux import _error_from_dbus_error
 from gi.repository import GObject
 
-from homekit.controller.ble_impl.tools import hci_adapter_exists_and_supports_bluetooth_le
+from homekit.controller.ble_impl.tools import hci_adapter_exists_and_supports_bluetooth_le, hci_adapter_exists
 from homekit.exceptions import BluetoothAdapterError
 
 
@@ -121,8 +121,12 @@ class DeviceManager(gatt.DeviceManager):
         :param adapter_name: the name of the adapter (defaults to hci0)
         :raises BluetoothAdapterError: if either the adapter does not exist or lacks appropriate capabilities
         """
+        self.logger = logging.getLogger('homekit.controller.ble')
+        if not hci_adapter_exists(adapter_name):
+            raise BluetoothAdapterError('Adapter "{a}" does not exist!'.format(a=adapter_name))
         if not hci_adapter_exists_and_supports_bluetooth_le(adapter_name):
-            raise BluetoothAdapterError('Adapter "{a}" does not suit our needs'.format(a=adapter_name))
+            print('Adapter "{a}" seems not to support Bluetooth LE, the command might not function properly!'
+                  .format(a=adapter_name))
         super().__init__(adapter_name)
 
     def set_timeout(self, timeout):

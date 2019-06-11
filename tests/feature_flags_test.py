@@ -14,24 +14,22 @@
 # limitations under the License.
 #
 
+import unittest
 
-class _FeatureFlags(object):
-    """
-    Data taken form table 5-8 Bonjour TXT Record Feature Flags on page 69.
-    """
-
-    def __init__(self):
-        self._data = {
-            0: 'No support for HAP Pairing',
-            1: 'Supports HAP Pairing'
-        }
-
-    def __getitem__(self, item):
-        bit_value = item & 0x01
-        if bit_value in self._data:
-            return self._data[bit_value]
-
-        raise KeyError('Item {item} not found'.format(item=item))
+from homekit.model.feature_flags import FeatureFlags
 
 
-FeatureFlags = _FeatureFlags()
+class TestFeatureFlags(unittest.TestCase):
+
+    def test_no_support_hap_pairing(self):
+        self.assertEqual(FeatureFlags[0], 'No support for HAP Pairing')
+
+    def test_support_hap_pairing(self):
+        self.assertEqual(FeatureFlags[1], 'Supports HAP Pairing')
+
+    def test_bug_143(self):
+        # 0b10 -> 2 means no hap pairing support?
+        self.assertEqual(FeatureFlags[2], 'No support for HAP Pairing')
+
+#    def test_unknown_code(self):
+#        self.assertRaises(KeyError, FeatureFlags.__getitem__, 99)

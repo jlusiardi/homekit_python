@@ -30,7 +30,7 @@ from homekit.protocol.tlv import TLV
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.zeroconf_impl import find_device_ip_and_port
 from homekit.model.services import ServicesTypes
-
+from homekit.crypto import SrpClient
 
 class IpPairing(AbstractPairing):
     """
@@ -379,7 +379,36 @@ class IpPairing(AbstractPairing):
                         self.put_characteristics([(aid, iid, True)])
                         return True
         return False
+    
+    def add_pairing(self, additional_controller_pairing_identifier, ios_device_ltpk, permissions):
+        if not self.session:
+            self.session = IpSession(self.pairing_data)
+        if permissions == 'User':
+            permissions = TLV.kTLVType_Permission_RegularUser
+        elif permissions == 'Admin':
+            permissions = TLV.kTLVType_Permission_AdminUser 
+        else:
+            print('UNKNOWN')
+        print('add pairing', type(permissions), permissions)
+        print('additional_controller_pairing_identifier', type(additional_controller_pairing_identifier), additional_controller_pairing_identifier)
+        print('ios_device_ltpk', type(ios_device_ltpk), ios_device_ltpk)
+        # Prepare the common (for IP and BLE) request data
+        request_tlv = TLV.encode_list([
+            (TLV.kTLVType_State, TLV.M1),
+            (TLV.kTLVType_Method, TLV.AddPairing),
+            (TLV.kTLVType_Identifier, additional_controller_pairing_identifier.encode()),
+            #(TLV.kTLVType_PublicKey, bytes.fromhex(ios_device_ltpk)),
+            (TLV.kTLVType_PublicKey, bytearray.fromhex(ios_device_ltpk)),
+            (TLV.kTLVType_Permissions, permissions)
+        ])
+        print(request_tlv)
 
+        # decode is required because post needs a string representation
+        response = self.session.post('/pairings', request_tlv)
+        session.close()
+        data = response.read()
+        data = TLV.decode_bytes(data)
+        print(data.to_string())
 
 class IpSession(object):
     def __init__(self, pairing_data):

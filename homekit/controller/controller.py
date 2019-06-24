@@ -31,6 +31,7 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
 from homekit.tools import IP_TRANSPORT_SUPPORTED, BLE_TRANSPORT_SUPPORTED
+from homekit.controller.additional_pairing import AdditionalPairing
 
 if BLE_TRANSPORT_SUPPORTED:
     from homekit.controller.ble_impl import BlePairing, BleSession, find_characteristic_by_uuid, \
@@ -270,6 +271,8 @@ class Controller(object):
                         if not BLE_TRANSPORT_SUPPORTED:
                             raise TransportNotSupportedError('BLE')
                         self.pairings[pairing_id] = BlePairing(data[pairing_id], self.ble_adapter)
+                    elif data[pairing_id]['Connection'] == 'ADDITIONAL_PAIRING':
+                        self.pairings[pairing_id] = AdditionalPairing(data[pairing_id])
                     else:
                         # ignore anything else, issue warning
                         self.logger.warning('could not load pairing %s of type "%s"', pairing_id,

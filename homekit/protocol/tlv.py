@@ -166,8 +166,10 @@ class TLV:
     def to_string(d) -> str:
         def entry_to_string(entry_key, entry_value) -> str:
             if isinstance(entry_value, bytearray):
-                return '  {k}: ({len} bytes) 0x{v}\n'.format(k=entry_key, v=entry_value.hex(), len=len(entry_value))
-            return '  {k}: ({len} bytes) {v}\n'.format(k=entry_key, v=entry_value, len=len(entry_value))
+                return '  {k}: ({len} bytes/{t}) 0x{v}\n'.format(k=entry_key, v=entry_value.hex(), len=len(entry_value),
+                                                                 t=type(entry_value))
+            return '  {k}: ({len} bytes/{t}) {v}\n'.format(k=entry_key, v=entry_value, len=len(entry_value),
+                                                           t=type(entry_value))
 
         if isinstance(d, dict):
             res = '{\n'

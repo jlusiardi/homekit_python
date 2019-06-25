@@ -56,15 +56,15 @@ if __name__ == '__main__':
             pairing_data = pairings[args.alias]._get_pairing_data()
             additional_controller_pairing_identifier = pairing_data['iOSPairingId']
             ios_device_ltpk = pairing_data['iOSDeviceLTPK']
-            raise AlreadyPairedError('Alias "{a}" is already in state add additional pairing.\n' \
-                                     'Please use\n' \
-                                     'AdditionalControllerPairingIdentifier: {id}\n' \
+            raise AlreadyPairedError('Alias "{a}" is already in state add additional pairing.\n'
+                                     'Please use\n'
+                                     'AdditionalControllerPairingIdentifier: {id}\n'
                                      'AdditionalControllerLTPK: {pk}'
                                      .format(a=args.alias,
                                              id=additional_controller_pairing_identifier,
                                              pk=ios_device_ltpk
-                                            )
-                                    )
+                                             )
+                                     )
 
         additional_controller_pairing_identifier = str(uuid.uuid4())
         ios_device_ltsk, ios_device_ltpk = ed25519.create_keypair()

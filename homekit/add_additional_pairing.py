@@ -19,14 +19,9 @@
 import argparse
 import sys
 import logging
-import uuid
-import ed25519
-from binascii import hexlify
 
 from homekit.controller import Controller
-from homekit.controller.additional_pairing import AdditionalPairing
 from homekit.log_support import setup_logging, add_log_arguments
-from homekit.exceptions import AlreadyPairedError
 
 
 def setup_args_parser():
@@ -38,6 +33,7 @@ def setup_args_parser():
     parser.add_argument('-p', action='store', required=True, dest='permission', choices=['User', 'Admin'], help='')
     add_log_arguments(parser)
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     args = setup_args_parser()
@@ -63,5 +59,3 @@ if __name__ == '__main__':
         print(e)
         logging.debug(e, exc_info=True)
         sys.exit(-1)
-    
-

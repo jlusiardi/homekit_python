@@ -342,6 +342,9 @@ class BlePairing(AbstractPairing):
 
         return results
 
+    def add_pairing(self, additional_controller_pairing_identifier, ios_device_ltpk, permissions):
+        pass
+
 
 class BleSession(object):
 

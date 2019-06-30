@@ -107,7 +107,7 @@ class TLV:
             length = tail.pop(0)
             value = tail[:length]
             if length != len(value):
-                raise TlvParseException('Not enough data for length {}'.format(length))
+                raise TlvParseException('Not enough data for length {} while decoding \'{}\''.format(length, ba))
             tail = tail[length:]
 
             if len(result) > 0 and result[-1][0] == key:

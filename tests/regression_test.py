@@ -106,13 +106,14 @@ class TestSecureSession(unittest.TestCase):
 
         with mock.patch.object(secure_http, '_handle_request') as handle_req:
             secure_http.get('/characteristics')
-            assert '\nHost: 192.168.1.2:8080\n' in handle_req.call_args[0][0]
+            print(handle_req.call_args[0][0])
+            assert '\r\nHost: 192.168.1.2:8080\r\n' in handle_req.call_args[0][0].decode()
 
-            secure_http.post('/characteristics', '')
-            assert '\nHost: 192.168.1.2:8080\n' in handle_req.call_args[0][0]
+            secure_http.post('/characteristics', b'')
+            assert '\r\nHost: 192.168.1.2:8080\r\n' in handle_req.call_args[0][0].decode()
 
-            secure_http.put('/characteristics', '')
-            assert '\nHost: 192.168.1.2:8080\n' in handle_req.call_args[0][0]
+            secure_http.put('/characteristics', b'')
+            assert '\r\nHost: 192.168.1.2:8080\r\n' in handle_req.call_args[0][0].decode()
 
     def test_requests_only_send_params_for_true_case(self):
         """

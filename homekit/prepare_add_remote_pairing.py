@@ -73,6 +73,8 @@ if __name__ == '__main__':
 
         print('AdditionalControllerPairingIdentifier: {id}'.format(id=additional_controller_pairing_identifier))
         print('AdditionalControllerLTPK: {pk}'.format(pk=public_key))
+        print('-i', additional_controller_pairing_identifier,
+              '-k', 'AccessoryLTPK', public_key)
 
         a = {
             'iOSPairingId': additional_controller_pairing_identifier,

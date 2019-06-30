@@ -25,12 +25,12 @@ from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit generate pairing data app')
+    parser = argparse.ArgumentParser(description='HomeKit ')
     parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
-    parser.add_argument('-i', action='store', required=True, dest='pairing_id', help='')
-    parser.add_argument('-k', action='store', required=True, dest='key', help='')
-    parser.add_argument('-p', action='store', required=True, dest='permission', choices=['User', 'Admin'], help='')
+    parser.add_argument('-c', action='store', required=True, dest='connection', help='connection type for the pairing')
+    parser.add_argument('-k', action='store', required=True, dest='key', help='long term public key for the pairing')
+    parser.add_argument('-i', action='store', required=True, dest='id', help='accessory ID for the pairing')
     add_log_arguments(parser)
     return parser.parse_args()
 
@@ -48,17 +48,19 @@ if __name__ == '__main__':
         logging.debug(e, exc_info=True)
         sys.exit(-1)
 
-    if args.alias not in controller.get_pairings():
-        print('"{a}" is no known alias'.format(a=args.alias))
-        sys.exit(-1)
-
     try:
-        pairing = controller.get_pairings()[args.alias]
-        pairing.add_pairing(args.pairing_id, args.key, args.permission)
-        if pairing.pairing_data['Connection'] == 'IP':
-            print('-c', pairing.pairing_data['Connection'],
-                  '-i', pairing.pairing_data['AccessoryPairingID'],
-                  '-k', 'AccessoryLTPK', pairing.pairing_data['AccessoryLTPK'])
+        pairings = controller.get_pairings()
+        if args.alias not in pairings:
+            print('"{a}" is no known alias'.format(a=args.alias))
+            sys.exit(-1)
+
+        pairing_data = pairings[args.alias]._get_pairing_data()
+        pairing_data['Connection'] = args.connection
+        if args.connection == 'IP':
+            pairing_data['AccessoryPairingID'] = args.id
+            pairing_data['AccessoryLTPK'] = args.key
+
+        controller.save_data(args.file)
     except Exception as e:
         print(e)
         logging.debug(e, exc_info=True)

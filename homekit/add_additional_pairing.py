@@ -56,9 +56,17 @@ if __name__ == '__main__':
         pairing = controller.get_pairings()[args.alias]
         pairing.add_pairing(args.pairing_id, args.key, args.permission)
         if pairing.pairing_data['Connection'] == 'IP':
-            print('-c', pairing.pairing_data['Connection'],
-                  '-i', pairing.pairing_data['AccessoryPairingID'],
-                  '-k', 'AccessoryLTPK', pairing.pairing_data['AccessoryLTPK'])
+            text = 'Please add this to homekit.finish_add_remote_pairing:\n' \
+                   '    -c {c} -i {id} -k {pk}' \
+                .format(c=pairing.pairing_data['Connection'],
+                        id=pairing.pairing_data['AccessoryPairingID'],
+                        pk=pairing.pairing_data['AccessoryLTPK']
+                        )
+            print(text)
+        elif pairing.pairing_data['Connection'] == 'BLE':
+            print('to be done')
+        else:
+            print('Not known')
     except Exception as e:
         print(e)
         logging.debug(e, exc_info=True)

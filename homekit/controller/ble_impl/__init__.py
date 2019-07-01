@@ -73,7 +73,7 @@ class BlePairing(AbstractPairing):
         if 'accessories' in self.pairing_data:
             return self.pairing_data['accessories']
 
-        manager = DeviceManager(adapter_name=self.adapter)
+        manager = DeviceManager(self.adapter)
         device = manager.make_device(self.pairing_data['AccessoryMAC'])
         device.connect()
         resolved_data = read_characteristics(device)
@@ -81,8 +81,43 @@ class BlePairing(AbstractPairing):
         return resolved_data['data']
 
     def list_pairings(self):
-        # TODO implementation still missing
-        pass
+        if not self.session:
+            self.session = BleSession(self.pairing_data, self.adapter)
+        request_tlv = TLV.encode_list([
+            (TLV.kTLVType_State, TLV.M1),
+            (TLV.kTLVType_Method, TLV.ListPairings)
+        ])
+        request_tlv = TLV.encode_list([
+            (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
+            (TLV.kTLVHAPParamValue, request_tlv)
+        ])
+        body = len(request_tlv).to_bytes(length=2, byteorder='little') + request_tlv
+
+        cid = -1
+        for a in self.pairing_data['accessories']:
+            for s in a['services']:
+                for c in s['characteristics']:
+                    if CharacteristicsTypes.get_short_uuid(c['type'].upper()) == CharacteristicsTypes.PAIRING_PAIRINGS:
+                        cid = c['iid']
+        fc, _ = self.session.find_characteristic_by_iid(cid)
+        response = self.session.request(fc, cid, HapBleOpCodes.CHAR_WRITE, body)
+        response = TLV.decode_bytes(response[1])
+        tmp = []
+        r = {}
+        for d in response[1:]:
+            if d[0] == TLV.kTLVType_Identifier:
+                r = {}
+                tmp.append(r)
+                r['pairingId'] = d[1].decode()
+            if d[0] == TLV.kTLVType_PublicKey:
+                r['publicKey'] = d[1].hex()
+            if d[0] == TLV.kTLVType_Permissions:
+                controller_type = 'regular'
+                if d[1] == b'\x01':
+                    controller_type = 'admin'
+                r['permissions'] = int.from_bytes(d[1], byteorder='little')
+                r['controllerType'] = controller_type
+        return tmp
 
     def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
         # TODO implementation still missing
@@ -343,7 +378,38 @@ class BlePairing(AbstractPairing):
         return results
 
     def add_pairing(self, additional_controller_pairing_identifier, ios_device_ltpk, permissions):
-        pass
+        if not self.session:
+            self.session = BleSession(self.pairing_data, self.adapter)
+        if permissions == 'User':
+            permissions = TLV.kTLVType_Permission_RegularUser
+        elif permissions == 'Admin':
+            permissions = TLV.kTLVType_Permission_AdminUser
+        else:
+            print('UNKNOWN')
+
+        request_tlv = TLV.encode_list([
+            (TLV.kTLVType_State, TLV.M1),
+            (TLV.kTLVType_Method, TLV.AddPairing),
+            (TLV.kTLVType_Identifier, additional_controller_pairing_identifier.encode()),
+            (TLV.kTLVType_PublicKey, bytes.fromhex(ios_device_ltpk)),
+            (TLV.kTLVType_Permissions, permissions)
+        ])
+
+        # decode is required because post needs a string representation
+        cid = -1
+        aid = -1
+        for a in self.pairing_data['accessories']:
+            for s in a['services']:
+                for c in s['characteristics']:
+                    if CharacteristicsTypes.get_short_uuid(c['type'].upper()) == CharacteristicsTypes.PAIRING_PAIRINGS:
+                        aid = a['aid']
+                        cid = c['iid']
+
+        # response = self.session.sec_http.post('/pairings', request_tlv)
+        # data = response.read()
+        # data = TLV.decode_bytes(data)
+        # # TODO handle the response properly
+        # self.session.close()
 
 
 class BleSession(object):
@@ -358,7 +424,7 @@ class BleSession(object):
         self.device = None
         mac_address = self.pairing_data['AccessoryMAC']
 
-        manager = DeviceManager(adapter_name=self.adapter)
+        manager = DeviceManager(self.adapter)
 
         self.device = manager.make_device(mac_address)
         logger.debug('connecting to device')
@@ -406,7 +472,7 @@ class BleSession(object):
 
         write_fun = create_ble_pair_setup_write(pair_verify_char, pair_verify_char_info['iid'])
         self.c2a_key, self.a2c_key = get_session_keys(None, self.pairing_data, write_fun)
-        logger.debug('keys: \n\t\tc2a: %s\n\t\ta2c: %s', self.c2a_key.hex(), self.a2c_key.hex())
+        logger.debug('pair_verified, keys: \n\t\tc2a: %s\n\t\ta2c: %s', self.c2a_key.hex(), self.a2c_key.hex())
 
         self.c2a_counter = 0
         self.a2c_counter = 0

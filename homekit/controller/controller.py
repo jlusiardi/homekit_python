@@ -443,7 +443,7 @@ class Controller(object):
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
 
         from .ble_impl.device import DeviceManager
-        manager = DeviceManager(adapter_name=adapter)
+        manager = DeviceManager(adapter)
         device = manager.make_device(mac_address=accessory_mac)
 
         logging.debug('connecting to device')

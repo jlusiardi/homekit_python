@@ -56,25 +56,27 @@ if __name__ == '__main__':
             pairing_data = pairings[args.alias]._get_pairing_data()
             additional_controller_pairing_identifier = pairing_data['iOSPairingId']
             ios_device_ltpk = pairing_data['iOSDeviceLTPK']
-            raise AlreadyPairedError('Alias "{a}" is already in state add additional pairing.\n'
-                                     'Please use\n'
-                                     'AdditionalControllerPairingIdentifier: {id}\n'
-                                     'AdditionalControllerLTPK: {pk}'
-                                     .format(a=args.alias,
-                                             id=additional_controller_pairing_identifier,
-                                             pk=ios_device_ltpk
-                                             )
-                                     )
+            text = 'Alias "{a}" is already in state add additional pairing.\n'\
+                   'Please add this to homekit.add_additional_pairing:\n'\
+                   '    -i {id} -k {pk}'\
+                   .format(a=args.alias,
+                           id=additional_controller_pairing_identifier,
+                           pk=ios_device_ltpk
+                           )
+            raise AlreadyPairedError(text)
 
         additional_controller_pairing_identifier = str(uuid.uuid4())
         ios_device_ltsk, ios_device_ltpk = ed25519.create_keypair()
 
         public_key = hexlify(ios_device_ltpk.to_bytes()).decode()
 
-        print('AdditionalControllerPairingIdentifier: {id}'.format(id=additional_controller_pairing_identifier))
-        print('AdditionalControllerLTPK: {pk}'.format(pk=public_key))
-        print('-i', additional_controller_pairing_identifier,
-              '-k', 'AccessoryLTPK', public_key)
+        text = 'Please add this to homekit.add_additional_pairing:\n' \
+               '    -i {id} -k {pk}' \
+            .format(a=args.alias,
+                    id=additional_controller_pairing_identifier,
+                    pk=public_key
+                    )
+        print(text)
 
         a = {
             'iOSPairingId': additional_controller_pairing_identifier,

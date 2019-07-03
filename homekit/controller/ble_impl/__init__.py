@@ -412,6 +412,7 @@ class BlePairing(AbstractPairing):
         # TODO handle response properly
         print(response)
 
+
 class BleSession(object):
 
     def __init__(self, pairing_data, adapter):

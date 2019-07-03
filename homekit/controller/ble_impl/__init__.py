@@ -409,7 +409,8 @@ class BlePairing(AbstractPairing):
                         cid = c['iid']
         fc, _ = self.session.find_characteristic_by_iid(cid)
         response = self.session.request(fc, cid, HapBleOpCodes.CHAR_WRITE, body)
-
+        # TODO handle response properly
+        print(response)
 
 class BleSession(object):
 

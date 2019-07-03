@@ -289,13 +289,41 @@ Pairing Id: 3d65d692-90bb-41c2-9bd0-2cb7a3a5dd18
 
 The information contains the pairing id, the public key of the device and permissions of the controller.
 
-## unpair
+## prepare_add_remote_pairing
+
+This tool will prepare data required for the `add_additional_pairing` command. 
+
+Usage:
+```bash
+python3 -m homekit.add_additional_pairing -f ${PAIRINGDATAFILE} -a ${ALIAS} [--log ${LOGLEVEL}]
+```
+
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device to be added.
+
+The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+
+This will print information to be fed into `homekit.add_additional_pairing` (via a second channel):
+
+```
+Please add this to homekit.add_additional_pairing:
+    -i cec11edd-7363-42c4-8d13-aeb06b608ffc -k 0cbfd3abc377f6c3bfd3b4c119c1c5ff0c840ef1f9530e0f99c68b1f531dd66a
+```
+
+## finish_add_remote_pairing.py
+
+This N
+
+## add_additional_pairing
+
+## remove_pairing
 
 This tool will remove a pairing from an accessory.
 
 Usage:
 ```bash
-python -m homekit.unpair -f ${PAIRINGDATAFILE} -a ${ALIAS} [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
+python -m homekit.remove_pairing -f ${PAIRINGDATAFILE} -a ${ALIAS} [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.

@@ -395,21 +395,20 @@ class BlePairing(AbstractPairing):
             (TLV.kTLVType_Permissions, permissions)
         ])
 
-        # decode is required because post needs a string representation
+        request_tlv = TLV.encode_list([
+            (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
+            (TLV.kTLVHAPParamValue, request_tlv)
+        ])
+        body = len(request_tlv).to_bytes(length=2, byteorder='little') + request_tlv
+
         cid = -1
-        aid = -1
         for a in self.pairing_data['accessories']:
             for s in a['services']:
                 for c in s['characteristics']:
                     if CharacteristicsTypes.get_short_uuid(c['type'].upper()) == CharacteristicsTypes.PAIRING_PAIRINGS:
-                        aid = a['aid']
                         cid = c['iid']
-
-        # response = self.session.sec_http.post('/pairings', request_tlv)
-        # data = response.read()
-        # data = TLV.decode_bytes(data)
-        # # TODO handle the response properly
-        # self.session.close()
+        fc, _ = self.session.find_characteristic_by_iid(cid)
+        response = self.session.request(fc, cid, HapBleOpCodes.CHAR_WRITE, body)
 
 
 class BleSession(object):

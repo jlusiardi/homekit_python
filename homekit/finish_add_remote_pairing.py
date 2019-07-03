@@ -31,6 +31,7 @@ def setup_args_parser():
     parser.add_argument('-c', action='store', required=True, dest='connection', help='connection type for the pairing')
     parser.add_argument('-k', action='store', required=True, dest='key', help='long term public key for the pairing')
     parser.add_argument('-i', action='store', required=True, dest='id', help='accessory ID for the pairing')
+    parser.add_argument('-m', action='store', required=False, dest='mac', help='accessory MAC for the pairing')
     add_log_arguments(parser)
     return parser.parse_args()
 
@@ -59,6 +60,10 @@ if __name__ == '__main__':
         if args.connection == 'IP':
             pairing_data['AccessoryPairingID'] = args.id
             pairing_data['AccessoryLTPK'] = args.key
+        elif args.connection == 'BLE':
+            pairing_data['AccessoryPairingID'] = args.id
+            pairing_data['AccessoryLTPK'] = args.key
+            pairing_data['AccessoryMAC'] = args.mac
 
         controller.save_data(args.file)
     except Exception as e:

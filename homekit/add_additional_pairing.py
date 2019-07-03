@@ -31,6 +31,8 @@ def setup_args_parser():
     parser.add_argument('-i', action='store', required=True, dest='pairing_id', help='')
     parser.add_argument('-k', action='store', required=True, dest='key', help='')
     parser.add_argument('-p', action='store', required=True, dest='permission', choices=['User', 'Admin'], help='')
+    parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
+                        help='the bluetooth adapter to be used (defaults to hci0)')
     add_log_arguments(parser)
     return parser.parse_args()
 
@@ -40,7 +42,7 @@ if __name__ == '__main__':
 
     setup_logging(args.loglevel)
 
-    controller = Controller()
+    controller = Controller(ble_adapter=args.adapter)
     try:
         controller.load_data(args.file)
     except Exception as e:
@@ -64,7 +66,14 @@ if __name__ == '__main__':
                         )
             print(text)
         elif pairing.pairing_data['Connection'] == 'BLE':
-            print('to be done')
+            text = 'Please add this to homekit.finish_add_remote_pairing:\n' \
+                   '    -c {c} -i {id} -m {mac} -k {pk}' \
+                .format(c=pairing.pairing_data['Connection'],
+                        id=pairing.pairing_data['AccessoryPairingID'],
+                        mac=pairing.pairing_data['AccessoryMAC'],
+                        pk=pairing.pairing_data['AccessoryLTPK']
+                        )
+            print(text)
         else:
             print('Not known')
     except Exception as e:

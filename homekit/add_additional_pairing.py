@@ -16,28 +16,46 @@
 # limitations under the License.
 #
 
+"""
+Utility to add an additional paring to a HomeKit Accessory (see chapter 4.11 page 51ff)
+"""
+
 import argparse
 import sys
 import logging
 
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
+from homekit.exceptions import HomeKitException
 
 
 def setup_args_parser():
+    """
+    Setup the parser for the CLI parameters and perform the parsing.
+
+    :return: an instance of argparse.Namespace containing the parsed parameters
+    """
     parser = argparse.ArgumentParser(description='HomeKit generate pairing data app')
     parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
-    parser.add_argument('-i', action='store', required=True, dest='pairing_id', help='')
-    parser.add_argument('-k', action='store', required=True, dest='key', help='')
-    parser.add_argument('-p', action='store', required=True, dest='permission', choices=['User', 'Admin'], help='')
+    parser.add_argument('-i', action='store', required=True, dest='pairing_id',
+                        help='the device identification of the other controller')
+    parser.add_argument('-k', action='store', required=True, dest='key',
+                        help='the public key of the other controller')
+    parser.add_argument('-p', action='store', required=True, dest='permission', choices=['User', 'Admin'],
+                        help='the privilege of the other controller')
     parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
                         help='the bluetooth adapter to be used (defaults to hci0)')
     add_log_arguments(parser)
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main():
+    """
+    the main function.
+
+    :return: none
+    """
     args = setup_args_parser()
 
     setup_logging(args.loglevel)
@@ -45,9 +63,9 @@ if __name__ == '__main__':
     controller = Controller(ble_adapter=args.adapter)
     try:
         controller.load_data(args.file)
-    except Exception as e:
-        print(e)
-        logging.debug(e, exc_info=True)
+    except HomeKitException as exception:
+        print(exception)
+        logging.debug(exception, exc_info=True)
         sys.exit(-1)
 
     if args.alias not in controller.get_pairings():
@@ -76,7 +94,11 @@ if __name__ == '__main__':
             print(text)
         else:
             print('Not known')
-    except Exception as e:
-        print(e)
-        logging.debug(e, exc_info=True)
+    except HomeKitException as exception:
+        print(exception)
+        logging.debug(exception, exc_info=True)
         sys.exit(-1)
+
+
+if __name__ == '__main__':
+    main()

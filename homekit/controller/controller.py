@@ -249,6 +249,7 @@ class Controller(object):
 
         :param filename: the file name of the pairing data
         :raises ConfigLoadingError: if the config could not be loaded. The reason is given in the message.
+        :raises TransportNotSupportedError: if the dependencies for the selected transport are not installed
         """
         try:
             with open(filename, 'r') as input_fp:
@@ -512,7 +513,7 @@ class Controller(object):
             body = len(inner).to_bytes(length=2, byteorder='little') + inner
 
             from .ble_impl.device import DeviceManager
-            manager = DeviceManager(adapter_name=self.ble_adapter)
+            manager = DeviceManager(self.ble_adapter)
             device = manager.make_device(pairing_data['AccessoryMAC'])
             device.connect()
 

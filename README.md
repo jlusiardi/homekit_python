@@ -291,31 +291,85 @@ The information contains the pairing id, the public key of the device and permis
 
 ## prepare_add_remote_pairing
 
-This tool will prepare data required for the `add_additional_pairing` command. 
+This tool will prepare data required for the `add_additional_pairing` command.
 
 Usage:
 ```bash
-python3 -m homekit.add_additional_pairing -f ${PAIRINGDATAFILE} -a ${ALIAS} [--log ${LOGLEVEL}]
+python3 -m homekit.prepare_add_remote_pairing -f ${PAIRINGDATAFILE} -a ${ALIAS} \
+        [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device to be added.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the loglevel for the command. This is optional. 
+Use `DEBUG` to get more output.
 
-This will print information to be fed into `homekit.add_additional_pairing` (via a second channel):
+This will print information to be fed into `homekit.add_additional_pairing` 
+(via a second channel):
 
 ```
 Please add this to homekit.add_additional_pairing:
     -i cec11edd-7363-42c4-8d13-aeb06b608ffc -k 0cbfd3abc377f6c3bfd3b4c119c1c5ff0c840ef1f9530e0f99c68b1f531dd66a
 ```
 
+## add_additional_pairing
+
+This tool is used to tell a HomeKit Accessory accept a new pairing for an 
+additional controller.
+ 
+Usage:
+```bash
+python3 -m homekit.add_additional_pairing -f ${PAIRINGDATAFILE} -a ${ALIAS} \
+        -i ${PAIRINGID} -k ${PUBLIC_KEY} -p ${LEVEL} [--log ${LOGLEVEL}]
+```
+
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device to be added.
+
+The option `--adapter` specifies which Bluetooth device to use. This is 
+optional and `hci0` is the default and is only used if the paired device is 
+using Bluetooth LE.
+
+The option `--log` specifies the loglevel for the command. This is optional. 
+Use `DEBUG` to get more output.
+
+This will print information to be fed into `homekit.finish_add_remote_pairing` (via a second channel):
+
+```
+Please add this to homekit.finish_add_remote_pairing:
+    -c BLE -i D0:CA:1E:56:13:AA -m cb:e0:b0:c9:e8:72 -k a07c471e12682b161034b91c0d016201516eb51d9bf1071b6dcf0e3be71e9269
+```
+
 ## finish_add_remote_pairing.py
 
-This N
+This tool finalizes the addition of a pairing to a HomeKit Accessory.
 
-## add_additional_pairing
+Usage:
+```bash
+python3 -m homekit.finish_add_remote_pairing -f ${PAIRINGDATAFILE} -a ${ALIAS} \
+        -c ${CONNECTIONTYPE} -i ${DEVICEID} -k ${DEVICEPUBLICKEY} \
+        [-m ${MACADDRESS}] [--log ${LOGLEVEL}]
+```
+
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device to be added.
+
+The option `-c` specifies the type of connection for the accessory (values are
+IP and BLE).
+
+The option `-i` specifies the accessory's device id.
+
+The option `-k` specifies the accessory's public key.
+
+The option `-m` specifies the accessory's mac address for Bluetooth Low Energy 
+accessories. This is not required for IP accessories. 
+
+The option `--log` specifies the loglevel for the command. This is optional. 
+Use `DEBUG` to get more output.
 
 ## remove_pairing
 
@@ -483,11 +537,13 @@ event for 1.8: False
 # Devices Reported to work
 
 The code was tested with the following devices by the author:
+
  * Koogeek P1EU Plug (IP) ([Vendor](https://www.koogeek.com/smart-home-2418/p-p1eu.html))
  * Koogeek DW1 (BLE)  ([Vendor](https://www.koogeek.com/p-dw1.html))
  * OSRAM SMART+ Classic E27 Multicolor (BLE) ([Vendor](https://smartplus.ledvance.de/produkte/innenbeleuchtung/index.jsp#_m507__2_9_col___image__video___rest_col___text_20))
 
 Users have tried (and succeeded, not checked by the author) to use the following devices:
+
  * Ikea TRÅDFRI (IP) ([Issue #13](https://github.com/jlusiardi/homekit_python/issues/13))
  * Philips Hue (IP) ([Issue #13](https://github.com/jlusiardi/homekit_python/issues/13))
  * Leviton DH6HD-1BZ (IP) ([Issue #16](https://github.com/jlusiardi/homekit_python/issues/16))

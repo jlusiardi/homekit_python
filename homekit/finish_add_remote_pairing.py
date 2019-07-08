@@ -77,3 +77,12 @@ if __name__ == '__main__':
         print(e)
         logging.debug(e, exc_info=True)
         sys.exit(-1)
+
+    try:
+        pairing = controller.get_pairings()[args.alias]
+        data = pairing.list_accessories_and_characteristics()
+        controller.save_data(args.file)
+    except Exception as e:
+        print(e)
+        logging.debug(e, exc_info=True)
+        sys.exit(-1)

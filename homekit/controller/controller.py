@@ -469,7 +469,7 @@ class Controller(object):
 
         return finish_pairing
 
-    def remove_pairing(self, alias):
+    def remove_pairing(self, alias, pairingId=None):
         """
         Remove a pairing between the controller and the accessory. The pairing data is delete on both ends, on the
         accessory and the controller.
@@ -478,6 +478,7 @@ class Controller(object):
             to be paired on the next start of the application.
 
         :param alias: the controller's alias for the accessory
+        :param pairingId: the pairing id to be removed
         :raises AuthenticationError: if the controller isn't authenticated to the accessory.
         :raises AccessoryNotFoundError: if the device can not be found via zeroconf
         :raises UnknownError: on unknown errors
@@ -485,12 +486,16 @@ class Controller(object):
         # package visibility like in java would be nice here
         pairing_data = self.pairings[alias]._get_pairing_data()
         connection_type = pairing_data['Connection']
+        if not pairingId:
+            pairingIdToDelete = pairing_data['iOSPairingId']
+        else:
+            pairingIdToDelete = pairingId
 
         # Prepare the common (for IP and BLE) request data
         request_tlv = TLV.encode_list([
             (TLV.kTLVType_State, TLV.M1),
             (TLV.kTLVType_Method, TLV.RemovePairing),
-            (TLV.kTLVType_Identifier, pairing_data['iOSPairingId'].encode())
+            (TLV.kTLVType_Identifier, pairingIdToDelete.encode())
         ])
 
         if connection_type == 'IP':
@@ -532,7 +537,8 @@ class Controller(object):
         # handle the result, spec says, if it has only one entry with state == M2 we unpaired, else its an error.
         logging.debug('response data: %s', data)
         if len(data) == 1 and data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2:
-            del self.pairings[alias]
+            if not pairingId:
+                del self.pairings[alias]
         else:
             if data[1][0] == TLV.kTLVType_Error and data[1][1] == TLV.kTLVError_Authentication:
                 raise AuthenticationError('Remove pairing failed: missing authentication')

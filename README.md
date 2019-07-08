@@ -264,7 +264,9 @@ The file with the pairing data will be required to send any additional commands 
 
 ## list_pairings
 
-This tool will perform a query to list all pairings of an accessory.
+This tool will perform a query to list all pairings of an accessory. The
+controller that performs the query must be registered as `Admin`. If this is
+not the case, no pairings are listed.
 
 Usage:
 ```bash

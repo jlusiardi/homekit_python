@@ -11,6 +11,9 @@ The code presented in this repository was created based on release R1 from 2017-
  * [quarcko](https://github.com/quarcko) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=quarcko)
  * [mjg59](https://github.com/mjg59) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=mjg59)
  * [mrstegeman](https://github.com/mrstegeman) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=mrstegeman)
+ * [netmanchris](https://github.com/netmanchris) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=netmanchris)
+
+(The contributors are not listed in any particular order!)
 
 # Installation
 
@@ -125,7 +128,7 @@ The option `-t` specifies the timeout for the inquiry. This is optional and 10s 
 
 The option `-u` activates a filter to show only unpaired devices. This is optional and deactivated by default.
 
-The option `--log` specifies the loglevel for the command. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 Output:
 ```
@@ -140,9 +143,10 @@ State Number (s#): 1
 Status Flags (sf): 0
 Category Identifier (ci): Other (Id: 1)
 ```
-Hints: 
- * Some devices like the Koogeek P1EU Plug need bluetooth to set up wireless (e.g. join the wireless network) before. Use your phone 
-   or the proper app to perform this
+Hints:
+
+ * Some devices like the Koogeek P1EU Plug need bluetooth to set up wireless (e.g. join the wireless network) before. 
+   Use your phone or the proper app to perform this
  * paired devices should not show up
 
 ## discover_ble
@@ -160,7 +164,7 @@ The option `-u` activates a filter to show only unpaired devices. This is option
 
 The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 Output:
 ```
@@ -187,7 +191,7 @@ python3 -m homekit.identify -d ${DEVICEID} [--log ${LOGLEVEL}]
 
 The option `-d` specifies the device id of the accessory to identify. Can be obtained via *discovery*.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 
 ### identify unpaired Homekit BLE Accessory
@@ -199,9 +203,9 @@ python3 -m homekit.identify -m ${MACADDRESS} [--adapter ${ADAPTER}] [--log ${LOG
 
 The option `-m` specifies the Bluetooth LE mac id of the accessory to identify. Can be obtained via *discovery_ble*.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
-
 The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default.
+
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 ### identify paired Homekit Accessory
 
@@ -214,9 +218,10 @@ The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device.
 
-The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only used if the paired device is using Bluetooth LE.
+The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only 
+used if the paired device is using Bluetooth LE.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 ## pair
 
@@ -229,13 +234,14 @@ python3 -m homekit.pair -d ${DEVICEID} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -a 
 
 The option `-d` specifies the device id of the accessory to pair. Can be obtained via discovery.
 
-The option `-p` specifies the HomeKit Setup Code. Can be obtained from the accessory. This must look like `XXX-XX-XXX` (X is a single digit and the dashes are important).
+The option `-p` specifies the HomeKit Setup Code. Can be obtained from the accessory. This must look like `XXX-XX-XXX` 
+(X is a single digit and the dashes are important).
 
 The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 The file with the pairing data will be required to send any additional commands to the accessory.
 
@@ -256,9 +262,10 @@ The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device.
 
-The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only used if the paired device is using Bluetooth LE.
+The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only 
+used if the paired device is using Bluetooth LE.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 The file with the pairing data will be required to send any additional commands to the accessory.
 
@@ -277,9 +284,10 @@ The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device.
 
-The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only used if the paired device is using Bluetooth LE.
+The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only 
+used if the paired device is using Bluetooth LE.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 This will print information for each controller that is paired with the accessory:
 
@@ -305,7 +313,7 @@ The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device to be added.
 
-The option `--log` specifies the loglevel for the command. This is optional. 
+The option `--log` specifies the log level for the command. This is optional. 
 Use `DEBUG` to get more output.
 
 This will print information to be fed into `homekit.add_additional_pairing` 
@@ -331,11 +339,14 @@ The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device to be added.
 
-The option `--adapter` specifies which Bluetooth device to use. This is 
-optional and `hci0` is the default and is only used if the paired device is 
-using Bluetooth LE.
+The option `-i` specifies the additional controller's pairing id.
 
-The option `--log` specifies the loglevel for the command. This is optional. 
+The option `-k` specifies the additional controller's public key.
+
+The option `-p` specifies the additional controller's access privileges, this can be `User` or `Admin` for a pairing
+with higher privileges.
+
+The option `--log` specifies the log level for the command. This is optional. 
 Use `DEBUG` to get more output.
 
 This will print information to be fed into `homekit.finish_add_remote_pairing` (via a second channel):
@@ -370,7 +381,7 @@ The option `-k` specifies the accessory's public key.
 The option `-m` specifies the accessory's mac address for Bluetooth Low Energy 
 accessories. This is not required for IP accessories. 
 
-The option `--log` specifies the loglevel for the command. This is optional. 
+The option `--log` specifies the log level for the command. This is optional. 
 Use `DEBUG` to get more output.
 
 ## remove_pairing
@@ -379,16 +390,19 @@ This tool will remove a pairing from an accessory.
 
 Usage:
 ```bash
-python -m homekit.remove_pairing -f ${PAIRINGDATAFILE} -a ${ALIAS} [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
+python -m homekit.remove_pairing -f ${PAIRINGDATAFILE} -a ${ALIAS} [-i ${PAIRINGID}] [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device.
 
-The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only used if the paired device is using Bluetooth LE.
+The option `-i` specifies the controller pairing id to remove.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only 
+used if the paired device is using Bluetooth LE.
+
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 ## get_accessories
 
@@ -407,9 +421,10 @@ The option `-o` specifies the format of the output:
  * `json` displays the result as pretty printed JSON
  * `compact` reformats the output to get more on one screen
 
-The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only used if the paired device is using Bluetooth LE.
+The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only 
+used if the paired device is using Bluetooth LE.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 Using the `compact` output the result will look like:
 ```
@@ -431,14 +446,16 @@ This tool will read values from one or more characteristics.
 
 Usage:
 ```bash
-python3 -m homekit.get_characteristic -f ${PAIRINGDATAFILE} -a ${ALIAS} -c ${CHARACTERISTICS} [-m] [-p] [-t] [-e] [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
+python3 -m homekit.get_characteristic -f ${PAIRINGDATAFILE} -a ${ALIAS} -c ${CHARACTERISTICS} [-m] [-p] [-t] [-e] \
+                                     [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device.
 
-The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>`. This option can be repeated to retrieve multiple characteristics with one call (e.g. `-c 1.9 -c 1.8`). 
+The option `-c` specifies the characteristics to read. The format is `<aid>.<cid>`. This option can be repeated to 
+retrieve multiple characteristics with one call (e.g. `-c 1.9 -c 1.8`). 
  
 The option `-m` specifies if the meta data should be read as well.
 
@@ -448,9 +465,10 @@ The option `-t` specifies if the type information should be read as well.
 
 The option `-e` specifies if the event data should be read as well.
 
-The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only used if the paired device is using Bluetooth LE.
+The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only 
+used if the paired device is using Bluetooth LE.
 
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 For example, this command reads 2 characteristics of a Koogeek P1EU Plug:
 ```
@@ -458,7 +476,7 @@ python3 -m homekit.get_characteristic -f koogeek.json -a koogeek -c 1.8 -c 1.9
 ```
 
 The result will be a json with data for each requested characteristic:
-```
+```json
 {
     "1.8": {
         "value": false
@@ -474,18 +492,21 @@ This tool will write values to one or more characteristics.
 
 Usage:
 ```bash
-python3 -m homekit.put_characteristic -f ${PAIRINGDATAFILE} -a ${ALIAS} -c ${Characteristics} ${value}[--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
+python3 -m homekit.put_characteristic -f ${PAIRINGDATAFILE} -a ${ALIAS} -c ${Characteristics} ${value} \
+                                     [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device.
 
-The option `-c` specifies the characteristics to change. The format is `<aid>.<cid> <value>`. This option can be repeated to change multiple characteristics with one call  (e.g. `-c 1.9 On -c 1.8 22.3`) . 
+The option `-c` specifies the characteristics to change. The format is `<aid>.<cid> <value>`. This option can be 
+repeated to change multiple characteristics with one call  (e.g. `-c 1.9 On -c 1.8 22.3`) . 
  
-The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only used if the paired device is using Bluetooth LE.
+The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only 
+used if the paired device is using Bluetooth LE.
  
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 For example, this command turns of a Koogeek P1EU Plug:
 ```
@@ -502,7 +523,8 @@ This tool will register with an accessory and listen to the events send back fro
 
 Usage
 ```bash
-python3 -m homekit.get_events -f ${PAIRINGDATAFILE} -a ${ALIAS} -c ${Characteristics} [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
+python3 -m homekit.get_events -f ${PAIRINGDATAFILE} -a ${ALIAS} -c ${Characteristics} \
+                             [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
 ```
 
 The option `-f` specifies the file that contains the pairing data.
@@ -512,9 +534,10 @@ The option `-a` specifies the alias for the device.
 The option `-c` specifies the characteristics to change. The format is `<aid>.<cid>`. This 
 option can be repeated to listen to multiple characteristics with one call.
 
-The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only used if the paired device is using Bluetooth LE.
+The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is 
+only used if the paired device is using Bluetooth LE.
  
-The option `--log` specifies the loglevel for the command. This is optional. Use `DEBUG` to get more output.
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
 For example, you can listen to characteristics 1.8 (on characteristic), 1.22 (1 REALTIME_ENERGY) and 
 1.23 (2 CURRENT_HOUR_DATA) of the Koogeek P1EU Plug with:

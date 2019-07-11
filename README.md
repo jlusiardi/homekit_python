@@ -11,6 +11,7 @@ The code presented in this repository was created based on release R1 from 2017-
  * [quarcko](https://github.com/quarcko) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=quarcko)
  * [mjg59](https://github.com/mjg59) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=mjg59)
  * [mrstegeman](https://github.com/mrstegeman) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=mrstegeman)
+* [limkevinkuan](https://github.com/limkevinkuan) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=limkevinkuan)
 
 # Installation
 

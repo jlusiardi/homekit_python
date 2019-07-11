@@ -13,18 +13,26 @@ To help with testing new devices, please have a look at [HomeKit Device Testing]
 
 |   | IP Transport | Bluetooth LE Transport |
 | ------------- | ------------- | ------------- |
-| pair accessory  |   :heavy_check_mark:  |  :heavy_check_mark: (in branch add_bluetooth) |
-| unpair accessory  |   :heavy_check_mark:  |  :heavy_check_mark: (in branch add_bluetooth) |
-| identify paired accessory  |   :heavy_check_mark:  |  :heavy_check_mark: (in branch add_bluetooth) |
-| ...  | ... | ... |
+| pair accessory  |   :heavy_check_mark:  |  :heavy_check_mark:  |
+| unpair accessory  |   :heavy_check_mark:  |  :heavy_check_mark:  |
+| identify paired accessory  |   :heavy_check_mark:  |  :heavy_check_mark: |
+| get accessories  |   :heavy_check_mark:  |  :heavy_check_mark: |
+| handle parings  |   :heavy_check_mark:  |  :heavy_check_mark: |
+| get characteristics  |   :heavy_check_mark:  |  :heavy_check_mark: |
+| put characteristics  |   :heavy_check_mark:  |  :heavy_check_mark: |
+| get events  |   :heavy_check_mark:  |   |
 
 ## Supported operations as HomeKit Accesory
 
 |   | IP Transport | Bluetooth LE Transport |
 | ------------- | ------------- | ------------- |
 | pair accessory  |   :heavy_check_mark:  |   |
-| unpair accessory  |   :heavy_check_mark:  |   |
-| identify paired accessory  |   :heavy_check_mark:  |  |
-| ...  | ... | ... |
+| unpair accessory  |   :heavy_check_mark:  |    |
+| identify paired accessory  |   :heavy_check_mark:  |   |
+| get accessories  |   :heavy_check_mark:  |   |
+| handle parings  |   partly  |  |
+| get characteristics  |   :heavy_check_mark:  |   |
+| put characteristics  |   :heavy_check_mark:  |   |
+| get events  |   :heavy_check_mark:  |   |
 
 

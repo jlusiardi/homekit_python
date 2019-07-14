@@ -120,7 +120,7 @@ class IpPairing(AbstractPairing):
             (TLV.kTLVType_Method, TLV.ListPairings)
         ])
         try:
-            response = self.session.sec_http.post('/pairings', request_tlv.decode())
+            response = self.session.sec_http.post('/pairings', request_tlv)
             data = response.read()
         except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
@@ -379,6 +379,31 @@ class IpPairing(AbstractPairing):
                         self.put_characteristics([(aid, iid, True)])
                         return True
         return False
+
+    def add_pairing(self, additional_controller_pairing_identifier, ios_device_ltpk, permissions):
+        if not self.session:
+            self.session = IpSession(self.pairing_data)
+        if permissions == 'User':
+            permissions = TLV.kTLVType_Permission_RegularUser
+        elif permissions == 'Admin':
+            permissions = TLV.kTLVType_Permission_AdminUser
+        else:
+            print('UNKNOWN')
+
+        request_tlv = TLV.encode_list([
+            (TLV.kTLVType_State, TLV.M1),
+            (TLV.kTLVType_Method, TLV.AddPairing),
+            (TLV.kTLVType_Identifier, additional_controller_pairing_identifier.encode()),
+            (TLV.kTLVType_PublicKey, bytes.fromhex(ios_device_ltpk)),
+            (TLV.kTLVType_Permissions, permissions)
+        ])
+
+        # decode is required because post needs a string representation
+        response = self.session.sec_http.post('/pairings', request_tlv)
+        data = response.read()
+        data = TLV.decode_bytes(data)
+        # TODO handle the response properly
+        self.session.close()
 
 
 class IpSession(object):

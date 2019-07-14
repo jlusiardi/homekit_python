@@ -43,7 +43,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('accessory')
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler()
-    ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    ch.setFormatter(logging.Formatter('%(asctime)s %(filename)s:%(lineno)04d %(levelname)s %(message)s'))
     logger.addHandler(ch)
     logger.info('starting')
 

@@ -16,6 +16,7 @@
 
 import threading
 import select
+import logging
 
 from homekit.http_impl.response import HttpResponse
 from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
@@ -49,26 +50,28 @@ class SecureHttp:
 
     def get(self, target):
         data = 'GET {tgt} HTTP/1.1\nHost: {host}:{port}\n\n'.format(tgt=target, host=self.host, port=self.port)
-        return self._handle_request(data)
+        data = data.replace("\n", "\r\n")
+        return self._handle_request(data.encode())
 
     def put(self, target, body, content_type=HttpContentTypes.JSON):
         headers = 'Host: {host}:{port}\n'.format(host=self.host, port=self.port) + \
                   'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'PUT {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
-        return self._handle_request(data)
+        data = data.replace("\n", "\r\n")
+        return self._handle_request(data.encode())
 
     def post(self, target, body, content_type=HttpContentTypes.TLV):
         headers = 'Host: {host}:{port}\n'.format(host=self.host, port=self.port) + \
                   'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
-        data = 'POST {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
-
-        return self._handle_request(data)
+        data = 'POST {tgt} HTTP/1.1\n{hdr}\n'.format(tgt=target, hdr=headers)
+        data = data.replace("\n", "\r\n")
+        return self._handle_request(data.encode() + body)
 
     def _handle_request(self, data):
+        logging.debug('handle request: %s', data)
         with self.lock:
-            data = data.replace("\n", "\r\n")
             while len(data) > 0:
                 # split the data to max 1024 bytes (see page 71)
                 len_data = min(len(data), 1024)
@@ -78,7 +81,7 @@ class SecureHttp:
                 cnt_bytes = self.c2a_counter.to_bytes(8, byteorder='little')
                 self.c2a_counter += 1
                 ciper_and_mac = chacha20_aead_encrypt(len_bytes, self.c2a_key, cnt_bytes, bytes([0, 0, 0, 0]),
-                                                      tmp_data.encode())
+                                                      tmp_data)
 
                 try:
                     self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])

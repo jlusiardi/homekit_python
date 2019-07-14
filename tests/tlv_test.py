@@ -95,28 +95,28 @@ class TestTLV(unittest.TestCase):
     def test_to_string_for_list(self):
         example = [(1, 'hello',), ]
         res = TLV.to_string(example)
-        self.assertEqual(res, '[\n  1: (5 bytes) hello\n]\n')
+        self.assertEqual(res, '[\n  1: (5 bytes/<class \'str\'>) hello\n]\n')
         example = [(1, 'hello',), (2, 'world',), ]
         res = TLV.to_string(example)
-        self.assertEqual(res, '[\n  1: (5 bytes) hello\n  2: (5 bytes) world\n]\n')
+        self.assertEqual(res, '[\n  1: (5 bytes/<class \'str\'>) hello\n  2: (5 bytes/<class \'str\'>) world\n]\n')
 
     def test_to_string_for_dict(self):
         example = {1: 'hello'}
         res = TLV.to_string(example)
-        self.assertEqual(res, '{\n  1: (5 bytes) hello\n}\n')
+        self.assertEqual(res, '{\n  1: (5 bytes/<class \'str\'>) hello\n}\n')
         example = {1: 'hello', 2: 'world'}
         res = TLV.to_string(example)
-        self.assertEqual(res, '{\n  1: (5 bytes) hello\n  2: (5 bytes) world\n}\n')
+        self.assertEqual(res, '{\n  1: (5 bytes/<class \'str\'>) hello\n  2: (5 bytes/<class \'str\'>) world\n}\n')
 
     def test_to_string_for_dict_bytearray(self):
         example = {1: bytearray([0x42, 0x23])}
         res = TLV.to_string(example)
-        self.assertEqual(res, '{\n  1: (2 bytes) 0x4223\n}\n')
+        self.assertEqual(res, '{\n  1: (2 bytes/<class \'bytearray\'>) 0x4223\n}\n')
 
     def test_to_string_for_list_bytearray(self):
         example = [[1, bytearray([0x42, 0x23])]]
         res = TLV.to_string(example)
-        self.assertEqual(res, '[\n  1: (2 bytes) 0x4223\n]\n')
+        self.assertEqual(res, '[\n  1: (2 bytes/<class \'bytearray\'>) 0x4223\n]\n')
 
     def test_separator_list(self):
         val = [

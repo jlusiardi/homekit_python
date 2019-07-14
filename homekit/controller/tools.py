@@ -142,6 +142,10 @@ class AbstractPairing(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def add_pairing(self, additional_controller_pairing_identifier, ios_device_ltpk, permissions):
+        pass
+
 
 def check_convert_value(val, target_type):
     """

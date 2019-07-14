@@ -25,7 +25,10 @@ from homekit.log_support import setup_logging, add_log_arguments
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit remove pairing app')
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
-    parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
+    parser.add_argument('-a', action='store', required=True, dest='alias',
+                        help='alias for the accessory')
+    parser.add_argument('-i', action='store', required=False, dest='pairingId',
+                        help='the pairing that should be removed')
     parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
                         help='the bluetooth adapter to be used (defaults to hci0)')
     add_log_arguments(parser)
@@ -43,6 +46,6 @@ if __name__ == '__main__':
         print('"{a}" is no known alias'.format(a=args.alias))
         exit(-1)
 
-    controller.remove_pairing(args.alias)
+    controller.remove_pairing(args.alias, args.pairingId)
     controller.save_data(args.file)
     print('Pairing for "{a}" was removed.'.format(a=args.alias))

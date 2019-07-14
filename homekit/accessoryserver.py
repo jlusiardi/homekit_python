@@ -867,7 +867,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             ios_device_pairing_id = session['ios_device_pairing_id']
             if not server_data.is_peer_admin(ios_device_pairing_id):
                 self.send_error_reply(TLV.M2, TLV.kTLVError_Authentication)
-                self.log_error('error in step #2: admin bit')
+                self.log_error('error in step #2: admin bit not set for controller %s', ios_device_pairing_id.decode())
                 return
 
             # 3) remove pairing and republish device

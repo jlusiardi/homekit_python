@@ -31,6 +31,7 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
 from homekit.tools import IP_TRANSPORT_SUPPORTED, BLE_TRANSPORT_SUPPORTED
+from homekit.controller.additional_pairing import AdditionalPairing
 
 if BLE_TRANSPORT_SUPPORTED:
     from homekit.controller.ble_impl import BlePairing, BleSession, find_characteristic_by_uuid, \
@@ -248,6 +249,7 @@ class Controller(object):
 
         :param filename: the file name of the pairing data
         :raises ConfigLoadingError: if the config could not be loaded. The reason is given in the message.
+        :raises TransportNotSupportedError: if the dependencies for the selected transport are not installed
         """
         try:
             with open(filename, 'r') as input_fp:
@@ -270,6 +272,8 @@ class Controller(object):
                         if not BLE_TRANSPORT_SUPPORTED:
                             raise TransportNotSupportedError('BLE')
                         self.pairings[pairing_id] = BlePairing(data[pairing_id], self.ble_adapter)
+                    elif data[pairing_id]['Connection'] == 'ADDITIONAL_PAIRING':
+                        self.pairings[pairing_id] = AdditionalPairing(data[pairing_id])
                     else:
                         # ignore anything else, issue warning
                         self.logger.warning('could not load pairing %s of type "%s"', pairing_id,
@@ -440,7 +444,7 @@ class Controller(object):
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
 
         from .ble_impl.device import DeviceManager
-        manager = DeviceManager(adapter_name=adapter)
+        manager = DeviceManager(adapter)
         device = manager.make_device(mac_address=accessory_mac)
 
         logging.debug('connecting to device')
@@ -465,7 +469,7 @@ class Controller(object):
 
         return finish_pairing
 
-    def remove_pairing(self, alias):
+    def remove_pairing(self, alias, pairingId=None):
         """
         Remove a pairing between the controller and the accessory. The pairing data is delete on both ends, on the
         accessory and the controller.
@@ -474,6 +478,7 @@ class Controller(object):
             to be paired on the next start of the application.
 
         :param alias: the controller's alias for the accessory
+        :param pairingId: the pairing id to be removed
         :raises AuthenticationError: if the controller isn't authenticated to the accessory.
         :raises AccessoryNotFoundError: if the device can not be found via zeroconf
         :raises UnknownError: on unknown errors
@@ -481,12 +486,16 @@ class Controller(object):
         # package visibility like in java would be nice here
         pairing_data = self.pairings[alias]._get_pairing_data()
         connection_type = pairing_data['Connection']
+        if not pairingId:
+            pairingIdToDelete = pairing_data['iOSPairingId']
+        else:
+            pairingIdToDelete = pairingId
 
         # Prepare the common (for IP and BLE) request data
         request_tlv = TLV.encode_list([
             (TLV.kTLVType_State, TLV.M1),
             (TLV.kTLVType_Method, TLV.RemovePairing),
-            (TLV.kTLVType_Identifier, pairing_data['iOSPairingId'].encode())
+            (TLV.kTLVType_Identifier, pairingIdToDelete.encode())
         ])
 
         if connection_type == 'IP':
@@ -494,7 +503,7 @@ class Controller(object):
                 raise TransportNotSupportedError('IP')
             session = IpSession(pairing_data)
             # decode is required because post needs a string representation
-            response = session.post('/pairings', request_tlv.decode())
+            response = session.post('/pairings', request_tlv)
             session.close()
             data = response.read()
             data = TLV.decode_bytes(data)
@@ -509,7 +518,7 @@ class Controller(object):
             body = len(inner).to_bytes(length=2, byteorder='little') + inner
 
             from .ble_impl.device import DeviceManager
-            manager = DeviceManager(adapter_name=self.ble_adapter)
+            manager = DeviceManager(self.ble_adapter)
             device = manager.make_device(pairing_data['AccessoryMAC'])
             device.connect()
 
@@ -528,7 +537,8 @@ class Controller(object):
         # handle the result, spec says, if it has only one entry with state == M2 we unpaired, else its an error.
         logging.debug('response data: %s', data)
         if len(data) == 1 and data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2:
-            del self.pairings[alias]
+            if not pairingId:
+                del self.pairings[alias]
         else:
             if data[1][0] == TLV.kTLVType_Error and data[1][1] == TLV.kTLVError_Authentication:
                 raise AuthenticationError('Remove pairing failed: missing authentication')

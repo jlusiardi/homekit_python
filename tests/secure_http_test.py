@@ -110,7 +110,7 @@ class TestSecureHttp(unittest.TestCase):
             }
 
             sh = SecureHttp(session)
-            self.assertRaises(AccessoryDisconnectedError, sh.post, '/', 'data')
+            self.assertRaises(AccessoryDisconnectedError, sh.post, '/', 'data'.encode())
 
     def test_get_on_connected_device_timeout(self):
         with mock.patch('homekit.controller.ip_implementation.IpSession') as session:

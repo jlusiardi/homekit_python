@@ -18,7 +18,7 @@ Important Information:
 python -m homekit.discover_ble
 ```
 
-## result **REPLACEME** (✔ or ✘)
+## result ✔
 
 ```text
 Name: A60 Ce

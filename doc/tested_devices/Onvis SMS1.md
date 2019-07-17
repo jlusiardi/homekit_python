@@ -42,7 +42,7 @@ python3 -m homekit.identify -m d0:77:11:3f:57:1b
 ## result ✔
 
 ```text
-
+Green LED flashes on the front below the sensor panel.
 ```
 
 # Step 3 - initialize controller storage
@@ -84,7 +84,7 @@ python3 -m homekit.identify -f onvis-sms1.json -a Onvis-SMS1
 ## result ✔
 
 ```text
-
+Green LED flashes on the front below the sensor panel.
 ```
 
 # Step 6 - get accessories

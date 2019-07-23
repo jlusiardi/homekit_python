@@ -53,6 +53,7 @@ class IpPairing(AbstractPairing):
         """
         if self.session:
             self.session.close()
+            self.session = None
 
     def _get_pairing_data(self):
         """
@@ -290,8 +291,11 @@ class IpPairing(AbstractPairing):
 
         bus.subscribe(characteristics)
 
+        start_time = time.time()
         for event_count, event in enumerate(bus):
             if max_events >= 0 and event_count >= max_events:
+                break
+            if max_seconds >= 0 and (time.time() - start_time) >= max_seconds:
                 break
             tmp = []
             for (aid, iid), char in event.items():
@@ -360,11 +364,6 @@ class IpPairing(AbstractPairing):
         data = TLV.decode_bytes(data)
         # TODO handle the response properly
         self.session.close()
-    
-    def close(self):
-        if self.session:
-            self.session.close()
-            self.session = None
 
 
 class IpMessageBus(object):
@@ -443,7 +442,6 @@ class IpMessageBus(object):
         except (AccessoryDisconnectedError, EncryptionError):
             self.pairing.close()
             raise
-
 
     def put_characteristics(self, characteristics, do_conversion=False, field='value'):
         """

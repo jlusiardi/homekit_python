@@ -24,6 +24,8 @@ import random
 import sys
 import uuid
 import struct
+import threading
+import queue
 from distutils.util import strtobool
 
 from homekit.controller.tools import AbstractPairing
@@ -411,6 +413,96 @@ class BlePairing(AbstractPairing):
         response = self.session.request(fc, cid, HapBleOpCodes.CHAR_WRITE, body)
         # TODO handle response properly
         print('unhandled response:', response)
+
+    def get_message_bus(self):
+        return BleMessageBus(self)
+
+
+class EventsDevice(Device):
+
+    def __init__(self, bus):
+        self.bus = bus
+        self.session = bus.session
+
+    def properties_changed(self, sender, changed_properties, invalidated_properties):
+        if 'ManufacturerData' in changed_properties:
+            data = self.get_homekit_discovery_data()
+
+            # Detect disconnected notification of state change
+            # A characteristic has changed but we don't know which one
+            # Resets back to 1 after overflow, factory reset or firmware update
+            if data['gsn'] != self.homekit_discovery_data.get('gsn', None):
+                self.bus.get_characteristics(list(self.bus.subscriptions))
+
+        return gatt.Device.properties_changed(self, sender, changed_properties, invalidated_properties)
+
+    def characteristic_value_updated(self, characteristic, value):
+        if value != b'':
+            # We are only interested in in blank values
+            return
+
+        # This is a UUID that we can't map to a (aid, iid)
+        if characteristic.uuid not in self.session.uuid_map:
+            return
+
+        # Retrieve the value for the UUID that changed
+        _, c = self.session.uuid_map[characteristic.uuid]
+        self.bus.get_characteristics([
+            (1, c['iid']),
+        ])
+
+
+class BleMessageBus(object):
+
+    # FIXME: Think about some kind of stop() / close() to get rid of the thread
+
+    def __init__(self, session):
+        self.session = session
+        self.queue = queue.Queue()
+
+        # FIXME: Pass in which accessory this is supposed to be connecting to
+        self.device = EventsDevice(self)
+        # FIXME: Create a manager and attach this device to it
+        self.monitor = threading.Thread(target=self.device.manager.run)
+
+        self.monitor.start()
+
+        self.subscriptions = set()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.queue.get()
+
+    def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,
+                            include_events=False):
+        self.queue.put_nowait(
+            self.session.get_characteristics(
+                characteristics,
+                include_meta=include_meta,
+                include_perms=include_perms,
+                include_type=include_type,
+                include_events=include_events,
+            )
+        )
+
+    def put_characteristics(self, characteristics, do_conversion=False):
+        self.queue.put_nowait(
+            self.session.put_characteristics(characteristics, do_conversion)
+        )
+
+    def subscribe(self, characteristics):
+        for (aid, iid) in characteristics:
+            self.subscriptions.add((aid, iid))
+            fc, fc_id = self.session.find_characteristic_by_iid(iid)
+            fc.enable_notifications()
+
+    def unsubscribe(self, characteristics):
+        for (aid, iid) in characteristics:
+            self.subscriptions.discard((aid, iid))
+            fc, fc_id = self.session.find_characteristic_by_iid(iid)
+            fc.disable_notifications()
 
 
 class BleSession(object):

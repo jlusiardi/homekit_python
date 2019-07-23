@@ -286,68 +286,24 @@ class IpPairing(AbstractPairing):
         :return: a dict mapping 2-tupels of aid and iid to dicts with status and description, e.g.
                  {(1, 37): {'description': 'Notification is not supported for characteristic.', 'status': -70406}}
         """
+        bus = self.get_message_bus()
+
+        bus.subscribe(characteristics)
+
+        for event_count, event in enumerate(bus):
+            if max_events >= 0 and event_count >= max_events:
+                break
+            tmp = []
+            for (aid, iid), char in event.items():
+                tmp.append(aid, iid, char.get('value'))
+            callback_fun(tmp)
+
+        return {}
+
+    def get_message_bus(self):
         if not self.session:
             self.session = IpSession(self.pairing_data)
-        data = []
-        characteristics_set = set()
-        for characteristic in characteristics:
-            aid = characteristic[0]
-            iid = characteristic[1]
-            characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
-            data.append({'aid': aid, 'iid': iid, 'ev': True})
-        data = json.dumps({'characteristics': data})
-
-        try:
-            response = self.session.put('/characteristics', data)
-        except (AccessoryDisconnectedError, EncryptionError):
-            self.session.close()
-            self.session = None
-            raise
-
-        # handle error responses
-        if response.code != 204:
-            tmp = {}
-            try:
-                data = json.loads(response.read().decode())
-            except JSONDecodeError:
-                self.session.close()
-                self.session = None
-                raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
-
-            for characteristic in data['characteristics']:
-                status = characteristic['status']
-                if status == 0:
-                    continue
-                aid = characteristic['aid']
-                iid = characteristic['iid']
-                tmp[(aid, iid)] = {'status': status, 'description': HapStatusCodes[status]}
-            return tmp
-
-        # wait for incoming events
-        event_count = 0
-        s = time.time()
-        while (max_events == -1 or event_count < max_events) and (max_seconds == -1 or s + max_seconds >= time.time()):
-            try:
-                r = self.session.sec_http.handle_event_response()
-                body = r.read().decode()
-            except (AccessoryDisconnectedError, EncryptionError):
-                self.session.close()
-                self.session = None
-                raise
-
-            if len(body) > 0:
-                try:
-                    r = json.loads(body)
-                except JSONDecodeError:
-                    self.session.close()
-                    self.session = None
-                    raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
-                tmp = []
-                for c in r['characteristics']:
-                    tmp.append((c['aid'], c['iid'], c['value']))
-                callback_fun(tmp)
-                event_count += 1
-        return {}
+        return IpMessageBus(self)
 
     def identify(self):
         """
@@ -404,6 +360,143 @@ class IpPairing(AbstractPairing):
         data = TLV.decode_bytes(data)
         # TODO handle the response properly
         self.session.close()
+    
+    def close(self):
+        if self.session:
+            self.session.close()
+            self.session = None
+
+
+class IpMessageBus(object):
+
+    def __init__(self, pairing):
+        self.pairing = pairing
+        self.session = pairing.session
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        # wait for incoming events
+        try:
+            r = self.session.sec_http.handle_event_response()
+            body = r.read().decode()
+        except (AccessoryDisconnectedError, EncryptionError):
+            self.pairing.close()
+            raise
+
+        if len(body) > 0:
+            try:
+                r = json.loads(body)
+            except JSONDecodeError:
+                self.pairing.close()
+                raise AccessoryDisconnectedError("Session closed after receiving malformed response from device")
+
+            tmp = {}
+            for c in r['characteristics']:
+                key = (c['aid'], c['iid'])
+                del c['aid']
+                del c['iid']
+
+                if 'status' in c and c['status'] == 0:
+                    del c['status']
+                if 'status' in c and c['status'] != 0:
+                    c['description'] = HapStatusCodes[c['status']]
+                tmp[key] = c
+
+            return tmp
+
+        return None
+
+    def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,
+                            include_events=False):
+        """
+        This method is used to get the current readouts of any characteristic of the accessory.
+
+        :param characteristics: a list of 2-tupels of accessory id and instance id
+        :param include_meta: if True, include meta information about the characteristics. This contains the format and
+                             the various constraints like maxLen and so on.
+        :param include_perms: if True, include the permissions for the requested characteristics.
+        :param include_type: if True, include the type of the characteristics in the result. See CharacteristicsTypes
+                             for translations.
+        :param include_events: if True on a characteristics that supports events, the result will contain information if
+                               the controller currently is receiving events for that characteristic. Key is 'ev'.
+        :return: a dict mapping 2-tupels of aid and iid to dicts with value or status and description, e.g.
+                 {(1, 8): {'value': 23.42}
+                  (1, 37): {'description': 'Resource does not exist.', 'status': -70409}
+                 }
+        """
+        if not self.pairing.session:
+            self.pairing.session = IpSession(self.pairing.pairing_data)
+        url = '/characteristics?id=' + ','.join([str(x[0]) + '.' + str(x[1]) for x in characteristics])
+        if include_meta:
+            url += '&meta=1'
+        if include_perms:
+            url += '&perms=1'
+        if include_type:
+            url += '&type=1'
+        if include_events:
+            url += '&ev=1'
+
+        try:
+            self.session.get_nowait(url)
+        except (AccessoryDisconnectedError, EncryptionError):
+            self.pairing.close()
+            raise
+
+
+    def put_characteristics(self, characteristics, do_conversion=False, field='value'):
+        """
+        Update the values of writable characteristics. The characteristics have to be identified by accessory id (aid),
+        instance id (iid). If do_conversion is False (the default), the value must be of proper format for the
+        characteristic since no conversion is done. If do_conversion is True, the value is converted.
+
+        :param characteristics: a list of 3-tupels of accessory id, instance id and the value
+        :param do_conversion: select if conversion is done (False is default)
+        :return: a dict from (aid, iid) onto {status, description}
+        :raises FormatError: if the input value could not be converted to the target type and conversion was
+                             requested
+        """
+        if not self.pairing.session:
+            self.pairing.session = IpSession(self.pairing.pairing_data)
+        data = []
+        characteristics_set = set()
+        for characteristic in characteristics:
+            aid = characteristic[0]
+            iid = characteristic[1]
+            value = characteristic[2]
+            if do_conversion:
+                # evaluate proper format
+                c_format = None
+                for d in self.pairing.pairing_data['accessories']:
+                    if 'aid' in d and d['aid'] == aid:
+                        for s in d['services']:
+                            for c in s['characteristics']:
+                                if 'iid' in c and c['iid'] == iid:
+                                    c_format = c['format']
+
+                value = check_convert_value(value, c_format)
+            characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
+            data.append({'aid': aid, 'iid': iid, field: value})
+        data = json.dumps({'characteristics': data})
+
+        try:
+            self.session.put_nowait('/characteristics', data)
+        except (AccessoryDisconnectedError, EncryptionError):
+            self.pairing.close()
+            raise
+
+    def subscribe(self, characteristics):
+        self.put_characteristics(
+            [(aid, iid, True) for (aid, iid) in characteristics],
+            field='ev',
+        )
+
+    def unsubscribe(self, characteristics):
+        self.put_characteristics(
+            [(aid, iid, False) for (aid, iid) in characteristics],
+            field='ev',
+        )
 
 
 class IpSession(object):
@@ -474,6 +567,14 @@ class IpSession(object):
         """
         return self.sec_http.get(url)
 
+    def get_nowait(self, url):
+        """
+        Perform HTTP get via the encrypted session.
+        :param url: The url to request
+        :return: a homekit.http_impl.HttpResponse object
+        """
+        return self.sec_http.get_nowait(url)
+
     def put(self, url, body, content_type=HttpContentTypes.JSON):
         """
         Perform HTTP put via the encrypted session.
@@ -484,6 +585,16 @@ class IpSession(object):
         """
         return self.sec_http.put(url, body, content_type)
 
+    def put_nowait(self, url, body, content_type=HttpContentTypes.JSON):
+        """
+        Perform HTTP put via the encrypted session.
+        :param url: The url to request
+        :param body: the body of the put request
+        :param content_type: the content of the content-type header
+        :return: a homekit.http_impl.HttpResponse object
+        """
+        return self.sec_http.put_nowait(url, body, content_type)
+
     def post(self, url, body, content_type=HttpContentTypes.JSON):
         """
         Perform HTTP post via the encrypted session.
@@ -493,3 +604,13 @@ class IpSession(object):
         :return: a homekit.http_impl.HttpResponse object
         """
         return self.sec_http.post(url, body, content_type)
+
+    def post_nowait(self, url, body, content_type=HttpContentTypes.JSON):
+        """
+        Perform HTTP post via the encrypted session.
+        :param url: The url to request
+        :param body: the body of the post request
+        :param content_type: the content of the content-type header
+        :return: a homekit.http_impl.HttpResponse object
+        """
+        return self.sec_http.post_nowait(url, body, content_type)

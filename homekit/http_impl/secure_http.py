@@ -48,26 +48,38 @@ class SecureHttp:
         self.timeout = timeout
         self.lock = threading.Lock()
 
-    def get(self, target):
+    def get_nowait(self, target):
         data = 'GET {tgt} HTTP/1.1\nHost: {host}:{port}\n\n'.format(tgt=target, host=self.host, port=self.port)
         data = data.replace("\n", "\r\n")
-        return self._handle_request(data.encode())
+        self._handle_request(data.encode())
 
-    def put(self, target, body, content_type=HttpContentTypes.JSON):
+    def get(self, target):
+        self.get_nowait(target)
+        return self._read_response(self.timeout)
+
+    def put_nowait(self, target, body, content_type=HttpContentTypes.JSON):
         headers = 'Host: {host}:{port}\n'.format(host=self.host, port=self.port) + \
                   'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'PUT {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
         data = data.replace("\n", "\r\n")
-        return self._handle_request(data.encode())
+        self._handle_request(data.encode())
 
-    def post(self, target, body, content_type=HttpContentTypes.TLV):
+    def put(self, target, body, content_type=HttpContentTypes.JSON):
+        self.put_nowait(target, body, content_type)
+        return self._read_response(self.timeout)
+
+    def post_nowait(self, target, body, content_type=HttpContentTypes.TLV):
         headers = 'Host: {host}:{port}\n'.format(host=self.host, port=self.port) + \
                   'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'POST {tgt} HTTP/1.1\n{hdr}\n'.format(tgt=target, hdr=headers)
         data = data.replace("\n", "\r\n")
-        return self._handle_request(data.encode() + body)
+        self._handle_request(data.encode() + body)
+
+    def post(self, target, body, content_type=HttpContentTypes.TLV):
+        self.post_nowait(target, body, content_type)
+        return self._read_response(self.timeout)
 
     def _handle_request(self, data):
         logging.debug('handle request: %s', data)
@@ -87,8 +99,6 @@ class SecureHttp:
                     self.sock.send(len_bytes + ciper_and_mac[0] + ciper_and_mac[1])
                 except OSError as e:
                     raise exceptions.AccessoryDisconnectedError(str(e))
-
-            return self._read_response(self.timeout)
 
     def _read_response(self, timeout=10):
         # following the information from page 71 about HTTP Message splitting:

@@ -53,6 +53,9 @@ class Device(gatt.Device):
         self.name = self._properties.Get('org.bluez.Device1', 'Alias')
         self.homekit_discovery_data = self.get_homekit_discovery_data()
 
+        self.subscribers = []
+        self.gsn = self.homekit_discovery_data.get('gsn', 0)
+
     def get_homekit_discovery_data(self):
         """
         Retrieve and decode the latest ManufacturerData from BlueZ for a
@@ -113,6 +116,27 @@ class Device(gatt.Device):
 
     def characteristic_write_value_failed(self, characteristic, error):
         logger.debug('write failed: %s %s', characteristic, error)
+
+    def advertised(self):
+        data = self.get_homekit_discovery_data()
+        if 'gsn' not in data:
+            return
+        if data['gsn'] != self.gsn:
+            for callback in self.subscribers:
+                callback('gsn')
+            self.gsn = data['gsn']
+
+    def disconnect_succeeded(self):
+        for callback in self.subscribers:
+            callback('disconnect')
+
+    def characteristic_value_updated(self, characteristic, value):
+        if value != b'':
+            # We are only interested in in blank values
+            return
+
+        for callback in self.subscribers:
+            callback('char_updated', characteristic.uuid)
 
 
 class DeviceManager(gatt.DeviceManager):

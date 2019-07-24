@@ -66,7 +66,13 @@ class BlePairing(AbstractPairing):
         """
         self.adapter = adapter
         self.pairing_data = pairing_data
-        self.session = None
+        self._session = None
+
+    @property
+    def session(self):
+        if not self._session:
+            self._session = BleSession(self)
+        return self._session
 
     def close(self):
         pass
@@ -83,8 +89,8 @@ class BlePairing(AbstractPairing):
         return resolved_data['data']
 
     def list_pairings(self):
-        if not self.session:
-            self.session = BleSession(self.pairing_data, self.adapter)
+        if not self.session.connected:
+            self.session.connect()
         request_tlv = TLV.encode_list([
             (TLV.kTLVType_State, TLV.M1),
             (TLV.kTLVType_Method, TLV.ListPairings)
@@ -131,8 +137,8 @@ class BlePairing(AbstractPairing):
 
         :return True, if the identification was run, False otherwise
         """
-        if not self.session:
-            self.session = BleSession(self.pairing_data, self.adapter)
+        if not self.session.connected:
+            self.session.connect()
         cid = -1
         aid = -1
         for a in self.pairing_data['accessories']:
@@ -163,8 +169,8 @@ class BlePairing(AbstractPairing):
                   (1, 37): {'description': 'Resource does not exist.', 'status': -70409}
                  }
         """
-        if not self.session:
-            self.session = BleSession(self.pairing_data, self.adapter)
+        if not self.session.connected:
+            self.session.connect()
 
         results = {}
         for aid, cid in characteristics:
@@ -179,7 +185,6 @@ class BlePairing(AbstractPairing):
                 response = self.session.request(fc, cid, HapBleOpCodes.CHAR_READ)
             except Exception as e:
                 self.session.close()
-                self.session = None
                 raise e
 
             value = self._convert_to_python(aid, cid, response[1]) if 1 in response else None
@@ -341,8 +346,8 @@ class BlePairing(AbstractPairing):
         :raises FormatError: if the input value could not be converted to the target type and conversion was
                              requested
         """
-        if not self.session:
-            self.session = BleSession(self.pairing_data, self.adapter)
+        if not self.session.connected:
+            self.session.connect()
 
         results = {}
 
@@ -370,14 +375,13 @@ class BlePairing(AbstractPairing):
                 }
             except Exception as e:
                 self.session.close()
-                self.session = None
                 raise e
 
         return results
 
     def add_pairing(self, additional_controller_pairing_identifier, ios_device_ltpk, permissions):
-        if not self.session:
-            self.session = BleSession(self.pairing_data, self.adapter)
+        if not self.session.connected:
+            self.session.connect()
         if permissions == 'User':
             permissions = TLV.kTLVType_Permission_RegularUser
         elif permissions == 'Admin':
@@ -411,59 +415,9 @@ class BlePairing(AbstractPairing):
         print('unhandled response:', response)
 
     def get_message_bus(self):
+        if not self.session.connected:
+            self.session.connect()
         return BleMessageBus(self)
-
-
-class EventsDevice(Device):
-
-    def __init__(self, mac_address, manager, bus):
-        self.bus = bus
-        self.pairing = bus.pairing
-        self.session = None
-
-        super().__init__(mac_address, manager)
-
-    def connect_succeeded(self):
-        self.session = BleSession(
-            self.pairing.pairing_data,
-            self.manager.adapter
-        )
-
-        for (aid, iid) in self.bus.subscriptions:
-            fc, fc_id = self.session.find_characteristic_by_iid(iid)
-            fc.enable_notifications()
-
-    def disconnect(self):
-        if self.session:
-            self.session.close()
-            self.session = None
-
-    def properties_changed(self, sender, changed_properties, invalidated_properties):
-        if 'ManufacturerData' in changed_properties:
-            data = self.get_homekit_discovery_data()
-
-            # Detect disconnected notification of state change
-            # A characteristic has changed but we don't know which one
-            # Resets back to 1 after overflow, factory reset or firmware update
-            if data['gsn'] != self.homekit_discovery_data.get('gsn', None):
-                self.bus.get_characteristics(list(self.bus.subscriptions))
-
-        return Device.properties_changed(self, sender, changed_properties, invalidated_properties)
-
-    def characteristic_value_updated(self, characteristic, value):
-        if value != b'':
-            # We are only interested in in blank values
-            return
-
-        # This is a UUID that we can't map to a (aid, iid)
-        if characteristic.uuid not in self.session.uuid_map:
-            return
-
-        # Retrieve the value for the UUID that changed
-        _, c = self.session.uuid_map[characteristic.uuid]
-        self.bus.get_characteristics([
-            (1, c['iid']),
-        ])
 
 
 class BleMessageBus(object):
@@ -472,20 +426,28 @@ class BleMessageBus(object):
 
     def __init__(self, pairing):
         self.pairing = pairing
+        self.session = pairing.session
+
         self.queue = queue.Queue()
 
-        self.manager = DeviceManager('hci0')
-
-        self.device = EventsDevice(
-            mac_address=self.pairing.pairing_data['AccessoryMAC'],
-            manager=self.manager,
-            bus=self,
-        )
-
-        self.monitor = threading.Thread(target=self.manager.run)
+        self.pairing.session.device.manager.start_discovery()
+        self.monitor = threading.Thread(target=self.pairing.session.device.manager.run)
         self.monitor.start()
 
-        self.subscriptions = set()
+        self.session.device.subscribers.append(self._handle_event)
+
+    def _handle_event(self, event, uuid=None):
+        print(event, uuid)
+        if event == 'char_updated':
+            if not uuid or uuid not in self.session.uuid_map:
+                print('unknown uuid')
+                return
+            _, c = self.session.uuid_map[uuid]
+            self.get_characteristics([
+                (1, c['iid']),
+            ])
+        elif event == 'gsn':
+            self.get_characteristics(self.session.subscriptions)
 
     def __iter__(self):
         return self
@@ -511,35 +473,53 @@ class BleMessageBus(object):
         )
 
     def subscribe(self, characteristics):
+        session = self.pairing.session
         for (aid, iid) in characteristics:
-            self.subscriptions.add((aid, iid))
-            if self.session:
-                fc, fc_id = self.session.find_characteristic_by_iid(iid)
+            print('subscribe', iid)
+            session.subscriptions.add((aid, iid))
+            if session.connected:
+                print('enable_not')
+                fc, fc_id = session.find_characteristic_by_iid(iid)
                 fc.enable_notifications()
 
     def unsubscribe(self, characteristics):
         for (aid, iid) in characteristics:
             self.subscriptions.discard((aid, iid))
-            if self.session:
-                fc, fc_id = self.session.find_characteristic_by_iid(iid)
+            if self.pairing.session.connected:
+                fc, fc_id = self.pairing.session.find_characteristic_by_iid(iid)
                 fc.disable_notifications()
 
 
 class BleSession(object):
 
-    def __init__(self, pairing_data, adapter):
-        self.adapter = adapter
-        self.pairing_data = pairing_data
+    def __init__(self, pairing):
+        self.pairing = pairing
+        self.session_lock = threading.Lock()
+        self.subscriptions = set()
+        self.connected = False
+
+        mac_address = self.pairing.pairing_data['AccessoryMAC']
+        manager = DeviceManager(self.pairing.adapter)
+        self.device = manager.make_device(mac_address)
+        self.device.disconnect()
+
+        self.device.subscribers.append(self._handle_event)
+
+    def _handle_event(self, event, uuid=None):
+        if event == 'disconnected':
+            self.close()
+
+    def connect(self):
+        with self.session_lock:
+            if not self.connected:
+                self._connect()
+
+    def _connect(self):
         self.c2a_counter = 0
         self.a2c_counter = 0
         self.c2a_key = None
         self.a2c_key = None
-        self.device = None
-        mac_address = self.pairing_data['AccessoryMAC']
 
-        manager = DeviceManager(self.adapter)
-
-        self.device = manager.make_device(mac_address)
         logger.debug('connecting to device')
         self.device.connect()
         logger.debug('connected to device')
@@ -552,7 +532,7 @@ class BleSession(object):
         self.uuid_map = {}
         self.iid_map = {}
         self.short_map = {}
-        for a in pairing_data['accessories']:
+        for a in self.pairing.pairing_data['accessories']:
             for s in a['services']:
                 s_short = None
                 if s['type'].endswith(ServicesTypes.baseUUID):
@@ -563,7 +543,7 @@ class BleSession(object):
                     if not char:
                         continue
                     self.iid_map[c['iid']] = (char, c)
-                    self.uuid_map[(s['type'], c['type'])] = (char, c)
+                    self.uuid_map[char.uuid] = (char, c)
 
                     if s_short and c['type'].endswith(CharacteristicsTypes.baseUUID):
                         c_short = c['type'].split('-', 1)[0].lstrip('0')
@@ -584,18 +564,29 @@ class BleSession(object):
             sys.exit(-1)
 
         write_fun = create_ble_pair_setup_write(pair_verify_char, pair_verify_char_info['iid'])
-        self.c2a_key, self.a2c_key = get_session_keys(None, self.pairing_data, write_fun)
+        self.c2a_key, self.a2c_key = get_session_keys(None, self.pairing.pairing_data, write_fun)
         logger.debug('pair_verified, keys: \n\t\tc2a: %s\n\t\ta2c: %s', self.c2a_key.hex(), self.a2c_key.hex())
 
         self.c2a_counter = 0
         self.a2c_counter = 0
+
+        self.connected = True
+
+        for (aid, iid) in self.subscriptions:
+            print('ENABLE')
+            fc, fc_id = self.find_characteristic_by_iid(iid)
+            fc.enable_notifications()
+
+        print('REALLY')
 
     def __del__(self):
         self.close()
 
     def close(self):
         logger.debug('closing session')
-        self.device.disconnect()
+        if self.conneced:
+            self.device.disconnect()
+            self.connected = False
 
     def find_characteristic_by_iid(self, cid):
         return self.iid_map.get(cid, (None, None))

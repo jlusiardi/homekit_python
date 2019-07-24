@@ -130,6 +130,7 @@ class AbstractPairing(abc.ABC):
         bus = self.get_message_bus()
 
         bus.subscribe(characteristics)
+        bus.get_characteristics(characteristics)
 
         start_time = time.time()
         for event_count, event in enumerate(bus):

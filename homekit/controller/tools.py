@@ -17,6 +17,7 @@
 import abc
 import base64
 import binascii
+import time
 from distutils.util import strtobool
 
 from homekit.protocol.tlv import TLV, TlvParseException
@@ -105,7 +106,6 @@ class AbstractPairing(abc.ABC):
         """
         pass
 
-    @abc.abstractmethod
     def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
         """
         This function is called to register for events on characteristics and receive them. Each time events are
@@ -127,7 +127,26 @@ class AbstractPairing(abc.ABC):
         :return: a dict mapping 2-tupels of aid and iid to dicts with status and description, e.g.
                  {(1, 37): {'description': 'Notification is not supported for characteristic.', 'status': -70406}}
         """
-        pass
+        bus = self.get_message_bus()
+
+        bus.subscribe(characteristics)
+
+        start_time = time.time()
+        for event_count, event in enumerate(bus):
+            if max_events >= 0 and event_count >= max_events:
+                break
+            if max_seconds >= 0 and (time.time() - start_time) >= max_seconds:
+                break
+            tmp = []
+            for (aid, iid), char in event.items():
+                tmp.append(aid, iid, char.get('value'))
+            callback_fun(tmp)
+
+        return {}
+    
+    @abs.abstractmethod
+    def get_message_bus(self):
+        raise NotImplementedError(self.get_message_bus)
 
     @abc.abstractmethod
     def identify(self):

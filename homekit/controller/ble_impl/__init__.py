@@ -121,10 +121,6 @@ class BlePairing(AbstractPairing):
                 r['controllerType'] = controller_type
         return tmp
 
-    def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
-        # TODO implementation still missing
-        pass
-
     def identify(self):
         """
         This call can be used to trigger the identification of a paired accessory. A successful call should
@@ -420,9 +416,10 @@ class BlePairing(AbstractPairing):
 
 class EventsDevice(Device):
 
-    def __init__(self, bus):
+    def __init__(self, mac_address, manager, bus):
         self.bus = bus
         self.session = bus.session
+        super().__init__(mac_address, maanger)
 
     def properties_changed(self, sender, changed_properties, invalidated_properties):
         if 'ManufacturerData' in changed_properties:
@@ -460,11 +457,15 @@ class BleMessageBus(object):
         self.session = session
         self.queue = queue.Queue()
 
-        # FIXME: Pass in which accessory this is supposed to be connecting to
-        self.device = EventsDevice(self)
-        # FIXME: Create a manager and attach this device to it
-        self.monitor = threading.Thread(target=self.device.manager.run)
+        self.manager = DeviceManager()
 
+        self.device = EventsDevice(
+            mac_address=self.session.pairing_data['AccessoryMAC'],
+            manager=self.manager,
+            bus=self,
+        )
+
+        self.monitor = threading.Thread(target=self.manager.run)
         self.monitor.start()
 
         self.subscriptions = set()

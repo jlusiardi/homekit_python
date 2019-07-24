@@ -23,7 +23,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setuptools.setup(
     name='homekit',
     packages=setuptools.find_packages(exclude=['tests']),
-    version='0.15.0',
+    version='0.14.0',
     description='Python code to interface HomeKit Accessories and Controllers',
     author='Joachim Lusiardi',
     author_email='pypi@lusiardi.de',

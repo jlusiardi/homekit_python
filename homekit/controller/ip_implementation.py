@@ -266,44 +266,6 @@ class IpPairing(AbstractPairing):
             return data
         return {}
 
-    def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
-        """
-        This function is called to register for events on characteristics and receive them. Each time events are
-        received a call back function is invoked. By that the caller gets information about the events.
-
-        The characteristics are identified via their proper accessory id (aid) and instance id (iid).
-
-        The call back function takes a list of 3-tupels of aid, iid and the value, e.g.:
-          [(1, 9, 26.1), (1, 10, 30.5)]
-
-        If the input contains characteristics without the event permission or any other error, the function will return
-        a dict containing tupels of aid and iid for each requested characteristic with error. Those who would have
-        worked are not in the result.
-
-        :param characteristics: a list of 2-tupels of accessory id (aid) and instance id (iid)
-        :param callback_fun: a function that is called each time events were recieved
-        :param max_events: number of reported events, default value -1 means unlimited
-        :param max_seconds: number of seconds to wait for events, default value -1 means unlimited
-        :return: a dict mapping 2-tupels of aid and iid to dicts with status and description, e.g.
-                 {(1, 37): {'description': 'Notification is not supported for characteristic.', 'status': -70406}}
-        """
-        bus = self.get_message_bus()
-
-        bus.subscribe(characteristics)
-
-        start_time = time.time()
-        for event_count, event in enumerate(bus):
-            if max_events >= 0 and event_count >= max_events:
-                break
-            if max_seconds >= 0 and (time.time() - start_time) >= max_seconds:
-                break
-            tmp = []
-            for (aid, iid), char in event.items():
-                tmp.append(aid, iid, char.get('value'))
-            callback_fun(tmp)
-
-        return {}
-
     def get_message_bus(self):
         if not self.session:
             self.session = IpSession(self.pairing_data)

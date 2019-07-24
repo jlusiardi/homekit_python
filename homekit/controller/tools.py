@@ -139,12 +139,12 @@ class AbstractPairing(abc.ABC):
                 break
             tmp = []
             for (aid, iid), char in event.items():
-                tmp.append(aid, iid, char.get('value'))
+                tmp.append((aid, iid, char.get('value')))
             callback_fun(tmp)
 
         return {}
     
-    @abs.abstractmethod
+    @abc.abstractmethod
     def get_message_bus(self):
         raise NotImplementedError(self.get_message_bus)
 

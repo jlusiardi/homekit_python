@@ -418,8 +418,25 @@ class EventsDevice(Device):
 
     def __init__(self, mac_address, manager, bus):
         self.bus = bus
-        self.session = bus.session
-        super().__init__(mac_address, maanger)
+        self.pairing = bus.pairing
+        self.session = None
+
+        super().__init__(mac_address, manager)
+
+    def connect_succeeded(self):
+        self.session = BleSession(
+            self.pairing.pairing_data,
+            self.manager.adapter
+        )
+
+        for (aid, iid) in self.bus.subscriptions:
+            fc, fc_id = self.session.find_characteristic_by_iid(iid)
+            fc.enable_notifications()
+
+    def disconnect(self):
+        if self.session:
+            self.session.close()
+            self.session = None
 
     def properties_changed(self, sender, changed_properties, invalidated_properties):
         if 'ManufacturerData' in changed_properties:
@@ -431,7 +448,7 @@ class EventsDevice(Device):
             if data['gsn'] != self.homekit_discovery_data.get('gsn', None):
                 self.bus.get_characteristics(list(self.bus.subscriptions))
 
-        return gatt.Device.properties_changed(self, sender, changed_properties, invalidated_properties)
+        return Device.properties_changed(self, sender, changed_properties, invalidated_properties)
 
     def characteristic_value_updated(self, characteristic, value):
         if value != b'':
@@ -453,14 +470,14 @@ class BleMessageBus(object):
 
     # FIXME: Think about some kind of stop() / close() to get rid of the thread
 
-    def __init__(self, session):
-        self.session = session
+    def __init__(self, pairing):
+        self.pairing = pairing
         self.queue = queue.Queue()
 
-        self.manager = DeviceManager()
+        self.manager = DeviceManager('hci0')
 
         self.device = EventsDevice(
-            mac_address=self.session.pairing_data['AccessoryMAC'],
+            mac_address=self.pairing.pairing_data['AccessoryMAC'],
             manager=self.manager,
             bus=self,
         )
@@ -479,7 +496,7 @@ class BleMessageBus(object):
     def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,
                             include_events=False):
         self.queue.put_nowait(
-            self.session.get_characteristics(
+            self.pairing.get_characteristics(
                 characteristics,
                 include_meta=include_meta,
                 include_perms=include_perms,
@@ -490,20 +507,22 @@ class BleMessageBus(object):
 
     def put_characteristics(self, characteristics, do_conversion=False):
         self.queue.put_nowait(
-            self.session.put_characteristics(characteristics, do_conversion)
+            self.pairing.put_characteristics(characteristics, do_conversion)
         )
 
     def subscribe(self, characteristics):
         for (aid, iid) in characteristics:
             self.subscriptions.add((aid, iid))
-            fc, fc_id = self.session.find_characteristic_by_iid(iid)
-            fc.enable_notifications()
+            if self.session:
+                fc, fc_id = self.session.find_characteristic_by_iid(iid)
+                fc.enable_notifications()
 
     def unsubscribe(self, characteristics):
         for (aid, iid) in characteristics:
             self.subscriptions.discard((aid, iid))
-            fc, fc_id = self.session.find_characteristic_by_iid(iid)
-            fc.disable_notifications()
+            if self.session:
+                fc, fc_id = self.session.find_characteristic_by_iid(iid)
+                fc.disable_notifications()
 
 
 class BleSession(object):

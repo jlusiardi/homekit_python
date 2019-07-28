@@ -980,7 +980,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
             # 3) construct response TLV
             tmp = [(TLV.kTLVType_State, TLV.M2)]
-            for index, pairing_id in enumerate(server_data.peers):
+            for index, pairing_id in enumerate(sorted(server_data.peers)):
                 tmp.append((TLV.kTLVType_Identifier, pairing_id.encode()))
                 tmp.append((TLV.kTLVType_PublicKey, server_data.get_peer_key(pairing_id.encode())))
                 user = TLV.kTLVType_Permission_RegularUser

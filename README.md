@@ -105,7 +105,7 @@ If everything went properly, you should be able to add this accessory to your ho
 
 The following tools help to access HomeKit Accessories.
 
-## init_controller_storage
+## `init_controller_storage`
 
 This tool initializes the HomeKit controller's storage file.
 
@@ -116,7 +116,7 @@ python3 -m homekit.init_controller_storage -f ${PAIRINGDATAFILE}
 
 The option `-f` specifies the name of the file to contain the controller's data.
 
-## discover
+## `discover`
 
 This tool will list all available HomeKit IP Accessories within the local network.
 
@@ -150,7 +150,7 @@ Hints:
    Use your phone or the proper app to perform this
  * paired devices should not show up
 
-## discover_ble
+## `discover_ble`
 
 This tool will list all available HomeKit BLE Accessories within range of the Bluetooth LE device.
 
@@ -179,7 +179,7 @@ Status Flags (sf): The accessory has been paired with a controllers. (Flag: 0)
 Category Identifier (ci): Sensor (Id: 10)
 ```
 
-## identify
+## `identify`
 
 This tool will use the Identify Routine of a HomeKit Accessory. It has 3 modes of operation.
 
@@ -224,7 +224,7 @@ used if the paired device is using Bluetooth LE.
 
 The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
-## pair
+## `pair`
 
 This tool will perform a pairing to a new IP accessory.
 
@@ -246,7 +246,7 @@ The option `--log` specifies the log level for the command. This is optional. Us
 
 The file with the pairing data will be required to send any additional commands to the accessory.
 
-## pair_ble
+## `pair_ble`
 
 This tool will perform a pairing to a new Bluetooth LE accessory.
 
@@ -270,7 +270,7 @@ The option `--log` specifies the log level for the command. This is optional. Us
 
 The file with the pairing data will be required to send any additional commands to the accessory.
 
-## list_pairings
+## `list_pairings`
 
 This tool will perform a query to list all pairings of an accessory. The
 controller that performs the query must be registered as `Admin`. If this is
@@ -300,7 +300,7 @@ Pairing Id: 3d65d692-90bb-41c2-9bd0-2cb7a3a5dd18
 
 The information contains the pairing id, the public key of the device and permissions of the controller.
 
-## prepare_add_remote_pairing
+## `prepare_add_remote_pairing`
 
 This tool will prepare data required for the `add_additional_pairing` command.
 
@@ -325,7 +325,7 @@ Please add this to homekit.add_additional_pairing:
     -i cec11edd-7363-42c4-8d13-aeb06b608ffc -k 0cbfd3abc377f6c3bfd3b4c119c1c5ff0c840ef1f9530e0f99c68b1f531dd66a
 ```
 
-## add_additional_pairing
+## `add_additional_pairing`
 
 This tool is used to tell a HomeKit Accessory accept a new pairing for an 
 additional controller.
@@ -357,7 +357,7 @@ Please add this to homekit.finish_add_remote_pairing:
     -c BLE -i D0:CA:1E:56:13:AA -m cb:e0:b0:c9:e8:72 -k a07c471e12682b161034b91c0d016201516eb51d9bf1071b6dcf0e3be71e9269
 ```
 
-## finish_add_remote_pairing.py
+## `finish_add_remote_pairing`
 
 This tool finalizes the addition of a pairing to a HomeKit Accessory.
 
@@ -385,7 +385,7 @@ accessories. This is not required for IP accessories.
 The option `--log` specifies the log level for the command. This is optional. 
 Use `DEBUG` to get more output.
 
-## remove_pairing
+## `remove_pairing`
 
 This tool will remove a pairing from an accessory.
 
@@ -398,14 +398,16 @@ The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device.
 
-The option `-i` specifies the controller pairing id to remove.
+The option `-i` specifies the controller pairing id to remove. This is optional. If left out, the calling controller's
+pairing id is used and the controller looses the ability to controll the device. See the output of `list_pairings` 
+how to get the controller's pairing id. *Important*: this is not the accessory's device id.
 
 The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only 
 used if the paired device is using Bluetooth LE.
 
 The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
 
-## get_accessories
+## `get_accessories`
 
 This tool will read the accessory attribute database.
 
@@ -442,7 +444,7 @@ Using the `compact` output the result will look like:
   1.10: Outlet () >name< [pr]
 ```
 
-## get_characteristic
+## `get_characteristic`
 This tool will read values from one or more characteristics.
 
 Usage:
@@ -488,7 +490,7 @@ The result will be a json with data for each requested characteristic:
 }
 ```
 
-## put_characteristic
+## `put_characteristic`
 This tool will write values to one or more characteristics.
 
 Usage:
@@ -516,7 +518,7 @@ python3 -m homekit.put_characteristic -f koogeek.json -a koogeek -c 1.8 false
 
 No output is given on successful operation or a error message is displayed.
 
-## get_events
+## `get_events`
 
 **!!Not yet implemented for Bluetooth LE Accessories!!**
 

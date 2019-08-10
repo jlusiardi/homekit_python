@@ -69,7 +69,6 @@ python3 -m homekit.pair -d A5:56:86:8B:8F:67 -p RED-AC-TED -f velux -a velux
 
 ```text
 Pairing for "velux" was established.
-
 ```
 
 # Step 5 - paired identify

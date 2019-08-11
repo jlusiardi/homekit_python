@@ -189,7 +189,7 @@ python3 -m homekit.get_characteristic -f velux -a velux -c 2.10 -c 2.17 -c 4.10 
 ## used command
 Open window to 100 pct
 ```bash
-python -m homekit.put_characteristic -f controller.json -a koogeek -c 1.8 Off
+python -m homekit.put_characteristic -f velux -a velux -c 4.11 100
 ```
 
 ## result ✔

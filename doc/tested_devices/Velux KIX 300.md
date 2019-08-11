@@ -18,7 +18,7 @@ Important Information:
 python3 -m homekit.discover
 ```
 
-## result (✔)
+## result ✔
 
 ```text
 Name: VELUX gateway._hap._tcp.local.
@@ -41,7 +41,7 @@ Category Identifier (ci): Bridge (Id: 2)
 python3 -m homekit.identify -d A5:56:86:8B:8F:67
 ```
 
-## result **REPLACEME** (✔ or ✘)
+## result ✔
 
 Led is blinking on gateway
 
@@ -53,7 +53,7 @@ Led is blinking on gateway
 python3 -m homekit.init_controller_storage -f velux
 ```
 
-## result **REPLACEME** (✔ or ✘)
+## result ✔
 
 The file `velux.json` is created and contains `{}`.
 
@@ -65,7 +65,7 @@ The file `velux.json` is created and contains `{}`.
 python3 -m homekit.pair -d A5:56:86:8B:8F:67 -p RED-AC-TED -f velux -a velux
 ```
 
-## result (✔)
+## result ✔
 
 ```text
 Pairing for "velux" was established.
@@ -79,9 +79,9 @@ Pairing for "velux" was established.
 python3 -m homekit.identify -f velux -a velux
 ```
 
-## result **REPLACEME** (✔ or ✘)
+## result ✔
 
-Led is pulsing on gateway
+Led is pulsating on gateway
 
 # Step 6 - get accessories
 
@@ -91,7 +91,7 @@ Led is pulsing on gateway
 python3 -m homekit.get_accessories -f velux -a velux
 ```
 
-## result **REPLACEME** (✔ or ✘)
+## result ✔
 
 ```text
 1.1: >accessory-information<
@@ -155,7 +155,7 @@ Query 3 characteristics (`2.17` co2, `4.10` window position and `2.10` temperatu
 python3 -m homekit.get_characteristic -f velux -a velux -c 2.10 -c 2.17 -c 4.10 -m -t
 ```
 
-## result **REPLACEME** (✔ or ✘)
+## result ✔
 
 ```text
 {
@@ -192,7 +192,7 @@ Open window to 100 pct
 python -m homekit.put_characteristic -f controller.json -a koogeek -c 1.8 Off
 ```
 
-## result **REPLACEME** (✔ or ✘)
+## result ✔
 Check result with `python3 -m homekit.get_characteristic -f velux -a velux -c 4.10 -m -t`
 ```text
 {
@@ -216,7 +216,7 @@ Listen to events for characteristic `4.10` (window position) while closing windo
 python3 -m homekit.get_events -f velux -a velux -c 4.10
 ```
 
-## result **REPLACEME** (✔ or ✘)
+## result ✔
 ```text
 event for 4.10: 45
 ```
@@ -229,7 +229,7 @@ event for 4.10: 45
 python3 -m homekit.remove_pairing -f velux -a velux
 ```
 
-## result **REPLACEME** (✔ or ✘)
+## result ✔
 
 ```text
 Pairing for "velux" was removed.

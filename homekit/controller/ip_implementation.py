@@ -415,18 +415,15 @@ class IpSession(object):
         """
         logging.debug('init session')
         connected = False
+        self.pairing_data = pairing_data
+
         if 'AccessoryIP' in pairing_data and 'AccessoryPort' in pairing_data:
             # if it is known, try it
             accessory_ip = pairing_data['AccessoryIP']
             accessory_port = pairing_data['AccessoryPort']
-            conn = HomeKitHTTPConnection(accessory_ip, port=accessory_port)
-            try:
-                conn.connect()
-                write_fun = create_ip_pair_verify_write(conn)
-                c2a_key, a2c_key = get_session_keys(conn, pairing_data, write_fun)
-                connected = True
-            except Exception:
-                connected = False
+
+            connected = self._connect(accessory_ip, accessory_port)
+
         if not connected:
             # no connection yet, so ip / port might have changed and we need to fall back to slow zeroconf lookup
             device_id = pairing_data['AccessoryPairingID']
@@ -434,18 +431,35 @@ class IpSession(object):
             if connection_data is None:
                 raise AccessoryNotFoundError(
                     'Device {id} not found'.format(id=pairing_data['AccessoryPairingID']))
-            conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
-            pairing_data['AccessoryIP'] = connection_data['ip']
-            pairing_data['AccessoryPort'] = connection_data['port']
-            write_fun = create_ip_pair_verify_write(conn)
-            c2a_key, a2c_key = get_session_keys(conn, pairing_data, write_fun)
+
+            if not self._connect(connection_data['ip'], connection_data['port']):
+                return
 
         logging.debug('session established')
-        self.sock = conn.sock
-        self.c2a_key = c2a_key
-        self.a2c_key = a2c_key
-        self.pairing_data = pairing_data
+
         self.sec_http = SecureHttp(self)
+
+    def _connect(self, accessory_ip, accessory_port):
+        conn = HomeKitHTTPConnection(accessory_ip, port=accessory_port)
+        try:
+            conn.connect()
+            write_fun = create_ip_pair_verify_write(conn)
+
+            state_machine = get_session_keys(self.pairing_data)
+
+            request, expected = state_machine.send(None)
+            while True:
+                try:
+                    response = write_fun(request, expected)
+                    request, expected = state_machine.send(response)
+                except StopIteration as result:
+                    self.c2a_key, self.a2c_key = result.value
+                    self.sock = conn.sock
+                    return True
+        except Exception:
+            logging.exception("Failed to connect to accessory")
+
+        return False
 
     def close(self):
         """

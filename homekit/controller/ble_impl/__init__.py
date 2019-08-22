@@ -472,7 +472,16 @@ class BleSession(object):
             sys.exit(-1)
 
         write_fun = create_ble_pair_setup_write(pair_verify_char, pair_verify_char_info['iid'])
-        self.c2a_key, self.a2c_key = get_session_keys(None, self.pairing_data, write_fun)
+        state_machine = get_session_keys(self.pairing_data)
+
+        request, expected = state_machine.send(None)
+        while True:
+            try:
+                response = write_fun(request, expected)
+                request, expected = state_machine.send(response)
+            except StopIteration as result:
+                self.c2a_key, self.a2c_key = result.value
+
         logger.debug('pair_verified, keys: \n\t\tc2a: %s\n\t\ta2c: %s', self.c2a_key.hex(), self.a2c_key.hex())
 
         self.c2a_counter = 0
@@ -603,10 +612,11 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
 def create_ble_pair_setup_write(characteristic, characteristic_id):
     def write(request, expected):
         # TODO document me
-        logger.debug('entering write function %s', TLV.to_string(TLV.decode_bytes(request)))
+        body = TLV.encode_list(request)
+        logger.debug('entering write function %s', TLV.to_string(TLV.decode_bytes(body)))
         request_tlv = TLV.encode_list([
             (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-            (TLV.kTLVHAPParamValue, request)
+            (TLV.kTLVHAPParamValue, body)
         ])
         transaction_id = random.randrange(0, 255)
         data = bytearray([0x00, HapBleOpCodes.CHAR_WRITE, transaction_id])

@@ -18,6 +18,6 @@ before_install:
     - ./.travis/install.sh
 script:
     - flake8 homekit
-    - coverage run -m unittest -v
+    - coverage run -m pytest tests/
 after_success:
     - coveralls

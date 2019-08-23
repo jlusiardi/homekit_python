@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
-from _socket import inet_ntoa
 from time import sleep
 import logging
-
 from zeroconf import Zeroconf, ServiceBrowser
+from _socket import inet_ntoa
+
 
 from homekit.model import Categories
 from homekit.model.feature_flags import FeatureFlags
@@ -73,6 +73,7 @@ def get_from_properties(props, key, default=None, case_sensitive=True):
     else:
         if default:
             return str(default)
+    return None
 
 
 def discover_homekit_devices(max_seconds=10):
@@ -90,22 +91,22 @@ def discover_homekit_devices(max_seconds=10):
     tmp = []
     for info in listener.get_data():
         # from Bonjour discovery
-        d = {
+        data = {
             'name': info.name,
-            'address': inet_ntoa(info.address),
+            'address': inet_ntoa(info.addresses[0]),
             'port': info.port
         }
 
         logging.debug('candidate data %s', info.properties)
 
-        d.update(parse_discovery_properties(decode_discovery_properties(
+        data.update(parse_discovery_properties(decode_discovery_properties(
             info.properties
         )))
 
-        if 'c#' not in d or 'md' not in d:
+        if 'c#' not in data or 'md' not in data:
             continue
-        logging.debug('found Homekit IP accessory %s', d)
-        tmp.append(d)
+        logging.debug('found Homekit IP accessory %s', data)
+        tmp.append(data)
 
     zeroconf.close()
     return tmp
@@ -120,8 +121,8 @@ def decode_discovery_properties(props):
     :return: A dictionary of key/value TXT records from Bonjour discovery. These are now str.
     """
     out = {}
-    for k, v in props.items():
-        out[k.decode('utf-8')] = v.decode('utf-8')
+    for k, value in props.items():
+        out[k.decode('utf-8')] = value.decode('utf-8')
     return out
 
 
@@ -137,49 +138,49 @@ def parse_discovery_properties(props):
     decoded as strings already. Byte data should be decoded with decode_discovery_properties.
     :return: A dictionary contained the parsed and normalized data.
     """
-    d = {}
+    data = {}
 
     # stuff taken from the Bonjour TXT record (see table 5-7 on page 69)
     conf_number = get_from_properties(props, 'c#', case_sensitive=False)
     if conf_number:
-        d['c#'] = conf_number
+        data['c#'] = conf_number
 
-    ff = get_from_properties(props, 'ff', case_sensitive=False)
-    if ff:
-        flags = int(ff)
+    feature_flags = get_from_properties(props, 'ff', case_sensitive=False)
+    if feature_flags:
+        flags = int(feature_flags)
     else:
         flags = 0
-    d['ff'] = flags
-    d['flags'] = FeatureFlags[flags]
+    data['ff'] = flags
+    data['flags'] = FeatureFlags[flags]
 
-    id = get_from_properties(props, 'id', case_sensitive=False)
-    if id:
-        d['id'] = id
+    dev_id = get_from_properties(props, 'id', case_sensitive=False)
+    if dev_id:
+        data['id'] = dev_id
 
-    md = get_from_properties(props, 'md', case_sensitive=False)
-    if md:
-        d['md'] = md
+    model_name = get_from_properties(props, 'md', case_sensitive=False)
+    if model_name:
+        data['md'] = model_name
 
-    pv = get_from_properties(props, 'pv', case_sensitive=False, default='1.0')
-    if pv:
-        d['pv'] = pv
+    protocol_version = get_from_properties(props, 'pv', case_sensitive=False, default='1.0')
+    if protocol_version:
+        data['pv'] = protocol_version
 
-    s = get_from_properties(props, 's#', case_sensitive=False)
-    if s:
-        d['s#'] = s
+    status = get_from_properties(props, 's#', case_sensitive=False)
+    if status:
+        data['s#'] = status
 
-    sf = get_from_properties(props, 'sf', case_sensitive=False)
-    if sf:
-        d['sf'] = sf
-        d['statusflags'] = IpStatusFlags[int(sf)]
+    status_flag = get_from_properties(props, 'sf', case_sensitive=False)
+    if status_flag:
+        data['sf'] = status_flag
+        data['statusflags'] = IpStatusFlags[int(status_flag)]
 
-    ci = get_from_properties(props, 'ci', case_sensitive=False)
-    if ci:
+    category_id = get_from_properties(props, 'ci', case_sensitive=False)
+    if category_id:
         category = props['ci']
-        d['ci'] = category
-        d['category'] = Categories[int(category)]
+        data['ci'] = category
+        data['category'] = Categories[int(category)]
 
-    return d
+    return data
 
 
 def find_device_ip_and_port(device_id: str, max_seconds=10):
@@ -203,7 +204,7 @@ def find_device_ip_and_port(device_id: str, max_seconds=10):
         data = listener.get_data()
         for info in data:
             if info.properties[b'id'].decode() == device_id:
-                result = {'ip': inet_ntoa(info.address), 'port': info.port}
+                result = {'ip': inet_ntoa(info.addresses[0]), 'port': info.port}
                 break
         counter += 1
 

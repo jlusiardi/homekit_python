@@ -106,7 +106,7 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         if self.data.is_paired:
             desc['sf'] = '0'
 
-        self.zeroconf_info = ServiceInfo(self.mdns_type, self.mdns_name, address=socket.inet_aton(self.data.ip),
+        self.zeroconf_info = ServiceInfo(self.mdns_type, self.mdns_name, addresses=[socket.inet_aton(self.data.ip)],
                                          port=self.data.port, properties=desc)
         self.zeroconf.unregister_service(self.zeroconf_info)
         self.zeroconf.register_service(self.zeroconf_info, allow_name_change=True)

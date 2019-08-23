@@ -414,7 +414,7 @@ class TestController(unittest.TestCase):
         controller_file.flush()
         self.controller.load_data(controller_file.name)
         self.assertIsInstance(self.controller.get_pairings()['alias_ip'], IpPairing)
-        self.assertEquals(self.controller.get_pairings()['alias_ip'].pairing_data['Connection'], 'IP')
+        self.assertEqual(self.controller.get_pairings()['alias_ip'].pairing_data['Connection'], 'IP')
         self.assertIsInstance(self.controller.get_pairings()['alias_ble'], BlePairing)
         controller_file.close()
 

@@ -254,3 +254,8 @@ class TransportNotSupportedError(HomeKitException):
     def __init__(self, transport):
         Exception.__init__(self,
                            'Transport {t} not supported. See setup.py for required dependencies.'.format(t=transport))
+
+
+class DisconnectedControllerError(HomeKitException):
+    def __init__(self):
+        Exception.__init__(self, 'Controller has passed away')

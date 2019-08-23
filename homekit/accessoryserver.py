@@ -39,7 +39,7 @@ from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead
 from homekit.crypto.srp import SrpServer
 
 from homekit.exceptions import ConfigurationError, ConfigLoadingError, ConfigSavingError, FormatError, \
-    CharacteristicPermissionError
+    CharacteristicPermissionError, DisconnectedControllerError
 from homekit.http_impl import HttpStatusCodes
 from homekit.model import Accessories, Categories
 from homekit.model.characteristics import CharacteristicsTypes
@@ -81,10 +81,16 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         HTTPServer.__init__(self, (self.data.ip, self.data.port), AccessoryRequestHandler)
 
     def write_event(self, characteristics, source=None):
+        dead_sessions = []
         for session_id, session in self.sessions.items():
             if source and session_id == source:
                 continue
-            session['handler'].write_event(characteristics)
+            try:
+                session['handler'].write_event(characteristics)
+            except DisconnectedControllerError:
+                dead_sessions.append(session_id)
+        for session_id in dead_sessions:
+            del self.sessions[session_id]
 
     def add_accessory(self, accessory):
         self.accessories.add_accessory(accessory)
@@ -384,8 +390,11 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 self.server.sessions[self.session_id]['accessory_to_controller_count'] += 1
                 out_data += len_bytes + ciper_and_mac[0] + ciper_and_mac[1]
 
-            self.orig_wfile.write(out_data)
-            self.orig_wfile.flush()
+            try:
+                self.orig_wfile.write(out_data)
+                self.orig_wfile.flush()
+            except ValueError as e:
+                raise DisconnectedControllerError()
 
     def handle_one_request(self):
         """

@@ -393,7 +393,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             try:
                 self.orig_wfile.write(out_data)
                 self.orig_wfile.flush()
-            except ValueError as e:
+            except ValueError:
                 raise DisconnectedControllerError()
 
     def handle_one_request(self):

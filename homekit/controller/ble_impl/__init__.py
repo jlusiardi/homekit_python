@@ -481,6 +481,7 @@ class BleSession(object):
                 request, expected = state_machine.send(response)
             except StopIteration as result:
                 self.c2a_key, self.a2c_key = result.value
+                break
 
         logger.debug('pair_verified, keys: \n\t\tc2a: %s\n\t\ta2c: %s', self.c2a_key.hex(), self.a2c_key.hex())
 

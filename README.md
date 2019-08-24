@@ -14,6 +14,7 @@ The code presented in this repository was created based on release R1 from 2017-
  * [netmanchris](https://github.com/netmanchris) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=netmanchris)
  * [limkevinkuan](https://github.com/limkevinkuan) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=limkevinkuan)
  * [tleegaard](https://github.com/tleegaard) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=tleegaard)
+ * [benasse](https://github.com/benasse) [Commits](https://github.com/jlusiardi/homekit_python/commits/master?author=benasse)
 
 (The contributors are not listed in any particular order!)
 

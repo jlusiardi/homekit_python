@@ -380,7 +380,17 @@ class Controller(object):
 
         try:
             write_fun = create_ip_pair_setup_write(conn)
-            salt, pub_key = perform_pair_setup_part1(write_fun)
+
+            state_machine = perform_pair_setup_part1()
+            request, expected = state_machine.send(None)
+            while True:
+                try:
+                    response = write_fun(request, expected)
+                    request, expected = state_machine.send(response)
+                except StopIteration as result:
+                    salt, pub_key = result.value
+                    break
+
         except Exception:
             conn.close()
             raise
@@ -388,9 +398,18 @@ class Controller(object):
         def finish_pairing(pin):
             Controller.check_pin_format(pin)
             try:
-                pairing = perform_pair_setup_part2(pin, str(uuid.uuid4()), write_fun, salt, pub_key)
+                state_machine = perform_pair_setup_part2(pin, str(uuid.uuid4()), salt, pub_key)
+                request, expected = state_machine.send(None)
+                while True:
+                    try:
+                        response = write_fun(request, expected)
+                        request, expected = state_machine.send(response)
+                    except StopIteration as result:
+                        pairing = result.value
+                        break
             finally:
                 conn.close()
+
             pairing['AccessoryIP'] = connection_data['ip']
             pairing['AccessoryPort'] = connection_data['port']
             pairing['Connection'] = 'IP'
@@ -456,11 +475,29 @@ class Controller(object):
         logging.debug('setup char: %s %s', pair_setup_char, pair_setup_char.service.device)
 
         write_fun = create_ble_pair_setup_write(pair_setup_char, pair_setup_char_id)
-        salt, pub_key = perform_pair_setup_part1(write_fun)
+
+        state_machine = perform_pair_setup_part1()
+        request, expected = state_machine.send(None)
+        while True:
+            try:
+                response = write_fun(request, expected)
+                request, expected = state_machine.send(response)
+            except StopIteration as result:
+                salt, pub_key = result.value
+                break
 
         def finish_pairing(pin):
             Controller.check_pin_format(pin)
-            pairing = perform_pair_setup_part2(pin, str(uuid.uuid4()), write_fun, salt, pub_key)
+
+            state_machine = perform_pair_setup_part2(pin, str(uuid.uuid4()), salt, pub_key)
+            request, expected = state_machine.send(None)
+            while True:
+                try:
+                    response = write_fun(request, expected)
+                    request, expected = state_machine.send(response)
+                except StopIteration as result:
+                    pairing = result.value
+                    break
 
             pairing['AccessoryMAC'] = accessory_mac
             pairing['Connection'] = 'BLE'

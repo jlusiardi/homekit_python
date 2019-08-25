@@ -613,10 +613,11 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
 def create_ble_pair_setup_write(characteristic, characteristic_id):
     def write(request, expected):
         # TODO document me
-        logger.debug('entering write function %s', TLV.to_string(TLV.decode_bytes(request)))
+        body = TLV.encode_list(request)
+        logger.debug('entering write function %s', TLV.to_string(TLV.decode_bytes(body)))
         request_tlv = TLV.encode_list([
             (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-            (TLV.kTLVHAPParamValue, request)
+            (TLV.kTLVHAPParamValue, body)
         ])
         transaction_id = random.randrange(0, 255)
         data = bytearray([0x00, HapBleOpCodes.CHAR_WRITE, transaction_id])
@@ -650,17 +651,6 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
         result = TLV.decode_bytes(resp_tlv[0][1], expected)
         logger.debug('leaving write function %s', TLV.to_string(result))
         return result
-
-    return write
-
-
-def create_ble_pair_verify_write(characteristic, characteristic_id):
-    # This is a temporary wrapper until the pairing functions are also migrated to
-    # the new state machine approach
-    pair_setup_write = create_ble_pair_setup_write(characteristic, characteristic_id)
-
-    def write(request, expected):
-        return pair_setup_write(TLV.encode_list(request), expected)
 
     return write
 

@@ -471,7 +471,7 @@ class BleSession(object):
             # TODO Have exception here
             sys.exit(-1)
 
-        write_fun = create_ble_pair_verify_write(pair_verify_char, pair_verify_char_info['iid'])
+        write_fun = create_ble_pair_setup_write(pair_verify_char, pair_verify_char_info['iid'])
         state_machine = get_session_keys(self.pairing_data)
 
         request, expected = state_machine.send(None)

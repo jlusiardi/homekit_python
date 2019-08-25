@@ -121,7 +121,7 @@ class BlePairing(AbstractPairing):
 
     def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
         # TODO implementation still missing
-        pass
+        return {}
 
     def identify(self):
         """
@@ -665,7 +665,7 @@ def read_characteristics(device):
     # TODO document me
     # FIXME: This only works on non secure sessions
     logger.debug('resolved %d services', len(device.services))
-
+    logger.debug('%s', device.services)
     a_data = {
         'aid': 1,
         'services': []
@@ -805,7 +805,7 @@ def parse_sig_read_response(data, expected_tid):
                 characteristic_step = struct.unpack('B', t[1])[0]
             # TODO include all formats!
 
-    # parse permissions
+    # parse permissions from table 6-35 page 129
     # TODO refactor!
     perms = []
     if (chr_prop_int & 0x0001) > 0:

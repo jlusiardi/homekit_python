@@ -72,11 +72,12 @@ def create_ip_pair_setup_write(connection):
 
 def create_ip_pair_verify_write(connection):
     def write_http(request, expected):
-        logging.debug('write message: %s', TLV.to_string(TLV.decode_bytes(request)))
+        body = TLV.encode_list(request)
+        logging.debug('write message: %s', TLV.to_string(TLV.decode_bytes(body)))
         connection.putrequest('POST', '/pair-verify', skip_accept_encoding=True)
         connection.putheader('Content-Type', 'application/pairing+tlv8')
-        connection.putheader('Content-Length', len(request))
-        connection.endheaders(request)
+        connection.putheader('Content-Length', len(body))
+        connection.endheaders(body)
         resp = connection.getresponse()
         response_tlv = TLV.decode_bytes(resp.read(), expected)
         logging.debug('response: %s', TLV.to_string(response_tlv))
@@ -272,23 +273,16 @@ def perform_pair_setup_part2(pin, ios_pairing_id, write_fun, salt, server_public
     }
 
 
-def get_session_keys(conn, pairing_data, write_fun):
+def get_session_keys(pairing_data):
     """
-    HomeKit Controller side call to perform a pair verify operation as described in chapter 4.8 page 47 ff.
-
-    :param conn: the http_impl connection to the target accessory
+    HomeKit Controller state machine to perform a pair verify operation as described in chapter 4.8 page 47 ff.
     :param pairing_data: the paring data as returned by perform_pair_setup
-    :param write_fun: a function that takes a bytes representation of a TLV, the expected keys as list and returns
-        decoded TLV as list
     :return: tuple of the session keys (controller_to_accessory_key and  accessory_to_controller_key)
     :raises InvalidAuthTagError: if the auth tag could not be verified,
     :raises IncorrectPairingIdError: if the accessory's LTPK could not be found
     :raises InvalidSignatureError: if the accessory's signature could not be verified
     :raises AuthenticationError: if the secured session could not be established
     """
-    # headers = {
-    #     'Content-Type': 'application/pairing+tlv8'
-    # }
 
     #
     # Step #1 ios --> accessory (send verify start Request) (page 47)
@@ -299,16 +293,13 @@ def get_session_keys(conn, pairing_data, write_fun):
         format=serialization.PublicFormat.Raw
     )
 
-    request_tlv = TLV.encode_list([
+    request_tlv = [
         (TLV.kTLVType_State, TLV.M1),
         (TLV.kTLVType_PublicKey, ios_key_pub)
-    ])
+    ]
 
-    # conn.request('POST', '/pair-verify', request_tlv, headers)
-    # resp = conn.getresponse()
-    # response_tlv = TLV.decode_bytes(resp.read())
     step2_expectations = [TLV.kTLVType_State, TLV.kTLVType_PublicKey, TLV.kTLVType_EncryptedData]
-    response_tlv = write_fun(request_tlv, step2_expectations)
+    response_tlv = yield (request_tlv, step2_expectations)
 
     #
     # Step #3 ios --> accessory (send SRP verify request)  (page 49)
@@ -379,17 +370,13 @@ def get_session_keys(conn, pairing_data, write_fun):
     tmp += encrypted_data_with_auth_tag[1]
 
     # 11) create tlv
-    request_tlv = TLV.encode_list([
+    request_tlv = [
         (TLV.kTLVType_State, TLV.M3),
         (TLV.kTLVType_EncryptedData, tmp)
-    ])
+    ]
 
-    # 12) send to accessory
-    # conn.request('POST', '/pair-verify', request_tlv, headers)
-    # resp = conn.getresponse()
-    # response_tlv = TLV.decode_bytes(resp.read())
     step3_expectations = [TLV.kTLVType_State, TLV.kTLVType_Error]
-    response_tlv = write_fun(request_tlv, step3_expectations)
+    response_tlv = yield (request_tlv, step3_expectations)
 
     #
     #   Post Step #4 verification (page 51)

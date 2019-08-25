@@ -471,8 +471,18 @@ class BleSession(object):
             # TODO Have exception here
             sys.exit(-1)
 
-        write_fun = create_ble_pair_setup_write(pair_verify_char, pair_verify_char_info['iid'])
-        self.c2a_key, self.a2c_key = get_session_keys(None, self.pairing_data, write_fun)
+        write_fun = create_ble_pair_verify_write(pair_verify_char, pair_verify_char_info['iid'])
+        state_machine = get_session_keys(self.pairing_data)
+
+        request, expected = state_machine.send(None)
+        while True:
+            try:
+                response = write_fun(request, expected)
+                request, expected = state_machine.send(response)
+            except StopIteration as result:
+                self.c2a_key, self.a2c_key = result.value
+                break
+
         logger.debug('pair_verified, keys: \n\t\tc2a: %s\n\t\ta2c: %s', self.c2a_key.hex(), self.a2c_key.hex())
 
         self.c2a_counter = 0
@@ -640,6 +650,17 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
         result = TLV.decode_bytes(resp_tlv[0][1], expected)
         logger.debug('leaving write function %s', TLV.to_string(result))
         return result
+
+    return write
+
+
+def create_ble_pair_verify_write(characteristic, characteristic_id):
+    # This is a temporary wrapper until the pairing functions are also migrated to
+    # the new state machine approach
+    pair_setup_write = create_ble_pair_setup_write(characteristic, characteristic_id)
+
+    def write(request, expected):
+        return pair_setup_write(TLV.encode_list(request), expected)
 
     return write
 

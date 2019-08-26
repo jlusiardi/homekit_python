@@ -92,7 +92,15 @@ class HttpResponse(object):
             pos = self._raw_response.find(b'\r\n')
 
         if self._state == HttpResponse.STATE_BODY and self._content_length > 0:
-            self.body = self._raw_response
+            remaining = self._content_length - len(self.body)
+            self.body += self._raw_response[:remaining]
+            self._raw_response = self._raw_response[remaining:]
+
+        if self.is_read_completely():
+            # Whatever is left in the buffer is part of the next request
+            return self._raw_response
+
+        return bytearray()
 
     def read(self):
         """

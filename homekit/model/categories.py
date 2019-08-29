@@ -40,11 +40,15 @@ class _Categories(object):
     IP_CAMERA = 17
     VIDEO_DOOR_BELL = 18
     AIR_PURIFIER = 19
-    # new categories referenced from https://github.com/abedinpour/HAS/blob/master/src/categories.ts
+    # new categories from 2nd release of the apple spec
     HEATER = 20
     AIRCONDITIONER = 21
     HUMIDIFIER = 22
     DEHUMIDIFER = 23
+    SPRINKLER = 28
+    FAUCET = 29
+    SHOWER_SYSTEM = 30
+    REMOTE = 32
 
     def __init__(self):
         self._categories = {
@@ -67,10 +71,14 @@ class _Categories(object):
             _Categories.IP_CAMERA: 'IP Camera',
             _Categories.VIDEO_DOOR_BELL: 'Video Door Bell',
             _Categories.AIR_PURIFIER: 'Air Purifier',
-            _Categories.HEATER: "Heater",
-            _Categories.AIRCONDITIONER: "Air Conditioner",
+            _Categories.HEATER: 'Heater',
+            _Categories.AIRCONDITIONER: 'Air Conditioner',
             _Categories.HUMIDIFIER: 'Humidifier',
-            _Categories.DEHUMIDIFER: "Dehumidifier"
+            _Categories.DEHUMIDIFER: 'Dehumidifier',
+            _Categories.SPRINKLER: 'Sprinkler',
+            _Categories.FAUCET: 'Faucet',
+            _Categories.SHOWER_SYSTEM: 'Shower System',
+            _Categories.REMOTE: 'Remote',
         }
 
         self._categories_rev = {self._categories[k]: k for k in self._categories.keys()}

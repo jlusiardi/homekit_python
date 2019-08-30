@@ -27,6 +27,7 @@ class _CharacteristicsTypes(object):
     """
     ACCESSORY_PROPERTIES = 'A6'
     ACTIVE = 'B0'
+    ACTIVE_IDENTIFIER = 'E7'
     ADMINISTRATOR_ONLY_ACCESS = '1'
     AIR_PARTICULATE_DENSITY = '64'
     AIR_PARTICULATE_SIZE = '65'
@@ -36,6 +37,7 @@ class _CharacteristicsTypes(object):
     AUDIO_FEEDBACK = '5'
     BATTERY_LEVEL = '68'
     BRIGHTNESS = '8'
+    BUTTON_EVENT = '126'
     CARBON_DIOXIDE_DETECTED = '92'
     CARBON_DIOXIDE_LEVEL = '93'
     CARBON_DIOXIDE_PEAK_LEVEL = '94'
@@ -45,6 +47,8 @@ class _CharacteristicsTypes(object):
     CHARGING_STATE = '8F'
     COLOR_TEMPERATURE = 'CE'
     CONTACT_STATE = '6A'
+    CURRENT_HEATER_COOLER_STATE = 'B1'
+    CURRENT_HUMIDIFIER_DEHUMIDIFIER_STATE = 'B3'
     DENSITY_NO2 = 'C4'
     DENSITY_OZONE = 'C3'
     DENSITY_PM10 = 'C7'
@@ -69,6 +73,8 @@ class _CharacteristicsTypes(object):
     IMAGE_MIRROR = '11F'
     IMAGE_ROTATION = '11E'
     INPUT_EVENT = '73'
+    IN_USE = 'D2'
+    IS_CONFIGURED = 'D6'
     LEAK_DETECTED = '70'
     LIGHT_LEVEL_CURRENT = '6B'
     LOCK_MANAGEMENT_AUTO_SECURE_TIMEOUT = '1A'
@@ -96,8 +102,12 @@ class _CharacteristicsTypes(object):
     POSITION_HOLD = '6F'
     POSITION_STATE = '72'
     POSITION_TARGET = '7C'
+    PROGRAM_MODE = 'D1'
+    RELATIVE_HUMIDITY_DEHUMIDIFIER_THRESHOLD = 'C9'
+    RELATIVE_HUMIDITY_HUMIDIFIER_THRESHOLD = 'CA'
     RELATIVE_HUMIDITY_CURRENT = '10'
     RELATIVE_HUMIDITY_TARGET = '34'
+    REMAINING_DURATION = 'D4'
     ROTATION_DIRECTION = '28'
     ROTATION_SPEED = '29'
     SATURATION = '2F'
@@ -105,12 +115,16 @@ class _CharacteristicsTypes(object):
     SECURITY_SYSTEM_STATE_CURRENT = '66'
     SECURITY_SYSTEM_STATE_TARGET = '67'
     SELECTED_RTP_STREAM_CONFIGURATION = '117'
+    SELECTED_AUDIO_STREAM_CONFIGURATION = '128'
     SERIAL_NUMBER = '30'
     SERVICE_LABEL_INDEX = 'CB'
     SERVICE_LABEL_NAMESPACE = 'CD'
     SERVICE_INSTANCE_ID = 'e604e95d-a759-4817-87d3-aa005083a0d1'.upper()  # new for BLE, homekit spec page 127
     SERVICE_SIGNATURE = 'A5'  # new for BLE, homekit spec page 128
+    SET_DURATION = 'D3'
+    SETUP_DATA_STREAM_TRANSPORT = '131'
     SETUP_ENDPOINTS = '118'
+    SIRI_INPUT_TYPE = '132'
     SLAT_STATE_CURRENT = 'AA'
     SMOKE_DETECTED = '76'
     STATUS_ACTIVE = '75'
@@ -120,9 +134,13 @@ class _CharacteristicsTypes(object):
     STATUS_TAMPERED = '7A'
     STREAMING_STATUS = '120'
     SUPPORTED_AUDIO_CONFIGURATION = '115'
+    SUPPORTED_DATA_STREAM_TRANSPORT_DATA_CONFIGURATION = '130'
     SUPPORTED_RTP_CONFIGURATION = '116'
     SUPPORTED_VIDEO_STREAM_CONFIGURATION = '114'
     SWING_MODE = 'B6'
+    TARGET_CONTROL_SUPPORTED_CONFIGURATION = '123'
+    TARGET_CONTROL_LIST = '124'
+    TARGET_HUMIDIFIER_DEHUMIDIFIER_STATE = 'B4'
     TEMPERATURE_COOLING_THRESHOLD = 'D'
     TEMPERATURE_CURRENT = '11'
     TEMPERATURE_HEATING_THRESHOLD = '12'
@@ -131,10 +149,12 @@ class _CharacteristicsTypes(object):
     TILT_CURRENT = 'C1'
     TILT_TARGET = 'C2'
     TYPE_SLAT = 'C0'
+    VALVE_TYPE = 'D5'
     VERSION = '37'
     VERTICAL_TILT_CURRENT = '6E'
     VERTICAL_TILT_TARGET = '7D'
     VOLUME = '119'
+    WATER_LEVEL = 'B5'
     ZOOM_DIGITAL = '11D'
     ZOOM_OPTICAL = '11C'
 
@@ -227,6 +247,10 @@ class _CharacteristicsTypes(object):
             'AD': 'public.hap.characteristic.filter.reset-indication',
             'AF': 'public.hap.characteristic.fan.state.current',
             'B0': 'public.hap.characteristic.active',
+            'B1': 'public.hap.characteristic.heater-cooler.state.current',
+            'B3': 'public.hap.characteristic.humidifier-dehumidifier.state.current',
+            'B4': 'public.hap.characteristic.humidifier-dehumidifier.state.target',
+            'B5': 'public.hap.characteristic.water-level',
             'B6': 'public.hap.characteristic.swing-mode',
             'BF': 'public.hap.characteristic.fan.state.target',
             'C0': 'public.hap.characteristic.type.slat',
@@ -238,9 +262,18 @@ class _CharacteristicsTypes(object):
             'C6': 'public.hap.characteristic.density.pm25',
             'C7': 'public.hap.characteristic.density.pm10',
             'C8': 'public.hap.characteristic.density.voc',
+            'C9': 'public.hap.characteristic.relative-humidity.dehumidifier-threshold',
+            'CA': 'public.hap.characteristic.relative-humidity.humidifier-threshold',
             'CB': 'public.hap.characteristic.service-label-index',
             'CD': 'public.hap.characteristic.service-label-namespace',
             'CE': 'public.hap.characteristic.color-temperature',
+            'D1': 'public.hap.characteristic.program-mode',
+            'D2': 'public.hap.characteristic.in-use',
+            'D3': 'public.hap.characteristic.set-duration',
+            'D4': 'public.hap.characteristic.remaining-duration',
+            'D5': 'public.hap.characteristic.valve-type',
+            'D6': 'public.hap.characteristic.is-configured',
+            'E7': 'public.hap.characteristic.active-identifier',
             '114': 'public.hap.characteristic.supported-video-stream-configuration',
             '115': 'public.hap.characteristic.supported-audio-configuration',
             '116': 'public.hap.characteristic.supported-rtp-configuration',
@@ -254,6 +287,14 @@ class _CharacteristicsTypes(object):
             '11E': 'public.hap.characteristic.image-rotation',
             '11F': 'public.hap.characteristic.image-mirror',
             '120': 'public.hap.characteristic.streaming-status',
+            '123': 'public.hap.characteristic.supported-target-configuration',
+            '124': 'public.hap.characteristic.target-list',
+            '126': 'public.hap.characteristic.button-event',
+            '128': 'public.hap.characteristic.selected-audio-stream-configuration',
+            '130': 'public.hap.characteristic.supported-data-stream-transport-configuration',
+            '131': 'public.hap.characteristic.setup-data-stream-transport',
+            '132': 'public.hap.characteristic.siri-input-type',
+
         }
 
         self._characteristics_rev = {self._characteristics[k]: k for k in self._characteristics.keys()}

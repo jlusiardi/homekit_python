@@ -59,11 +59,21 @@ class _ServicesTypes(object):
             'B9': 'public.hap.service.vertical-slat',
             'BA': 'public.hap.service.filter-maintenance',
             'BB': 'public.hap.service.air-purifier',
+            'BC': 'public.hap.service.heater-cooler',
+            'BD': 'public.hap.service.humidifier-dehumidifier',
             'CC': 'public.hap.service.service-label',
+            'CF': 'public.hap.service.irrigation-system',
+            'D0': 'public.hap.service.valve',
+            'D7': 'public.hap.service.faucet',
             '110': 'public.hap.service.camera-rtp-stream-management',
             '112': 'public.hap.service.microphone',
             '113': 'public.hap.service.speaker',
             '121': 'public.hap.service.doorbell',
+            '122': 'public.hap.service.target-control-management',
+            '125': 'public.hap.service.target-control',
+            '127': 'public.hap.service.audio-stream-management',
+            '129': 'public.hap.service.data-stream-transport-management',
+            '133': 'public.hap.service.siri',
         }
 
         self._services_rev = {self._services[k]: k for k in self._services.keys()}

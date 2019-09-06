@@ -57,11 +57,12 @@ def error_handler(error, stage):
 
 def create_ip_pair_setup_write(connection):
     def write_http(request, expected):
-        logging.debug('write message: %s', TLV.to_string(TLV.decode_bytes(request)))
+        body = TLV.encode_list(request)
+        logging.debug('write message: %s', TLV.to_string(TLV.decode_bytes(body)))
         connection.putrequest('POST', '/pair-setup', skip_accept_encoding=True)
         connection.putheader('Content-Type', 'application/pairing+tlv8')
-        connection.putheader('Content-Length', len(request))
-        connection.endheaders(request)
+        connection.putheader('Content-Length', len(body))
+        connection.endheaders(body)
         resp = connection.getresponse()
         response_tlv = TLV.decode_bytes(resp.read(), expected)
         logging.debug('response: %s', TLV.to_string(response_tlv))
@@ -86,12 +87,10 @@ def create_ip_pair_verify_write(connection):
     return write_http
 
 
-def perform_pair_setup_part1(write_fun):
+def perform_pair_setup_part1():
     """
     Performs a pair setup operation as described in chapter 4.7 page 39 ff.
 
-    :param write_fun: a function that takes a bytes representation of a TLV, the expected keys as list and returns
-        decoded TLV as list
     :return: a tuple of salt and server's public key
     :raises UnavailableError: if the device is already paired
     :raises MaxTriesError: if the device received more than 100 unsuccessful pairing attempts
@@ -105,13 +104,13 @@ def perform_pair_setup_part1(write_fun):
     # Step #1 ios --> accessory (send SRP start Request) (see page 39)
     #
     logging.debug('#1 ios -> accessory: send SRP start request')
-    request_tlv = TLV.encode_list([
+    request_tlv = [
         (TLV.kTLVType_State, TLV.M1),
         (TLV.kTLVType_Method, TLV.PairSetup)
-    ])
+    ]
 
     step2_expectations = [TLV.kTLVType_State, TLV.kTLVType_Error, TLV.kTLVType_PublicKey, TLV.kTLVType_Salt]
-    response_tlv = write_fun(request_tlv, step2_expectations)
+    response_tlv = yield (request_tlv, step2_expectations)
 
     #
     # Step #3 ios --> accessory (send SRP verify request) (see page 41)
@@ -129,17 +128,16 @@ def perform_pair_setup_part1(write_fun):
 
     assert response_tlv[1][0] == TLV.kTLVType_PublicKey, 'perform_pair_setup: Not a public key'
     assert response_tlv[2][0] == TLV.kTLVType_Salt, 'perform_pair_setup: Not a salt'
+
     return response_tlv[2][1], response_tlv[1][1]
 
 
-def perform_pair_setup_part2(pin, ios_pairing_id, write_fun, salt, server_public_key):
+def perform_pair_setup_part2(pin, ios_pairing_id, salt, server_public_key):
     """
     Performs a pair setup operation as described in chapter 4.7 page 39 ff.
 
     :param pin: the setup code from the accessory
     :param ios_pairing_id: the id of the simulated ios device
-    :param write_fun: a function that takes a bytes representation of a TLV, the expected keys as list and returns
-        decoded TLV as list
     :return: a dict with the ios device's part of the pairing information
     :raises UnavailableError: if the device is already paired
     :raises MaxTriesError: if the device received more than 100 unsuccessful pairing attempts
@@ -155,14 +153,14 @@ def perform_pair_setup_part2(pin, ios_pairing_id, write_fun, salt, server_public
     client_pub_key = srp_client.get_public_key()
     client_proof = srp_client.get_proof()
 
-    response_tlv = TLV.encode_list([
+    response_tlv = [
         (TLV.kTLVType_State, TLV.M3),
         (TLV.kTLVType_PublicKey, SrpClient.to_byte_array(client_pub_key)),
         (TLV.kTLVType_Proof, SrpClient.to_byte_array(client_proof)),
-    ])
+    ]
 
     step4_expectations = [TLV.kTLVType_State, TLV.kTLVType_Error, TLV.kTLVType_Proof]
-    response_tlv = write_fun(response_tlv, step4_expectations)
+    response_tlv = yield (response_tlv, step4_expectations)
 
     #
     # Step #5 ios --> accessory (Exchange Request) (see page 43)
@@ -220,10 +218,9 @@ def perform_pair_setup_part2(pin, ios_pairing_id, write_fun, salt, server_public
         (TLV.kTLVType_State, TLV.M5),
         (TLV.kTLVType_EncryptedData, tmp)
     ]
-    body = TLV.encode_list(response_tlv)
 
     step6_expectations = [TLV.kTLVType_State, TLV.kTLVType_Error, TLV.kTLVType_EncryptedData]
-    response_tlv = write_fun(body, step6_expectations)
+    response_tlv = yield (response_tlv, step6_expectations)
 
     #
     # Step #7 ios (Verification) (page 47)

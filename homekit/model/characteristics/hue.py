@@ -43,5 +43,5 @@ class HueCharacteristicMixin(object):
     def set_hue_set_callback(self, callback):
         self._hueCharacteristic.set_set_value_callback(callback)
 
-    def set_brightness_get_callback(self, callback):
+    def set_hue_get_callback(self, callback):
         self._hueCharacteristic.set_get_value_callback(callback)

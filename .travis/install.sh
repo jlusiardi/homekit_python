@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 echo "OS: $TRAVIS_OS_NAME"
 
@@ -16,18 +17,12 @@ if [ "$TRAVIS_OS_NAME" == "linux" ]; then
 fi
 
 if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+    # Install Python 3.6.5 directly from brew
     brew update
-    # see https://github.com/pyenv/pyenv/wiki#suggested-build-environment for Mac OS X
-    brew install openssl readline sqlite3 xz zlib
-    openssl version
-    # pyenv is already installed on a test node
-    brew outdated pyenv || brew upgrade pyenv
-    pyenv install --list
-    pyenv install $PYTHON
-    pyenv shell $PYTHON
-    python --version
+    brew uninstall --ignore-dependencies python
+    brew install --ignore-dependencies https://raw.githubusercontent.com/Homebrew/homebrew-core/f2a764ef944b1080be64bd88dca9a1d80130c558/Formula/python.rb
+
     python3 --version
-    pip --version
     pip3 --version
     pip3 install -r requirements_osx.txt
     pip3 install coveralls

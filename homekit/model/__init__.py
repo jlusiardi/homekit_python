@@ -15,14 +15,15 @@
 #
 
 __all__ = [
-    'AccessoryInformationService', 'BHSLightBulbService', 'FanService', 'LightBulbService', 'ThermostatService',
-    'Categories', 'CharacteristicPermissions', 'CharacteristicFormats', 'FeatureFlags', 'Accessory'
+    'AccessoryInformationService', 'BHSLightBulbService', 'RTPStreamService', 'ManagedRTPStreamService', 'FanService',
+    'LightBulbService', 'ThermostatService', 'MicrophoneService', 'Categories', 'CharacteristicPermissions',
+    'CharacteristicFormats', 'FeatureFlags', 'Accessory', 'CameraAccessory'
 ]
 
 import json
 from homekit.model.mixin import ToDictMixin, get_id
 from homekit.model.services import AccessoryInformationService, LightBulbService, FanService, \
-    BHSLightBulbService, ThermostatService
+    BHSLightBulbService, ThermostatService, RTPStreamService, ManagedRTPStreamService, MicrophoneService
 from homekit.model.categories import Categories
 from homekit.model.characteristics import CharacteristicPermissions, CharacteristicFormats
 from homekit.model.feature_flags import FeatureFlags
@@ -64,6 +65,17 @@ class Accessory(ToDictMixin):
             'services': services_list
         }
         return d
+
+
+# def __init__(self, session_id, ):
+
+class CameraAccessory(Accessory):
+    def __init__(self, name, manufacturer, model, serial_number, firmware_revision):
+        super().__init__(name, manufacturer, model, serial_number, firmware_revision)
+        self.get_image_snapshot_callback = None
+
+    def set_get_image_snapshot_callback(self, callback):
+        self.get_image_snapshot_callback = callback
 
 
 class Accessories(ToDictMixin):

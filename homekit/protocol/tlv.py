@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 import logging
+from enum import IntEnum
+from struct import Struct
 
 logger = logging.getLogger('homekit.protocol.tlv')
 
@@ -57,7 +59,7 @@ class TLV:
     kTLVType_FragmentLast = 13
     kTLVType_Separator = 255
     kTLVType_Separator_Pair = [255, bytearray(b'')]
-    kTLVType_SessionID = 0x0e   # Table 6-27 page 116
+    kTLVType_SessionID = 0x0e  # Table 6-27 page 116
 
     # Errors (see table 4-5 page 60)
     kTLVError_Unknown = bytearray(b'\x01')
@@ -207,3 +209,70 @@ class TLV:
 class TlvParseException(Exception):
     """Raised upon parse error with some TLV"""
     pass
+
+
+class TLVItem:
+    """Resource for tlv object-mapping"""
+    short_struct = Struct("<H")
+    int_struct = Struct("<I")
+
+    def __init__(self, tlv_type, cls):
+        self.tlv_type = tlv_type
+        self.cls = cls
+
+    def __set_name__(self, owner, name):
+        if not hasattr(owner, "_tlv"):
+            owner._tlv = {}
+        owner._tlv[self.tlv_type] = self
+        self.name = name
+
+    @staticmethod
+    def encode(obj):
+        if isinstance(obj, IntEnum):
+            return bytes([obj.value])
+        elif isinstance(obj, int):
+            if obj <= 255:
+                return bytes([obj])
+            else:
+                return TLVItem.short_struct.pack(obj)
+        elif isinstance(obj, str):
+            return obj.encode("utf-8")
+        elif isinstance(obj, bytes) or isinstance(obj, bytearray):
+            return obj
+        elif obj is not None:
+            children = []
+            for tlv_type, tlv_item in obj._tlv.items():
+                value = obj.__dict__.get(tlv_item.name, None)
+                if value is not None:
+                    if isinstance(value, list):
+                        children.extend((tlv_type, TLVItem.encode(value)) for value in value)
+                    else:
+                        children.append((tlv_type, TLVItem.encode(value)))
+            return TLV.encode_list(children)
+
+    @staticmethod
+    def decode(cls, payload):
+        values = TLV.decode_bytes(payload)
+        instance = cls.__new__(cls)
+        for key, value in values:
+            if key in cls._tlv:
+                inner_tlv_type = cls._tlv[key]
+                instance.__setattr__(inner_tlv_type.name, inner_tlv_type.decode_inner(value))
+        return instance
+
+    def decode_inner(self, payload: bytes):
+        if issubclass(self.cls, IntEnum):
+            return self.cls(payload[0])
+        elif issubclass(self.cls, int):
+            if len(payload) == 1:
+                return int(payload[0])
+            elif len(payload) == 2:
+                return TLVItem.short_struct.unpack(payload)[0]
+            elif len(payload) == 2:
+                return TLVItem.int_struct.unpack(payload)[0]
+        elif issubclass(self.cls, str):
+            return payload.decode("utf-8")
+        elif issubclass(self.cls, bytes):
+            return payload
+        else:
+            return TLVItem.decode(self.cls, payload)

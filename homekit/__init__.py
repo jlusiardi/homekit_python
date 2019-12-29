@@ -36,4 +36,4 @@ if IP_TRANSPORT_SUPPORTED:
     # TODO: change import and let it be imported from its specific file
     from homekit.accessoryserver import AccessoryServer  # noqa: F401
 
-    __all__ += 'AccessoryServer'
+    __all__.append('AccessoryServer')

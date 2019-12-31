@@ -398,7 +398,6 @@ class IpPairing(AbstractPairing):
             (TLV.kTLVType_Permissions, permissions)
         ])
 
-        # decode is required because post needs a string representation
         response = self.session.sec_http.post('/pairings', request_tlv)
         data = response.read()
         data = TLV.decode_bytes(data)

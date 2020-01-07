@@ -539,7 +539,6 @@ class Controller(object):
             if not IP_TRANSPORT_SUPPORTED:
                 raise TransportNotSupportedError('IP')
             session = IpSession(pairing_data)
-            # decode is required because post needs a string representation
             response = session.post('/pairings', request_tlv)
             session.close()
             data = response.read()

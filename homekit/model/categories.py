@@ -48,6 +48,7 @@ class _Categories(object):
     SPRINKLER = 28
     FAUCET = 29
     SHOWER_SYSTEM = 30
+    TV = 31
     REMOTE = 32
 
     def __init__(self):
@@ -78,6 +79,7 @@ class _Categories(object):
             _Categories.SPRINKLER: 'Sprinkler',
             _Categories.FAUCET: 'Faucet',
             _Categories.SHOWER_SYSTEM: 'Shower System',
+            _Categories.TV: 'TV',
             _Categories.REMOTE: 'Remote',
         }
 

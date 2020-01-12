@@ -3,6 +3,7 @@ import socket
 import tempfile
 import threading
 import time
+from unittest import mock
 
 import pytest
 
@@ -72,7 +73,10 @@ def controller_and_unpaired_accessory(request, event_loop):
             break
         time.sleep(1)
 
-    yield controller
+    with mock.patch.object(controller, "load_data", lambda x: None):
+        with mock.patch("homekit.aio.__main__.Controller") as c:
+            c.return_value = controller
+            yield controller
 
     httpd.shutdown()
 
@@ -141,7 +145,10 @@ def controller_and_paired_accessory(request, event_loop):
         event_loop.run_until_complete(async_cleanup())
     request.addfinalizer(cleanup)
 
-    yield controller
+    with mock.patch.object(controller, "load_data", lambda x: None):
+        with mock.patch("homekit.aio.__main__.Controller") as c:
+            c.return_value = controller
+            yield controller
 
     httpd.shutdown()
 

@@ -19,7 +19,7 @@ def port_ready(port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     try:
-        s.bind(("127.0.0.1", 5555))
+        s.bind(("127.0.0.1", port))
     except socket.error as e:
         if e.errno == errno.EADDRINUSE:
             return True

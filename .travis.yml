@@ -12,12 +12,19 @@ matrix:
           python: 3.7
         - os: osx
           language: generic
-          env: PYTHON=3.5.6
+          addons:
+            homebrew:
+              packages: python
 
-before_install:
-    - ./.travis/install.sh
+install:
+- python3 -m venv ./venv
+- source venv/bin/activate
+- python -m pip install -r requirements.txt -e .
+- python -m pip install coveralls
+
 script:
-    - flake8 homekit
-    - coverage run -m pytest tests/
+- python -m flake8 homekit
+- python -m coverage run -m pytest tests/
+
 after_success:
-    - coveralls
+- coveralls

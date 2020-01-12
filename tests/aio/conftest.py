@@ -145,6 +145,11 @@ def controller_and_paired_accessory(request, event_loop):
         event_loop.run_until_complete(async_cleanup())
     request.addfinalizer(cleanup)
 
+    for i in range(10):
+        if port_ready(51842):
+            break
+        time.sleep(1)
+
     with mock.patch.object(controller, "load_data", lambda x: None):
         with mock.patch("homekit.aio.__main__.Controller") as c:
             c.return_value = controller

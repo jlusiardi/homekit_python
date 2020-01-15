@@ -1,4 +1,4 @@
-# Device Name: **REPLACEME**
+# Device Name: Koogeek DW1
 
 Important Information:
  * device manufacturer : Koogeek

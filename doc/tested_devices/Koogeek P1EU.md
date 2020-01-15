@@ -1,4 +1,4 @@
-# Device Name: **REPLACEME**
+# Device Name: Koogeek P1EU
 
 Important Information:
  * device manufacturer : Koogeek

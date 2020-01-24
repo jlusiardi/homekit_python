@@ -420,13 +420,17 @@ class IpSession(object):
             # if it is known, try it
             accessory_ip = pairing_data['AccessoryIP']
             accessory_port = pairing_data['AccessoryPort']
-
             connected = self._connect(accessory_ip, accessory_port)
 
         if not connected:
             # no connection yet, so ip / port might have changed and we need to fall back to slow zeroconf lookup
             device_id = pairing_data['AccessoryPairingID']
             connection_data = find_device_ip_and_port(device_id)
+
+            # update pairing data with the IP/port we elaborated above, perhaps next time they are valid
+            pairing_data['AccessoryIP'] = connection_data['ip']
+            pairing_data['AccessoryPort'] = connection_data['port']
+
             if connection_data is None:
                 raise AccessoryNotFoundError(
                     'Device {id} not found'.format(id=pairing_data['AccessoryPairingID']))
@@ -455,6 +459,8 @@ class IpSession(object):
                     self.c2a_key, self.a2c_key = result.value
                     self.sock = conn.sock
                     return True
+        except OSError as e:
+            logging.debug("Failed to connect to accessory: %s", e.strerror)
         except Exception:
             logging.exception("Failed to connect to accessory")
 

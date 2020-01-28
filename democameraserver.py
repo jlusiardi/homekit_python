@@ -35,6 +35,7 @@ import logging
 import datetime
 import argparse
 import os.path
+import platform
 
 def get_image_snapshot(format_data):
     img = Image.new('RGB', (format_data['image-width'],format_data['image-height']), '#FFFFFF')
@@ -77,9 +78,11 @@ if __name__ == '__main__':
                 self.ffmpeg_process = None
 
             def on_start(self, attrs):
-                self.ffmpeg_process = subprocess.Popen(
-                    ['ffmpeg', '-re',
-                     # read input at native frame rate
+                # 
+                #   more information on ffmpeg and web cams:
+                #       https://trac.ffmpeg.org/wiki/Capture/Webcam
+                #
+                command_linux = ['ffmpeg', 
                      '-re',
                      # chose input driver
                      '-f', args.driver,  # linux
@@ -115,7 +118,40 @@ if __name__ == '__main__':
                      f'&localrtcpport={self.controller_address.video_rtp_port}'
                      # packet size for IPv4 (1378 bytes) / IPv6 (1228) as defined by spec r2 chapter 11.8.1 page 246
                      '&pkt_size=1378'
-                     ])
+                     ]
+
+                command_mac = ['ffmpeg', 
+                     '-re',
+                     '-f', args.driver,
+                     '-r', '30.000030', 
+                     '-i', args.camera, 
+                     '-threads', '0',
+                     '-vcodec', 'libx264', 
+                     '-an', 
+                     '-pix_fmt', 'yuv420p',
+                     '-f', 'rawvideo', 
+                     '-tune', 'zerolatency', 
+                     '-vf', f'scale={attrs.attributes.width}:{attrs.attributes.height}',
+                     '-b:v', '300k', 
+                     '-bufsize', '300k',
+                     '-payload_type', '99', 
+                     '-ssrc', '32', 
+                     '-f', 'rtp',
+                     '-srtp_out_suite', 'AES_CM_128_HMAC_SHA1_80',
+                     '-srtp_out_params', base64.b64encode(
+                        self.srtp_params_video.master_key + self.srtp_params_video.master_salt).decode('ascii'),
+                     f'srtp://{self.controller_address.ip_address}:{self.controller_address.video_rtp_port}'
+                     f'?rtcpport={self.controller_address.video_rtp_port}'
+                     f'&localrtcpport={self.controller_address.video_rtp_port}'
+                     '&pkt_size=1378'
+                     ]
+
+                if platform.system() == 'Darwin':
+                    command = command_mac
+                else:
+                    command = command_linux
+                logger.info('starting ffmpeg: %s', ' '.join(command))
+                self.ffmpeg_process = subprocess.Popen(command)
 
             def on_end(self):
                 if self.ffmpeg_process is not None:

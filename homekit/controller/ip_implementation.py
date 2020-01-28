@@ -150,6 +150,28 @@ class IpPairing(AbstractPairing):
                     r['controllerType'] = controller_type
             return tmp
 
+    def get_resource(self, resource_request):
+        """
+        This method performs a request to read the /resource endpoint of an accessory. What it does is dependend on the
+        accessory being queried. For example this could be a IP based camera to return a snapshot image (see spec R2,
+        chapter 11.5 page 242).
+
+        :param resource_request: a dict of values to be sent to the accessory as a json dump
+        :return: the content of the response body as bytes
+        """
+        if not self.session:
+            self.session = IpSession(self.pairing_data)
+        url = '/resource'
+        body = json.dumps(resource_request).encode()
+
+        try:
+            response = self.session.post(url, body)
+            return response.read()
+        except (AccessoryDisconnectedError, EncryptionError):
+            self.session.close()
+            self.session = None
+            raise
+
     def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,
                             include_events=False):
         """
@@ -420,13 +442,17 @@ class IpSession(object):
             # if it is known, try it
             accessory_ip = pairing_data['AccessoryIP']
             accessory_port = pairing_data['AccessoryPort']
-
             connected = self._connect(accessory_ip, accessory_port)
 
         if not connected:
             # no connection yet, so ip / port might have changed and we need to fall back to slow zeroconf lookup
             device_id = pairing_data['AccessoryPairingID']
             connection_data = find_device_ip_and_port(device_id)
+
+            # update pairing data with the IP/port we elaborated above, perhaps next time they are valid
+            pairing_data['AccessoryIP'] = connection_data['ip']
+            pairing_data['AccessoryPort'] = connection_data['port']
+
             if connection_data is None:
                 raise AccessoryNotFoundError(
                     'Device {id} not found'.format(id=pairing_data['AccessoryPairingID']))
@@ -455,6 +481,8 @@ class IpSession(object):
                     self.c2a_key, self.a2c_key = result.value
                     self.sock = conn.sock
                     return True
+        except OSError as e:
+            logging.debug("Failed to connect to accessory: %s", e.strerror)
         except Exception:
             logging.exception("Failed to connect to accessory")
 

@@ -150,6 +150,28 @@ class IpPairing(AbstractPairing):
                     r['controllerType'] = controller_type
             return tmp
 
+    def get_resource(self, resource_request):
+        """
+        This method performs a request to read the /resource endpoint of an accessory. What it does is dependend on the
+        accessory being queried. For example this could be a IP based camera to return a snapshot image (see spec R2,
+        chapter 11.5 page 242).
+
+        :param resource_request: a dict of values to be sent to the accessory as a json dump
+        :return: the content of the response body as bytes
+        """
+        if not self.session:
+            self.session = IpSession(self.pairing_data)
+        url = '/resource'
+        body = json.dumps(resource_request).encode()
+
+        try:
+            response = self.session.post(url, body)
+            return response.read()
+        except (AccessoryDisconnectedError, EncryptionError):
+            self.session.close()
+            self.session = None
+            raise
+
     def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,
                             include_events=False):
         """

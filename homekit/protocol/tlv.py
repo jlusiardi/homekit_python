@@ -245,7 +245,10 @@ class TLVItem:
                 value = obj.__dict__.get(tlv_item.name, None)
                 if value is not None:
                     if isinstance(value, list):
-                        children.extend((tlv_type, TLVItem.encode(value)) for value in value)
+                        for index, value_item in enumerate(value):
+                            children.append((tlv_type, TLVItem.encode(value_item)))
+                            if index + 1 < len(value):
+                                children.append(TLV.kTLVType_Separator_Pair)
                     else:
                         children.append((tlv_type, TLVItem.encode(value)))
             return TLV.encode_list(children)

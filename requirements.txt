@@ -9,3 +9,4 @@ cryptography>=2.5
 coverage
 flake8
 pytest
+pytest-asyncio

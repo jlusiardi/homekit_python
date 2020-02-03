@@ -26,7 +26,8 @@ __all__ = [
     'SaturationCharacteristicMixin', 'SerialNumberCharacteristic', 'TargetHeatingCoolingStateCharacteristic',
     'TargetHeatingCoolingStateCharacteristicMixin', 'TargetTemperatureCharacteristic',
     'TargetTemperatureCharacteristicMixin', 'TemperatureDisplayUnitCharacteristic', 'TemperatureDisplayUnitsMixin',
-    'VolumeCharacteristic', 'VolumeCharacteristicMixin'
+    'VolumeCharacteristic', 'VolumeCharacteristicMixin', 'MicrophoneMuteCharacteristicMixin',
+    'MicrophoneMuteCharacteristic'
 ]
 
 from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
@@ -59,3 +60,5 @@ from homekit.model.characteristics.target_temperature import TargetTemperatureCh
 from homekit.model.characteristics.temperature_display_unit import TemperatureDisplayUnitsMixin, \
     TemperatureDisplayUnitCharacteristic
 from homekit.model.characteristics.volume import VolumeCharacteristic, VolumeCharacteristicMixin
+from homekit.model.characteristics.microphone_mute import MicrophoneMuteCharacteristicMixin, \
+    MicrophoneMuteCharacteristic

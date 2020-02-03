@@ -24,10 +24,11 @@ from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.exceptions import CharacteristicPermissionError, FormatError
+from homekit.protocol.tlv import TLVItem
 
 
 class AbstractCharacteristic(ToDictMixin):
-    def __init__(self, iid: int, characteristic_type: str, characteristic_format: str):
+    def __init__(self, iid: int, characteristic_type: str, characteristic_format: str, characteristic_tlv_type=None):
         if type(self) is AbstractCharacteristic:
             raise Exception('AbstractCharacteristic is an abstract class and cannot be instantiated directly')
         self.type = CharacteristicsTypes.get_uuid(characteristic_type)  # page 65, see ServicesTypes
@@ -46,6 +47,8 @@ class AbstractCharacteristic(ToDictMixin):
         self.maxDataLen = 2097152  # number, not required, page 66, used if format is data
         self.valid_values = None  # array, not required, see page 67, all numeric entries are allowed values
         self.valid_values_range = None  # 2 element array, not required, see page 67
+
+        self.tlv_type = characteristic_tlv_type
 
         self._set_value_callback = None
         self._get_value_callback = None
@@ -118,6 +121,9 @@ class AbstractCharacteristic(ToDictMixin):
             if len(new_val) > self.maxLen:
                 raise FormatError(HapStatusCodes.INVALID_VALUE)
 
+        if self.format == CharacteristicFormats.tlv8 and new_val is not None:
+            new_val = TLVItem.decode(self.tlv_type, base64.decodebytes(new_val.encode()))
+
         self.value = new_val
         if self._set_value_callback:
             self._set_value_callback(new_val)
@@ -155,9 +161,15 @@ class AbstractCharacteristic(ToDictMixin):
         """
         if CharacteristicPermissions.paired_read not in self.perms:
             raise CharacteristicPermissionError(HapStatusCodes.CANT_READ_WRITE_ONLY)
-        if self._get_value_callback:
-            return self._get_value_callback()
-        return self.value
+
+        value = self.value
+        if self._get_value_callback is not None:
+            value = self._get_value_callback()
+
+        if self.value is not None and self.format == CharacteristicFormats.tlv8:
+            return base64.b64encode(TLVItem.encode(value)).decode("ascii")
+        else:
+            return value
 
     def get_value_for_ble(self):
         value = self.get_value()
@@ -200,7 +212,10 @@ class AbstractCharacteristic(ToDictMixin):
             'format': self.format,
         }
         if CharacteristicPermissions.paired_read in self.perms:
-            d['value'] = self.value
+            if self.value is not None and self.format == CharacteristicFormats.tlv8:
+                d['value'] = base64.b64encode(TLVItem.encode(self.value)).decode("ascii")
+            else:
+                d['value'] = self.value
         if self.ev:
             d['ev'] = self.ev
         if self.description:

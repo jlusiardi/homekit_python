@@ -41,7 +41,7 @@ from homekit.crypto.srp import SrpServer
 from homekit.exceptions import ConfigurationError, ConfigLoadingError, ConfigSavingError, FormatError, \
     CharacteristicPermissionError, DisconnectedControllerError
 from homekit.http_impl import HttpStatusCodes
-from homekit.model import Accessories, Categories
+from homekit.model import Accessories, Categories, CameraAccessory
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.protocol import TLV
 from homekit.protocol.statuscodes import HapStatusCodes
@@ -316,6 +316,9 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             },
             '/pairings': {
                 'POST': self._post_pairings
+            },
+            '/resource': {
+                'POST': self._post_resource
             }
         }
         self.protocol_version = 'HTTP/1.1'
@@ -860,6 +863,27 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             return
 
         self.send_error(HttpStatusCodes.METHOD_NOT_ALLOWED)
+
+    def _post_resource(self):
+        format = json.loads(self.body)
+        accessories = self.server.accessories.accessories
+
+        if 'aid' in format:
+            aid = format['aid']
+            accessories = [accessory for accessory in accessories if accessory.aid == aid]
+
+        if len(accessories) != 0 and isinstance(accessories[0], CameraAccessory) and \
+                accessories[0].get_image_snapshot_callback is not None:
+            accessory = accessories[0]
+            image = accessory.get_image_snapshot_callback(format)
+
+            self.send_response(HttpStatusCodes.OK)
+            self.send_header('Content-Type', 'image/jpeg')
+            self.send_header('Content-Length', len(image))
+            self.end_headers()
+            self.wfile.write(image)
+        else:
+            self.send_error(HttpStatusCodes.NOT_FOUND)
 
     def _post_pairings(self):
         d_req = TLV.decode_bytes(self.body)

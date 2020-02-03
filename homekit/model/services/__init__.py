@@ -16,7 +16,8 @@
 
 __all__ = [
     'ThermostatService', 'LightBulbService', 'FanService', 'BHSLightBulbService', 'AccessoryInformationService',
-    'OutletService', 'AbstractService', 'ServicesTypes'
+    'OutletService', 'AbstractService', 'ServicesTypes', 'RTPStreamService', 'ManagedRTPStreamService',
+    'MicrophoneService'
 ]
 
 from homekit.model.services.service_types import ServicesTypes
@@ -28,3 +29,5 @@ from homekit.model.services.fan_service import FanService
 from homekit.model.services.lightbulb_service import LightBulbService
 from homekit.model.services.outlet_service import OutletService
 from homekit.model.services.thermostat_service import ThermostatService
+from homekit.model.services.rtpstream_service import RTPStreamService, ManagedRTPStreamService
+from homekit.model.services.microphone_service import MicrophoneService

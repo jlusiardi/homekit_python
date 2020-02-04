@@ -562,6 +562,35 @@ event for 1.23: 0.16111
 event for 1.8: False
 ```
 
+## `get_image_snapshot`
+
+**!!Not yet implemented for Bluetooth LE Accessories!!**
+
+This tool will register with an accessory and listen to the events send back from it.
+
+Usage
+```bash
+python3 -m homekit.get_image_snapshot -f ${PAIRINGDATAFILE} -a ${ALIAS} -A ${ACCESSORYID} \
+                             -o ${OUTPUT} -W ${WIDTH} -H ${HEIGHT} \
+                             [--log ${LOGLEVEL}]
+```
+
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device.
+
+The option `-A`
+ 
+The option `-o` 
+ 
+The option `-W` 
+ 
+The option `-H` 
+ 
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
+
+
+
 # HomeKit Accessory
 
 # Devices Reported to work

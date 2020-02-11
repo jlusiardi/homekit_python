@@ -84,13 +84,13 @@ class BlePairing(AbstractPairing):
     def list_pairings(self):
         if not self.session:
             self.session = BleSession(self.pairing_data, self.adapter)
-        request_tlv = tlv8.encode([
+        subrequest_tlv = tlv8.encode([
             tlv8.Entry(TLV.kTLVType_State, TLV._M1),
             tlv8.Entry(TLV.kTLVType_Method, TLV._ListPairings)
         ])
         request_tlv = tlv8.encode([
-            tlv8.Entry(TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-            tlv8.Entry(TLV.kTLVHAPParamValue, request_tlv)
+            tlv8.Entry(TLV.kTLVHAPParamParamReturnResponse, b'\x01'),
+            tlv8.Entry(TLV.kTLVHAPParamValue, subrequest_tlv)
         ])
         body = len(request_tlv).to_bytes(length=2, byteorder='little') + request_tlv
 
@@ -392,17 +392,17 @@ class BlePairing(AbstractPairing):
         else:
             print('UNKNOWN')
 
-        request_tlv = TLV.encode_list([
-            (TLV.kTLVType_State, TLV._M1),
-            (TLV.kTLVType_Method, TLV.AddPairing),
-            (TLV.kTLVType_Identifier, additional_controller_pairing_identifier.encode()),
-            (TLV.kTLVType_PublicKey, bytes.fromhex(ios_device_ltpk)),
-            (TLV.kTLVType_Permissions, permissions)
+        subrequest_tlv = tlv8.encode([
+            tlv8.Entry(TLV.kTLVType_State, TLV._M1),
+            tlv8.Entry(TLV.kTLVType_Method, TLV._AddPairing),
+            tlv8.Entry(TLV.kTLVType_Identifier, additional_controller_pairing_identifier),
+            tlv8.Entry(TLV.kTLVType_PublicKey, bytes.fromhex(ios_device_ltpk)),
+            tlv8.Entry(TLV.kTLVType_Permissions, permissions)
         ])
 
-        request_tlv = TLV.encode_list([
-            (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-            (TLV.kTLVHAPParamValue, request_tlv)
+        request_tlv = tlv8.encode([
+            tlv8.Entry(TLV.kTLVHAPParamParamReturnResponse, b'\x01'),
+            tlv8.Entry(TLV.kTLVHAPParamValue, subrequest_tlv)
         ])
         body = len(request_tlv).to_bytes(length=2, byteorder='little') + request_tlv
 
@@ -568,9 +568,10 @@ class BleSession(object):
         logger.debug('expected body length %d (got %d)', length, len(data[5:]))
 
         # parse tlvs and analyse information
-        tlv = TLV.decode_bytes(data[5:])
-        logger.debug('received TLV: %s', TLV.to_string(tlv))
-        return dict(tlv)
+        tlv = tlv8.decode(data[5:])
+        logger.debug('received TLV: %s', tlv8.format_string(tlv))
+        result = {x.type_id: x.data for x in tlv}
+        return result
 
 
 def find_characteristic_by_uuid(device, service_uuid, char_uuid):
@@ -618,11 +619,11 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
 def create_ble_pair_setup_write(characteristic, characteristic_id):
     def write(request, expected):
         # TODO document me
-        body = TLV.encode_list(request)
-        logger.debug('entering write function %s', TLV.to_string(TLV.decode_bytes(body)))
-        request_tlv = TLV.encode_list([
-            (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-            (TLV.kTLVHAPParamValue, body)
+        body = tlv8.encode(request)
+        logger.debug('entering write function %s', tlv8.format_string(request))
+        request_tlv = tlv8.encode([
+            tlv8.Entry(TLV.kTLVHAPParamParamReturnResponse, b'\x01'),
+            tlv8.Entry(TLV.kTLVHAPParamValue, body)
         ])
         transaction_id = random.randrange(0, 255)
         data = bytearray([0x00, HapBleOpCodes.CHAR_WRITE, transaction_id])
@@ -652,9 +653,11 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
 
         logger.debug('received %s', bytes(resp_data).hex())
         logger.debug('decode %s', bytes(resp_data[5:]).hex())
-        resp_tlv = TLV.decode_bytes(bytes([int(a) for a in resp_data[5:]]), expected=[TLV.kTLVHAPParamValue])
-        result = TLV.decode_bytes(resp_tlv[0][1], expected)
-        logger.debug('leaving write function %s', TLV.to_string(result))
+        resp_tlv = tlv8.decode(bytes([int(a) for a in resp_data[5:]]), {
+            TLV.kTLVHAPParamValue: tlv8.DataType.BYTES
+        })
+        result = tlv8.decode(resp_tlv[0].data, expected)
+        logger.debug('leaving write function %s', tlv8.format_string(result))
         return result
 
     return write
@@ -771,54 +774,54 @@ def parse_sig_read_response(data, expected_tid):
     logger.debug('expected body length %d (got %d)', length, len(data[5:]))
 
     # parse tlvs and analyse information
-    tlv = TLV.decode_bytes(data[5:])
+    tlv = tlv8.decode(data[5:])
 
     description = ''
     characteristic_format = ''
     characteristic_range = None
     characteristic_step = None
     for t in tlv:
-        if t[0] == TLV.kTLVHAPParamCharacteristicType:
-            chr_type = [int(a) for a in t[1]]
+        if t.type_id == TLV.kTLVHAPParamCharacteristicType:
+            chr_type = [int(a) for a in t.data]
             chr_type.reverse()
             chr_type = str(uuid.UUID(''.join('%02x' % b for b in chr_type)))
-        if t[0] == TLV.kTLVHAPParamServiceInstanceId:
-            svc_id = int.from_bytes(t[1], byteorder='little')
-        if t[0] == TLV.kTLVHAPParamServiceType:
-            svc_type = [int(a) for a in t[1]]
+        if t.type_id == TLV.kTLVHAPParamServiceInstanceId:
+            svc_id = int.from_bytes(t.data, byteorder='little')
+        if t.type_id == TLV.kTLVHAPParamServiceType:
+            svc_type = [int(a) for a in t.data]
             svc_type.reverse()
             svc_type = str(uuid.UUID(''.join('%02x' % b for b in svc_type)))
-        if t[0] == TLV.kTLVHAPParamHAPCharacteristicPropertiesDescriptor:
-            chr_prop_int = int.from_bytes(t[1], byteorder='little')
-        if t[0] == TLV.kTLVHAPParamGATTUserDescriptionDescriptor:
-            description = t[1].decode()
-        if t[0] == TLV.kTLVHAPParamHAPValidValuesDescriptor:
-            print('valid values', t[1])
-        if t[0] == TLV.kTLVHAPParamHAPValidValuesRangeDescriptor:
-            print('valid values range', t[1])
-        if t[0] == TLV.kTLVHAPParamGATTPresentationFormatDescriptor:
-            unit_bytes = t[1][2:4]
+        if t.type_id == TLV.kTLVHAPParamHAPCharacteristicPropertiesDescriptor:
+            chr_prop_int = int.from_bytes(t.data, byteorder='little')
+        if t.type_id == TLV.kTLVHAPParamGATTUserDescriptionDescriptor:
+            description = t.data.decode()
+        if t.type_id == TLV.kTLVHAPParamHAPValidValuesDescriptor:
+            print('valid values', t.data)
+        if t.type_id == TLV.kTLVHAPParamHAPValidValuesRangeDescriptor:
+            print('valid values range', t.data)
+        if t.type_id == TLV.kTLVHAPParamGATTPresentationFormatDescriptor:
+            unit_bytes = t.data[2:4]
             unit_bytes.reverse()
-            characteristic_format = BleCharacteristicFormats.get(int(t[1][0]), 'unknown')
+            characteristic_format = BleCharacteristicFormats.get(int(t.data[0]), 'unknown')
             unit = BleCharacteristicUnits.get(int.from_bytes(unit_bytes, byteorder='big'), 'unknown')
-        if t[0] == TLV.kTLVHAPParamGATTValidRange:
-            logger.debug('range: %s', t[1].hex())
+        if t.type_id == TLV.kTLVHAPParamGATTValidRange:
+            logger.debug('range: %s', t.data.hex())
             lower = None
             upper = None
             if characteristic_format == 'int32' or characteristic_format == 'int':
-                (lower, upper) = struct.unpack('ii', t[1])
+                (lower, upper) = struct.unpack('ii', t.data)
             if characteristic_format == 'uint8':
-                (lower, upper) = struct.unpack('BB', t[1])
+                (lower, upper) = struct.unpack('BB', t.data)
             if characteristic_format == 'float':
-                (lower, upper) = struct.unpack('ff', t[1])
+                (lower, upper) = struct.unpack('ff', t.data)
             # TODO include all formats!
             characteristic_range = (lower, upper)
-        if t[0] == TLV.kTLVHAPParamHAPStepValueDescriptor:
+        if t.type_id == TLV.kTLVHAPParamHAPStepValueDescriptor:
             characteristic_step = None
             if characteristic_format == 'int32':
-                characteristic_step = struct.unpack('i', t[1])[0]
+                characteristic_step = struct.unpack('i', t.data)[0]
             if characteristic_format == 'uint8':
-                characteristic_step = struct.unpack('B', t[1])[0]
+                characteristic_step = struct.unpack('B', t.data)[0]
             # TODO include all formats!
 
     # parse permissions

@@ -19,6 +19,7 @@ import unittest
 from unittest import mock
 import uuid
 import logging
+import tlv8
 
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit import Controller
@@ -46,6 +47,7 @@ def tlv8_entry_list_to_dict(entry_list):
     Convert a list of tlv8.Entry instances into a dict with the type_id as key and the data as value.
     """
     return {x.type_id: x.data for x in entry_list}
+
 
 class DeviceManager:
     """
@@ -301,7 +303,8 @@ class Characteristic:
                 tlv8.Entry(TLV.kTLVHAPParamHAPCharacteristicPropertiesDescriptor, b'\x00'),
                 tlv8.Entry(TLV.kTLVHAPParamGATTPresentationFormatDescriptor, gatt_fmt),
                 tlv8.Entry(TLV.kTLVHAPParamCharacteristicType, char_type),
-                tlv8.Entry(TLV.kTLVHAPParamServiceInstanceId, self.service.service.iid.to_bytes(length=8, byteorder='little')),
+                tlv8.Entry(TLV.kTLVHAPParamServiceInstanceId,
+                           self.service.service.iid.to_bytes(length=8, byteorder='little')),
                 tlv8.Entry(TLV.kTLVHAPParamServiceType, service_type),
             ]
 

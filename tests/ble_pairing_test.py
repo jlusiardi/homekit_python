@@ -18,7 +18,6 @@ import unittest
 import tlv8
 
 from homekit.exceptions import FormatError
-from homekit.protocol.tlv import TLV
 
 from homekit.tools import BLE_TRANSPORT_SUPPORTED
 

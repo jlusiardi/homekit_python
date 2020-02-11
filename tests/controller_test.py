@@ -21,8 +21,8 @@ import time
 
 from homekit import Controller
 from homekit import AccessoryServer
-from homekit.exceptions import AccessoryNotFoundError, AlreadyPairedError, UnavailableError, FormatError, \
-    ConfigLoadingError, ConfigSavingError, MalformedPinError
+from homekit.exceptions import AccessoryNotFoundError, AlreadyPairedError, FormatError, \
+    ConfigLoadingError, ConfigSavingError, MalformedPinError, AuthenticationError
 from homekit.model import Accessory
 from homekit.model.services import LightBulbService
 from homekit.model import mixin as model_mixin
@@ -129,13 +129,6 @@ class TestControllerIpUnpaired(unittest.TestCase):
         """Try to identify a non existing accessory. This should result in AccessoryNotFoundError"""
         self.assertRaises(AccessoryNotFoundError, self.controller.identify, '12:34:56:00:01:0C')
 
-    def test_02_pair(self):
-        """Try to pair the test accessory"""
-        self.controller.perform_pairing('alias', '12:34:56:00:01:0B', '010-22-020')
-        pairings = self.controller.get_pairings()
-        self.controller.save_data(self.controller_file.name)
-        self.assertIn('alias', pairings)
-
     def test_02_pair_accessory_not_found(self):
         """"""
         self.assertRaises(AccessoryNotFoundError, self.controller.perform_pairing, 'alias1', '12:34:56:00:01:1B',
@@ -143,13 +136,71 @@ class TestControllerIpUnpaired(unittest.TestCase):
 
     def test_02_pair_wrong_pin(self):
         """"""
-        self.assertRaises(UnavailableError, self.controller.perform_pairing, 'alias2', '12:34:56:00:01:0B',
+        self.assertRaises(AuthenticationError, self.controller.perform_pairing, 'alias2', '12:34:56:00:01:0B',
                           '010-22-021')
 
     def test_02_pair_malformed_pin(self):
         """"""
         self.assertRaises(MalformedPinError, self.controller.perform_pairing, 'alias2', '12:34:56:00:01:0B',
                           '01022021')
+
+
+class TestControllerIpPair(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # prepare config file for unpaired accessory server
+        cls.config_file = tempfile.NamedTemporaryFile()
+        cls.config_file.write("""{
+              "accessory_ltpk": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
+              "accessory_ltsk": "3d99f3e959a1f93af4056966f858074b2a1fdec1c5fd84a51ea96f9fa004156a",
+              "accessory_pairing_id": "12:34:56:00:01:0B",
+              "accessory_pin": "010-22-020",
+              "c#": 0,
+              "category": "Lightbulb",
+              "host_ip": "127.0.0.1",
+              "host_port": 54321,
+              "name": "unittestLight",
+              "peers": {
+              },
+              "unsuccessful_tries": 0
+            }""".encode())
+        cls.config_file.flush()
+
+        # Make sure get_id() numbers are stable between tests
+        model_mixin.id_counter = 0
+
+        cls.httpd = AccessoryServer(cls.config_file.name, None)
+        cls.httpd.set_identify_callback(identify_callback)
+        accessory = Accessory('Testlicht', 'lusiardi.de', 'Demoserver', '0001', '0.1')
+        accessory.set_identify_callback(identify_callback)
+        lightBulbService = LightBulbService()
+        lightBulbService.set_on_set_callback(set_value)
+        accessory.services.append(lightBulbService)
+        cls.httpd.add_accessory(accessory)
+        t = T(cls.httpd)
+        t.start()
+        time.sleep(10)
+        cls.controller_file = tempfile.NamedTemporaryFile()
+
+    def __init__(self, methodName='runTest'):
+        unittest.TestCase.__init__(self, methodName)
+        self.controller_file = tempfile.NamedTemporaryFile()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.unpublish_device()
+        cls.httpd.shutdown()
+        cls.config_file.close()
+
+    def setUp(self):
+        self.controller = Controller()
+
+    def test_02_pair(self):
+        """Try to pair the test accessory"""
+        self.controller.perform_pairing('alias', '12:34:56:00:01:0B', '010-22-020')
+        pairings = self.controller.get_pairings()
+        self.controller.save_data(self.controller_file.name)
+        self.assertIn('alias', pairings)
 
 
 class TestControllerIpPaired(unittest.TestCase):

@@ -18,8 +18,8 @@ import abc
 import base64
 import binascii
 from distutils.util import strtobool
+import tlv8
 
-from homekit.protocol.tlv import TLV, TlvParseException
 from homekit.exceptions import FormatError
 from homekit.model.characteristics import CharacteristicFormats
 
@@ -176,13 +176,13 @@ def check_convert_value(val, target_type):
             raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     if target_type == CharacteristicFormats.data:
         try:
-            base64.decodebytes(val.encode())
+            val = base64.decodebytes(val.encode())
         except binascii.Error:
             raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     if target_type == CharacteristicFormats.tlv8:
         try:
             tmp_bytes = base64.decodebytes(val.encode())
-            TLV.decode_bytes(tmp_bytes)
-        except (binascii.Error, TlvParseException):
+            val = tlv8.decode(tmp_bytes)
+        except (binascii.Error, ValueError):
             raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     return val

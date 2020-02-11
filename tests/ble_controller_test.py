@@ -495,7 +495,7 @@ class PairingPairingsCharacteristicHandler(Characteristic):
         request = dict(TLV.decode_bytes(value))
         logging.debug('%s', request)
 
-        assert request[TLV.kTLVType_State] == TLV.M1
+        assert request[TLV.kTLVType_State] == TLV._M1
 
         if request[TLV.kTLVType_Method] == TLV.RemovePairing:
             ident = request[TLV.kTLVType_Identifier].decode()
@@ -507,7 +507,7 @@ class PairingPairingsCharacteristicHandler(Characteristic):
         response = bytearray([0x02, tid, 0x00])
 
         inner = TLV.encode_list([
-            (TLV.kTLVType_State, TLV.M2),
+            (TLV.kTLVType_State, TLV._M2),
         ])
 
         outer = TLV.encode_list([(TLV.kTLVHAPParamValue, inner)])

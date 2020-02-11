@@ -17,8 +17,9 @@
 __all__ = [
     'TestServerData', 'BleCharacteristicFormatsTest', 'BleCharacteristicUnitsTest', 'CharacteristicTypesTest',
     'TestBLEController', 'TestChacha20poly1305', 'TestCharacteristicsTypes', 'TestController', 'TestControllerIpPaired',
-    'TestControllerIpUnpaired', 'TestHttpResponse', 'TestHttpStatusCodes', 'TestMfrData', 'TestSrp', 'TestTLV',
-    'TestZeroconf', 'TestBLEPairing', 'TestServiceTypes', 'TestSecureHttp', 'TestHTTPPairing', 'TestSecureSession'
+    'TestControllerIpUnpaired', 'TestHttpResponse', 'TestHttpStatusCodes', 'TestMfrData', 'TestSrp',
+    'TestZeroconf', 'TestBLEPairing', 'TestServiceTypes', 'TestSecureHttp', 'TestHTTPPairing', 'TestSecureSession',
+    'CheckConvertLevelTest'
 ]
 
 from tests.bleCharacteristicFormats_test import BleCharacteristicFormatsTest
@@ -36,5 +37,5 @@ from tests.secure_http_test import TestSecureHttp
 from tests.serverdata_test import TestServerData
 from tests.serviceTypes_test import TestServiceTypes
 from tests.srp_test import TestSrp
-from tests.tlv_test import TestTLV
 from tests.zeroconf_test import TestZeroconf
+from tests.tools_tests import CheckConvertLevelTest

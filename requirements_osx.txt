@@ -5,3 +5,4 @@ cryptography>=2.5
 coverage
 flake8
 pytest
+tlv8

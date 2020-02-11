@@ -25,6 +25,7 @@ import sys
 import uuid
 import struct
 from distutils.util import strtobool
+import tlv8
 
 from homekit.controller.tools import AbstractPairing
 from homekit.protocol.tlv import TLV
@@ -83,13 +84,13 @@ class BlePairing(AbstractPairing):
     def list_pairings(self):
         if not self.session:
             self.session = BleSession(self.pairing_data, self.adapter)
-        request_tlv = TLV.encode_list([
-            (TLV.kTLVType_State, TLV.M1),
-            (TLV.kTLVType_Method, TLV.ListPairings)
+        request_tlv = tlv8.encode([
+            tlv8.Entry(TLV.kTLVType_State, TLV._M1),
+            tlv8.Entry(TLV.kTLVType_Method, TLV._ListPairings)
         ])
-        request_tlv = TLV.encode_list([
-            (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-            (TLV.kTLVHAPParamValue, request_tlv)
+        request_tlv = tlv8.encode([
+            tlv8.Entry(TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
+            tlv8.Entry(TLV.kTLVHAPParamValue, request_tlv)
         ])
         body = len(request_tlv).to_bytes(length=2, byteorder='little') + request_tlv
 
@@ -101,21 +102,25 @@ class BlePairing(AbstractPairing):
                         cid = c['iid']
         fc, _ = self.session.find_characteristic_by_iid(cid)
         response = self.session.request(fc, cid, HapBleOpCodes.CHAR_WRITE, body)
-        response = TLV.decode_bytes(response[1])
+        response = tlv8.decode(response[1], {
+            TLV.kTLVType_Identifier: tlv8.DataType.STRING,
+            TLV.kTLVType_PublicKey: tlv8.DataType.BYTES,
+            TLV.kTLVType_Permissions: tlv8.DataType.INTEGER,
+        })
         tmp = []
         r = {}
         for d in response[1:]:
-            if d[0] == TLV.kTLVType_Identifier:
+            if d.type_id == TLV.kTLVType_Identifier:
                 r = {}
                 tmp.append(r)
-                r['pairingId'] = d[1].decode()
-            if d[0] == TLV.kTLVType_PublicKey:
-                r['publicKey'] = d[1].hex()
-            if d[0] == TLV.kTLVType_Permissions:
+                r['pairingId'] = d.data
+            if d.type_id == TLV.kTLVType_PublicKey:
+                r['publicKey'] = d.data.hex()
+            if d.type_id == TLV.kTLVType_Permissions:
                 controller_type = 'regular'
-                if d[1] == b'\x01':
+                if d.data == 1:
                     controller_type = 'admin'
-                r['permissions'] = int.from_bytes(d[1], byteorder='little')
+                r['permissions'] = d.data
                 r['controllerType'] = controller_type
         return tmp
 
@@ -357,7 +362,7 @@ class BlePairing(AbstractPairing):
                 }
                 continue
 
-            value = TLV.encode_list([(1, self._convert_from_python(aid, cid, value))])
+            value = tlv8.encode([tlv8.Entry(1, self._convert_from_python(aid, cid, value))])
             body = len(value).to_bytes(length=2, byteorder='little') + value
 
             try:
@@ -388,7 +393,7 @@ class BlePairing(AbstractPairing):
             print('UNKNOWN')
 
         request_tlv = TLV.encode_list([
-            (TLV.kTLVType_State, TLV.M1),
+            (TLV.kTLVType_State, TLV._M1),
             (TLV.kTLVType_Method, TLV.AddPairing),
             (TLV.kTLVType_Identifier, additional_controller_pairing_identifier.encode()),
             (TLV.kTLVType_PublicKey, bytes.fromhex(ios_device_ltpk)),

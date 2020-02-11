@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 import logging
+import sys
+import traceback
 
 logger = logging.getLogger('homekit.protocol.tlv')
 
@@ -23,20 +25,20 @@ class TLV:
     as described in Appendix 12 (page 251)
     """
 
-    # Steps
-    M1 = bytearray(b'\x01')
-    M2 = bytearray(b'\x02')
-    M3 = bytearray(b'\x03')
-    M4 = bytearray(b'\x04')
-    M5 = bytearray(b'\x05')
-    M6 = bytearray(b'\x06')
+    # Steps (see Table 5-6 TLV Values under kTLVType_State in Spec R2 page 51)
+    _M1 = 1
+    _M2 = 2
+    _M3 = 3
+    _M4 = 4
+    _M5 = 5
+    _M6 = 6
 
     # Methods (see table 4-4 page 60)
-    PairSetup = bytearray(b'\x01')
-    PairVerify = bytearray(b'\x02')
-    AddPairing = bytearray(b'\x03')
-    RemovePairing = bytearray(b'\x04')
-    ListPairings = bytearray(b'\x05')
+    _PairSetup = 1
+    _PairVerify = 2
+    _AddPairing = 3
+    _RemovePairing = 4
+    _ListPairings = 5
 
     # TLV Values (see table 4-6 page 61)
     kTLVType_Method = 0
@@ -60,13 +62,13 @@ class TLV:
     kTLVType_SessionID = 0x0e   # Table 6-27 page 116
 
     # Errors (see table 4-5 page 60)
-    kTLVError_Unknown = bytearray(b'\x01')
-    kTLVError_Authentication = bytearray(b'\x02')
-    kTLVError_Backoff = bytearray(b'\x03')
-    kTLVError_MaxPeers = bytearray(b'\x04')
-    kTLVError_MaxTries = bytearray(b'\x05')
-    kTLVError_Unavailable = bytearray(b'\x06')
-    kTLVError_Busy = bytearray(b'\x07')
+    _kTLVError_Unknown = 1
+    _kTLVError_Authentication = 2
+    _kTLVError_Backoff = 3
+    _kTLVError_MaxPeers = 4
+    _kTLVError_MaxTries = 5
+    _kTLVError_Unavailable = 6
+    _kTLVError_Busy = 7
 
     # Table 6-27 page 116
     kTLVMethod_Resume = 0x07
@@ -92,11 +94,13 @@ class TLV:
     kTLVHAPParamHAPValidValuesRangeDescriptor = 0x12
 
     @staticmethod
-    def decode_bytes(bs, expected=None) -> list:
+    def _decode_bytes(bs, expected=None) -> list:
         return TLV.decode_bytearray(bytearray(bs), expected)
 
     @staticmethod
-    def decode_bytearray(ba: bytearray, expected=None) -> list:
+    def _decode_bytearray(ba: bytearray, expected=None) -> list:
+#        print('decode_bytearray', ba)
+#        traceback.print_stack(file=sys.stdout)
         result = []
         # do not influence caller!
         tail = ba.copy()
@@ -131,6 +135,7 @@ class TLV:
 
     @staticmethod
     def encode_list(d: list) -> bytearray:
+        print('encoding %s' % TLV.to_string(d))
         logger.debug('sending %s', TLV.to_string(d))
         result = bytearray()
         for p in d:
@@ -199,7 +204,7 @@ class TLV:
         tmp = []
         for key in preferred_order:
             for item in tlv_array:
-                if item[0] == key:
+                if item.type_id == key:
                     tmp.append(item)
         return tmp
 

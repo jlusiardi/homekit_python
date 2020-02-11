@@ -94,7 +94,10 @@ E0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF''', 16)
 
     @staticmethod
     def to_byte_array(num: int) -> bytearray:
-        return bytearray(num.to_bytes(int(math.ceil(num.bit_length() / 8)), "big"))
+        if isinstance(num, bytes):
+            return bytearray(num)
+        else:
+            return bytearray(num.to_bytes(int(math.ceil(num.bit_length() / 8)), "big"))
 
     def _calculate_x(self) -> int:
         i = (self.username + ':' + self.password).encode()
@@ -136,6 +139,8 @@ class SrpClient(Srp):
 
     def set_server_public_key(self, B):
         if isinstance(B, bytearray):
+            self.B = int.from_bytes(B, "big")
+        elif isinstance(B, bytes):
             self.B = int.from_bytes(B, "big")
         else:
             self.B = B
@@ -183,6 +188,8 @@ class SrpClient(Srp):
 
     def verify_servers_proof(self, M):
         if isinstance(M, bytearray):
+            tmp = int.from_bytes(M, "big")
+        elif isinstance(M, bytes):
             tmp = int.from_bytes(M, "big")
         else:
             tmp = M

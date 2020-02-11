@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 import logging
-import sys
-import traceback
 
 logger = logging.getLogger('homekit.protocol.tlv')
 
@@ -99,8 +97,6 @@ class TLV:
 
     @staticmethod
     def _decode_bytearray(ba: bytearray, expected=None) -> list:
-#        print('decode_bytearray', ba)
-#        traceback.print_stack(file=sys.stdout)
         result = []
         # do not influence caller!
         tail = ba.copy()

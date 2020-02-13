@@ -383,9 +383,9 @@ class AccessoryRequestHandler(accessoryserver.AccessoryRequestHandler):
             tlv8.Entry(TLV.kTLVType_State, state),
             tlv8.Entry(TLV.kTLVType_Error, error)
         ]
-        self._send_response_tlv(d_res)
+        self._send_response_tlv8(d_res)
 
-    def _send_response_tlv(self, d_res, close=False, status=None):
+    def _send_response_tlv8(self, d_res, close=False, status=None):
         result_bytes = tlv8.encode(d_res)
 
         outer = tlv8.encode([
@@ -503,13 +503,17 @@ class PairingPairingsCharacteristicHandler(Characteristic):
     def do_char_write(self, tid, value):
         """The value is actually a TLV with a command to perform"""
 
-        request = tlv8_entry_list_to_dict(tlv8.decode(value))
+        request = tlv8_entry_list_to_dict(tlv8.decode(value, {
+            TLV.kTLVType_State: tlv8.DataType.INTEGER,
+            TLV.kTLVType_Method: tlv8.DataType.INTEGER,
+            TLV.kTLVType_Identifier: tlv8.DataType.STRING
+        }))
         logging.debug('%s', request)
 
         assert request[TLV.kTLVType_State] == TLV._M1
 
-        if request[TLV.kTLVType_Method] == TLV.RemovePairing:
-            ident = request[TLV.kTLVType_Identifier].decode()
+        if request[TLV.kTLVType_Method] == TLV._RemovePairing:
+            ident = request[TLV.kTLVType_Identifier]
             self.service.device.peers.pop(ident, None)
 
             # If ident == this session then disconnect it

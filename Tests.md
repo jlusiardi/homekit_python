@@ -24,7 +24,9 @@ docker run --rm -ti homekit_tests
 ```bash
 coverage3 run --branch -m unittest -v ; coverage3 html
 ```
-
+```bash
+coverage run --branch -m pytest tests/; coverage3 html
+```
 # Style checker
 
 ```bash

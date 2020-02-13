@@ -800,7 +800,8 @@ def parse_sig_read_response(data, expected_tid):
         if t.type_id == TLV.kTLVHAPParamHAPValidValuesRangeDescriptor:
             print('valid values range', t.data)
         if t.type_id == TLV.kTLVHAPParamGATTPresentationFormatDescriptor:
-            unit_bytes = t.data[2:4]
+            # TODO can we use unpack here?
+            unit_bytes = bytearray(t.data[2:4])
             unit_bytes.reverse()
             characteristic_format = BleCharacteristicFormats.get(int(t.data[0]), 'unknown')
             unit = BleCharacteristicUnits.get(int.from_bytes(unit_bytes, byteorder='big'), 'unknown')

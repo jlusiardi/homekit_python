@@ -40,6 +40,7 @@ setuptools.setup(
         'hkdf',
         'ed25519',
         'cryptography>=2.5',
+        'tlv8'
     ],
     extras_require={
         'IP': ['zeroconf'],

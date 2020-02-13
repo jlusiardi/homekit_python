@@ -15,9 +15,9 @@
 #
 
 import unittest
+import tlv8
 
 from homekit.exceptions import FormatError
-from homekit.protocol.tlv import TLV
 
 from homekit.tools import BLE_TRANSPORT_SUPPORTED
 
@@ -192,7 +192,9 @@ class TestBLEPairing(unittest.TestCase):
     def test__convert_from_python__tlv__proper_values(self):
         pairing_data = self._create_pairing_data()
         pairing = BlePairing(pairing_data)
-        data = TLV.encode_list([(6, bytearray(b'\x03'))])
+        data = tlv8.encode([
+            tlv8.Entry(6, b'\x03')
+        ])
         self.assertEqual(b'\x06\x01\x03', pairing._convert_from_python(1, 10, data))
 
     def test__find_characteristic_in_pairing_data__found(self):

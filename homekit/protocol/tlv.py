@@ -87,13 +87,13 @@ class Types(enum.IntEnum):
     kTLVType_Certificate = 9
     kTLVType_Signature = 0x0a
     kTLVType_Permissions = 0x0b  # 0x00 => reg. user, 0x01 => admin
-    kTLVType_Permission_RegularUser = 0 #bytearray(b'\x00')
-    kTLVType_Permission_AdminUser = 1 #bytearray(b'\x01')
+    kTLVType_Permission_RegularUser = 0  # bytearray(b'\x00')
+    kTLVType_Permission_AdminUser = 1  # bytearray(b'\x01')
     kTLVType_FragmentData = 0x0c
     kTLVType_FragmentLast = 0x0d
     kTLVType_Flags = 0x13
     kTLVType_Separator = 255
-    #kTLVType_Separator_Pair = [255, bytearray(b'')]
+    # kTLVType_Separator_Pair = [255, bytearray(b'')]
     # table 6-27 page 116 spec R1 / table 7-38 page 111 spec R2
     kTLVType_SessionID = 0x0e
 

@@ -27,7 +27,7 @@ from homekit.exceptions import AccessoryNotFoundError, UnknownError, UnpairedErr
 from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, create_ip_pair_verify_write
-from homekit.protocol.tlv import TLV, Steps, Methods, Types, Errors
+from homekit.protocol.tlv import Steps, Methods, Types, Errors
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.zeroconf_impl import find_device_ip_and_port
 from homekit.model.services import ServicesTypes

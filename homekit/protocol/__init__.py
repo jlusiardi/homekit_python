@@ -243,7 +243,6 @@ def perform_pair_setup_part2(pin, ios_pairing_id, salt, server_public_key):
     #
     # Step #7 ios (Verification) (page 47)
     #
-    # response_tlv = TLV.reorder(response_tlv, step6_expectations)
     assert response_tlv[0].type_id == Types.kTLVType_State and response_tlv[0].data == Steps.M6, \
         'perform_pair_setup: State not M6'
     if response_tlv[1].type_id == Types.kTLVType_Error:
@@ -256,12 +255,8 @@ def perform_pair_setup_part2(pin, ios_pairing_id, salt, server_public_key):
         raise homekit.exception.IllegalData('step 7')
 
     response_tlv = tlv8.decode(decrypted_data)
-    # response_tlv = TLV.reorder(response_tlv, [
-    #    Types.kTLVType_Identifier, Types.kTLVType_PublicKey, Types.kTLVType_Signature])
 
-    #assert response_tlv[2].type_id == Types.kTLVType_Signature, 'perform_pair_setup: No signature'
     response_tlv.assert_has(Types.kTLVType_Signature, 'perform_pair_setup: No signature')
-    #accessory_sig = response_tlv[2].data
     accessory_sig = response_tlv.first_by_id(Types.kTLVType_Signature).data
 
     assert response_tlv[0].type_id == Types.kTLVType_Identifier, 'perform_pair_setup: No identifier'

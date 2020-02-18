@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Joachim Lusiardi
+# Copyright 2018-2020 Joachim Lusiardi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,31 +14,67 @@
 # limitations under the License.
 #
 import logging
+import enum
 
 logger = logging.getLogger('homekit.protocol.tlv')
 
 
-class TLV:
-    """
-    as described in Appendix 12 (page 251)
-    """
-
+class Steps(enum.IntEnum):
     # Steps (see Table 5-6 TLV Values under kTLVType_State in Spec R2 page 51)
-    _M1 = 1
-    _M2 = 2
-    _M3 = 3
-    _M4 = 4
-    _M5 = 5
-    _M6 = 6
+    M1 = 1
+    M2 = 2
+    M3 = 3
+    M4 = 4
+    M5 = 5
+    M6 = 6
 
-    # Methods (see table 4-4 page 60)
-    _PairSetup = 1
-    _PairVerify = 2
-    _AddPairing = 3
-    _RemovePairing = 4
-    _ListPairings = 5
 
-    # TLV Values (see table 4-6 page 61)
+class Methods(enum.IntEnum):
+    """
+    TLV id for methods.
+    See:
+     - table 4-4 page 60 in spec R1 or
+     - table 5-3 page 49 in spec R2
+    """
+    PairSetup = 1
+    PairVerify = 2
+    AddPairing = 3
+    RemovePairing = 4
+    ListPairings = 5
+    # table 6-27 page 116 spec R1 / table 7-38 page 111 spec R2
+    kTLVMethod_Resume = 0x06
+
+
+class Errors(enum.IntEnum):
+    """
+    TLV id for errors.
+    See:
+     - table 4-5 page 60 in spec R1 or
+     - table 5-5 page 50 in spec R2
+    """
+    kTLVError_Unknown = 1
+    kTLVError_Authentication = 2
+    kTLVError_Backoff = 3
+    kTLVError_MaxPeers = 4
+    kTLVError_MaxTries = 5
+    kTLVError_Unavailable = 6
+    kTLVError_Busy = 7
+
+
+class Types(enum.IntEnum):
+    """
+    TLV id for values.
+    See:
+     - table 4-6 page 61 in spec R1 or
+     - table 5-6 page 51 in spec R2
+
+    Additional types (SessionId) can be found in
+     - table 6-27 page 116 spec R1
+     - table 7-38 page 111 spec R2
+    and (for BLE):
+     - table 6-9 page 98 spec R1
+     - table 7-10 page 92 spec R2
+    """
     kTLVType_Method = 0
     kTLVType_Identifier = 1
     kTLVType_Salt = 2
@@ -49,29 +85,18 @@ class TLV:
     kTLVType_Error = 7
     kTLVType_RetryDelay = 8
     kTLVType_Certificate = 9
-    kTLVType_Signature = 10
-    kTLVType_Permissions = 11  # 0x00 => reg. user, 0x01 => admin
-    kTLVType_Permission_RegularUser = bytearray(b'\x00')
-    kTLVType_Permission_AdminUser = bytearray(b'\x01')
-    kTLVType_FragmentData = 12
-    kTLVType_FragmentLast = 13
+    kTLVType_Signature = 0x0a
+    kTLVType_Permissions = 0x0b  # 0x00 => reg. user, 0x01 => admin
+    kTLVType_Permission_RegularUser = 0 #bytearray(b'\x00')
+    kTLVType_Permission_AdminUser = 1 #bytearray(b'\x01')
+    kTLVType_FragmentData = 0x0c
+    kTLVType_FragmentLast = 0x0d
+    kTLVType_Flags = 0x13
     kTLVType_Separator = 255
-    kTLVType_Separator_Pair = [255, bytearray(b'')]
-    kTLVType_SessionID = 0x0e   # Table 6-27 page 116
+    #kTLVType_Separator_Pair = [255, bytearray(b'')]
+    # table 6-27 page 116 spec R1 / table 7-38 page 111 spec R2
+    kTLVType_SessionID = 0x0e
 
-    # Errors (see table 4-5 page 60)
-    _kTLVError_Unknown = 1
-    _kTLVError_Authentication = 2
-    _kTLVError_Backoff = 3
-    _kTLVError_MaxPeers = 4
-    _kTLVError_MaxTries = 5
-    _kTLVError_Unavailable = 6
-    _kTLVError_Busy = 7
-
-    # Table 6-27 page 116
-    kTLVMethod_Resume = 0x07
-
-    # Additional Parameter Types for BLE (Table 6-9 page 98)
     kTLVHAPParamValue = 0x01
     kTLVHAPParamAdditionalAuthorizationData = 0x02
     kTLVHAPParamOrigin = 0x03
@@ -91,98 +116,11 @@ class TLV:
     kTLVHAPParamHAPValidValuesDescriptor = 0x11
     kTLVHAPParamHAPValidValuesRangeDescriptor = 0x12
 
-    @staticmethod
-    def _decode_bytes(bs, expected=None) -> list:
-        return TLV.decode_bytearray(bytearray(bs), expected)
 
-    @staticmethod
-    def _decode_bytearray(ba: bytearray, expected=None) -> list:
-        result = []
-        # do not influence caller!
-        tail = ba.copy()
-        while len(tail) > 0:
-            key = tail.pop(0)
-            if expected and key not in expected:
-                break
-            length = tail.pop(0)
-            value = tail[:length]
-            if length != len(value):
-                raise TlvParseException('Not enough data for length {} while decoding \'{}\''.format(length, ba))
-            tail = tail[length:]
-
-            if len(result) > 0 and result[-1][0] == key:
-                result[-1][1] += value
-            else:
-                result.append([key, value])
-        logger.debug('receiving %s', TLV.to_string(result))
-        return result
-
-    @staticmethod
-    def validate_key(k: int) -> bool:
-        try:
-            val = int(k)
-            if val < 0 or val > 255:
-                valid = False
-            else:
-                valid = True
-        except ValueError:
-            valid = False
-        return valid
-
-    @staticmethod
-    def encode_list(d: list) -> bytearray:
-        print('encoding %s' % TLV.to_string(d))
-        logger.debug('sending %s', TLV.to_string(d))
-        result = bytearray()
-        for p in d:
-            (key, value) = p
-            if not TLV.validate_key(key):
-                raise ValueError('Invalid key')
-
-            # handle separators properly
-            if key == TLV.kTLVType_Separator:
-                if len(value) == 0:
-                    result.append(key)
-                    result.append(0)
-                else:
-                    raise ValueError('Separator must not have data')
-
-            while len(value) > 0:
-                result.append(key)
-                if len(value) > 255:
-                    length = 255
-                    result.append(length)
-                    for b in value[:length]:
-                        result.append(b)
-                    value = value[length:]
-                else:
-                    length = len(value)
-                    result.append(length)
-                    for b in value[:length]:
-                        result.append(b)
-                    value = value[length:]
-        return result
-
-    @staticmethod
-    def to_string(d) -> str:
-        def entry_to_string(entry_key, entry_value) -> str:
-            if isinstance(entry_value, bytearray):
-                return '  {k}: ({len} bytes/{t}) 0x{v}\n'.format(k=entry_key, v=entry_value.hex(), len=len(entry_value),
-                                                                 t=type(entry_value))
-            return '  {k}: ({len} bytes/{t}) {v}\n'.format(k=entry_key, v=entry_value, len=len(entry_value),
-                                                           t=type(entry_value))
-
-        if isinstance(d, dict):
-            res = '{\n'
-            for k in d.keys():
-                res += entry_to_string(k, d[k])
-            res += '}\n'
-        else:
-            res = '[\n'
-            for k in d:
-                res += entry_to_string(k[0], k[1])
-            res += ']\n'
-        return res
+class TLV:
+    """
+    as described in Appendix 12 (page 251)
+    """
 
     @staticmethod
     def reorder(tlv_array, preferred_order):
@@ -203,8 +141,3 @@ class TLV:
                 if item.type_id == key:
                     tmp.append(item)
         return tmp
-
-
-class TlvParseException(Exception):
-    """Raised upon parse error with some TLV"""
-    pass

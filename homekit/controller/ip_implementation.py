@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Joachim Lusiardi
+# Copyright 2018-2020 Joachim Lusiardi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ from homekit.exceptions import AccessoryNotFoundError, UnknownError, UnpairedErr
 from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, create_ip_pair_verify_write
-from homekit.protocol.tlv import TLV
+from homekit.protocol.tlv import TLV, Steps, Methods, Types, Errors
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.zeroconf_impl import find_device_ip_and_port
 from homekit.model.services import ServicesTypes
@@ -117,8 +117,8 @@ class IpPairing(AbstractPairing):
         if not self.session:
             self.session = IpSession(self.pairing_data)
         request_tlv = tlv8.encode([
-            tlv8.Entry(TLV.kTLVType_State, TLV._M1),
-            tlv8.Entry(TLV.kTLVType_Method, TLV._ListPairings)
+            tlv8.Entry(Types.kTLVType_State, Steps.M1),
+            tlv8.Entry(Types.kTLVType_Method, Methods.ListPairings)
         ])
         try:
             response = self.session.sec_http.post('/pairings', request_tlv)
@@ -128,26 +128,26 @@ class IpPairing(AbstractPairing):
             self.session = None
             raise
         data = tlv8.decode(bytes(data), {
-            TLV.kTLVType_State: tlv8.DataType.INTEGER,
-            TLV.kTLVType_Identifier: tlv8.DataType.STRING,
-            TLV.kTLVType_PublicKey: tlv8.DataType.BYTES,
-            TLV.kTLVType_Permissions: tlv8.DataType.INTEGER
+            Types.kTLVType_State: tlv8.DataType.INTEGER,
+            Types.kTLVType_Identifier: tlv8.DataType.STRING,
+            Types.kTLVType_PublicKey: tlv8.DataType.BYTES,
+            Types.kTLVType_Permissions: tlv8.DataType.INTEGER
         })
-        if not (data[0].type_id == TLV.kTLVType_State and data[0].data == TLV._M2):
+        if not (data[0].type_id == Types.kTLVType_State and data[0].data == Steps.M2):
             raise UnknownError('unexpected data received: ' + str(data))
-        elif data[1].type_id == TLV.kTLVType_Error and data[1].data == TLV.kTLVError_Authentication:
+        elif data[1].type_id == Types.kTLVType_Error and data[1].data == Errors.kTLVError_Authentication:
             raise UnpairedError('Must be paired')
         else:
             tmp = []
             r = {}
             for d in data[1:]:
-                if d.type_id == TLV.kTLVType_Identifier:
+                if d.type_id == Types.kTLVType_Identifier:
                     r = {}
                     tmp.append(r)
                     r['pairingId'] = d.data
-                if d.type_id == TLV.kTLVType_PublicKey:
+                if d.type_id == Types.kTLVType_PublicKey:
                     r['publicKey'] = d.data.hex()
-                if d.type_id == TLV.kTLVType_Permissions:
+                if d.type_id == Types.kTLVType_Permissions:
                     controller_type = 'regular'
                     if d.data == 1:
                         controller_type = 'admin'
@@ -411,18 +411,18 @@ class IpPairing(AbstractPairing):
         if not self.session:
             self.session = IpSession(self.pairing_data)
         if permissions == 'User':
-            permissions = TLV.kTLVType_Permission_RegularUser
+            permissions = Types.kTLVType_Permission_RegularUser
         elif permissions == 'Admin':
-            permissions = TLV.kTLVType_Permission_AdminUser
+            permissions = Types.kTLVType_Permission_AdminUser
         else:
             print('UNKNOWN')
 
         request_tlv = tlv8.encode([
-            tlv8.Entry(TLV.kTLVType_State, TLV._M1),
-            tlv8.Entry(TLV.kTLVType_Method, TLV.AddPairing),
-            tlv8.Entry(TLV.kTLVType_Identifier, additional_controller_pairing_identifier.encode()),
-            tlv8.Entry(TLV.kTLVType_PublicKey, bytes.fromhex(ios_device_ltpk)),
-            tlv8.Entry(TLV.kTLVType_Permissions, permissions)
+            tlv8.Entry(Types.kTLVType_State, Steps.M1),
+            tlv8.Entry(Types.kTLVType_Method, Methods.AddPairing),
+            tlv8.Entry(Types.kTLVType_Identifier, additional_controller_pairing_identifier.encode()),
+            tlv8.Entry(Types.kTLVType_PublicKey, bytes.fromhex(ios_device_ltpk)),
+            tlv8.Entry(Types.kTLVType_Permissions, permissions)
         ])
 
         response = self.session.sec_http.post('/pairings', request_tlv)

@@ -17,7 +17,8 @@
 
 class _HapBleOpCodes(object):
     """
-    This data is taken from Table 6-7 HAP Opcode Description on page 97.
+    This data is taken from Table 6-7 HAP Opcode Description on page 97 in Spec R1 and Table 8-8 HAP Opcode Description
+    on page 91 in Spec R2.
     """
     CHAR_SIG_READ = 0x01
     CHAR_WRITE = 0x02

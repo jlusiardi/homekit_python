@@ -18,6 +18,7 @@ __all__ = [
     'Device', 'BlePairing', 'BleSession', 'find_characteristic_by_uuid', 'create_ble_pair_setup_write'
 ]
 
+
 import time
 import logging
 import random
@@ -38,6 +39,7 @@ from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats, CharacteristicFormats
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
 from homekit.exceptions import FormatError, RequestRejected, AccessoryDisconnectedError
+from homekit.controller.ble_impl.gatt import Characteristic
 
 from homekit.tools import BLE_TRANSPORT_SUPPORTED
 
@@ -616,22 +618,41 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
     return result_char, result_char_id
 
 
-def create_ble_pair_setup_write(characteristic, characteristic_id):
+def create_ble_pair_setup_write(characteristic: Characteristic, characteristic_id: int):
+    """
+
+    :param characteristic: homekit.controller.ble_impl.gatt.Characteristic
+    :param characteristic_id: int
+    :return:
+    """
+
     def write(request, expected):
-        # TODO document me
+        """
+        TODO document me
+
+        :param request:
+        :param expected:
+        :return:
+        """
         body = tlv8.encode(request)
         logger.debug('entering write function %s', tlv8.format_string(request))
+
         request_tlv = tlv8.encode([
             tlv8.Entry(Types.kTLVHAPParamParamReturnResponse, b'\x01'),
             tlv8.Entry(Types.kTLVHAPParamValue, body)
         ])
+
         transaction_id = random.randrange(0, 255)
+
+        # craft a HAP-BLE Request formatted according to table 7-7 page 90 Spec R2 (table 6-6 page 97 Spec R1)
+        # bytearray is used because of its extend function and characteristic.write_value gets a bytes instance
         data = bytearray([0x00, HapBleOpCodes.CHAR_WRITE, transaction_id])
         data.extend(characteristic_id.to_bytes(length=2, byteorder='little'))
         data.extend(len(request_tlv).to_bytes(length=2, byteorder='little'))
         data.extend(request_tlv)
         logger.debug('sent %s', bytes(data).hex())
         characteristic.write_value(value=data)
+
         data = []
         while len(data) == 0:
             time.sleep(1)
@@ -648,7 +669,9 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
             time.sleep(1)
             logger.debug('reading characteristic')
             data = characteristic.read_value()
-            resp_data.extend([b for b in data])
+            data = [b for b in data]
+            # see chapter 6.3.3.5 HAP PDU Fragmentation Scheme, we skip control field and TxID here
+            resp_data.extend(data[2:])
             logger.debug('data %s of %s', len(resp_data[3:]), expected_length)
 
         logger.debug('received %s', bytes(resp_data).hex())
@@ -774,7 +797,7 @@ def parse_sig_read_response(data, expected_tid):
     logger.debug('expected body length %d (got %d)', length, len(data[5:]))
 
     # parse tlvs and analyse information
-    tlv = tlv8.decode(data[5:])
+    tlv = tlv8.decode(bytearray(data[5:]))
 
     description = ''
     characteristic_format = ''

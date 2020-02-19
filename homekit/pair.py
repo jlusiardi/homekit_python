@@ -76,8 +76,13 @@ if __name__ == '__main__':
     try:
         finish_pairing = controller.start_pairing(args.alias, args.device)
         finish_pairing(pin_function())
+
+        # pairing is established, save the crypto material before doing anything else.
+        controller.save_data(args.file)
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()
+
+        # got the accessories and characteristics, save them as well
         controller.save_data(args.file)
         print('Pairing for "{a}" was established.'.format(a=args.alias))
     except Exception as e:

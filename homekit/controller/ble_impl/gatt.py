@@ -76,6 +76,14 @@ class Characteristic(gatt.Characteristic):
             if descriptor_regex.match(desc[0])
         ]
 
+    def read_value(self, offset=0):
+        data = super(Characteristic, self).read_value(offset)
+        print('----- data read: ', len(data), data)
+        return data
+
+    def write_value(self, value, offset=0):
+        return super(Characteristic, self).write_value(value, offset)
+
 
 class Service(gatt.Service):
 

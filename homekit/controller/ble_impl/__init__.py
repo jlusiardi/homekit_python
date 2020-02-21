@@ -25,8 +25,9 @@ import random
 import sys
 import uuid
 import struct
-from distutils.util import strtobool
 import tlv8
+from distutils.util import strtobool
+from gatt import Characteristic
 
 from homekit.controller.tools import AbstractPairing
 from homekit.protocol.tlv import Types, Steps, Methods
@@ -39,7 +40,6 @@ from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats, CharacteristicFormats
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
 from homekit.exceptions import FormatError, RequestRejected, AccessoryDisconnectedError
-from homekit.controller.ble_impl.gatt import Characteristic
 
 from homekit.tools import BLE_TRANSPORT_SUPPORTED
 

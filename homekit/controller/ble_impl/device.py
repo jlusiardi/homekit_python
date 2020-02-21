@@ -21,7 +21,7 @@ import dbus
 
 from homekit.exceptions import AccessoryNotFoundError
 
-from . import gatt
+import gatt
 from .manufacturer_data import parse_manufacturer_specific
 
 # 0x004c is the Company Identifier code for Apple Inc. (see Chapter 6.4.2.2 of the spec on page 124)

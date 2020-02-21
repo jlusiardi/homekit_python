@@ -272,7 +272,6 @@ class Characteristic:
         if opcode == HapBleOpCodes.CHAR_WRITE:
             new_value = tlv8_entry_list_to_dict(tlv8.decode(payload))
             self.do_char_write(tid, new_value[1])
-
         elif opcode == HapBleOpCodes.CHAR_READ:
             value = self.char.get_value_for_ble()
             value = tlv8.encode([
@@ -394,13 +393,13 @@ class AccessoryRequestHandler(accessoryserver.AccessoryRequestHandler):
         self.value += b'\x00' + len(outer).to_bytes(length=2, byteorder='little') + outer
 
     def process_setup(self, tid, value):
-        self.value = b'\x00' + tid.to_bytes(length=1, byteorder='little')
+        self.value = b'\x02' + tid.to_bytes(length=1, byteorder='little')
         self.body = value
         self._post_pair_setup()
         return self.value
 
     def process_verify(self, tid, value):
-        self.value = b'\x00' + tid.to_bytes(length=1, byteorder='little')
+        self.value = b'\x02' + tid.to_bytes(length=1, byteorder='little')
         self.body = value
         self._post_pair_verify()
         return self.value

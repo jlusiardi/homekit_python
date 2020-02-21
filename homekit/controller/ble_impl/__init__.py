@@ -653,6 +653,7 @@ def create_ble_pair_setup_write(characteristic: Characteristic, characteristic_i
         logger.debug('sent %s', bytes(data).hex())
         characteristic.write_value(value=data)
 
+        # read the HAP response (format described in table 7-9 page 91 spec r2)
         data = []
         while len(data) == 0:
             time.sleep(1)
@@ -665,6 +666,14 @@ def create_ble_pair_setup_write(characteristic: Characteristic, characteristic_i
             'control field: {c:x}, tid: {t:x}, status: {s:x}, length: {length}'.format(c=resp_data[0], t=resp_data[1],
                                                                                        s=resp_data[2],
                                                                                        length=expected_length))
+        assert transaction_id == resp_data[1], "transaction ids are not matching"
+
+        # see spec r2 chapter 7.3.3.1
+        assert resp_data[0] == 0x02, "the read data is not response" + str(type(characteristic))
+
+        # see table 7-37 spec r2 page 110
+        assert resp_data[2] == 0x00, "the status code is not 'SUCCESS' but " + resp_data[2]
+
         while len(resp_data[3:]) < expected_length:
             time.sleep(1)
             logger.debug('reading characteristic')

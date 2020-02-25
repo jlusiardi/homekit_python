@@ -60,7 +60,7 @@ class DeviceManager:
     def make_device(self, mac_address):
         return self._devices[mac_address]
 
-    def start_discovery(self, callback=None):
+    def start_discovery(self, callback=None, timeout=None):
         pass
 
     def set_timeout(self, timeout):

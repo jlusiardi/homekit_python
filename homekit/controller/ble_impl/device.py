@@ -18,6 +18,7 @@ import logging
 import time
 import atexit
 import dbus
+from gi.repository import GObject
 
 from homekit.exceptions import AccessoryNotFoundError
 
@@ -134,6 +135,9 @@ class DeviceManager(gatt.DeviceManager):
 
     def make_device(self, mac_address):
         return self.Device(mac_address=mac_address, manager=self)
+
+    def set_timeout(self, timeout):
+        GObject.timeout_add(timeout, self.stop)
 
     def cleanup(self):
         # restore the old power state

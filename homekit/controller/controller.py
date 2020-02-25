@@ -114,8 +114,7 @@ class Controller(object):
         if not BLE_TRANSPORT_SUPPORTED:
             raise TransportNotSupportedError('BLE')
         manager = DiscoveryDeviceManager(adapter)
-        manager.start_discovery()
-        manager.set_timeout(max_seconds * 1000)
+        manager.start_discovery(timeout=max_seconds * 1000)
         manager.run()
 
         result = []

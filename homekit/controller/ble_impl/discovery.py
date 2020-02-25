@@ -39,7 +39,7 @@ class DiscoveryDeviceManager(DeviceManager):
         if self.discover_callback:
             self.discover_callback(device)
 
-    def start_discovery(self, callback=None):
+    def start_discovery(self, callback=None, timeout=None):
         """
         Tells BlueZ to start notifying us of detected BLE devices.
 
@@ -47,6 +47,8 @@ class DiscoveryDeviceManager(DeviceManager):
         function will be called every time a new device is discovered.
         """
         self.discover_callback = callback
+        if timeout:
+            self.set_timeout(timeout)
         return super().start_discovery()
 
     def devices(self):

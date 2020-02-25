@@ -37,7 +37,7 @@ This variant requires some packages on operating systems for the access onto Blu
 installed on Debian based operating systems via:
 
 ```bash
-apt install -y libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0 libdbus-1-dev
+apt install -y libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0 libdbus-1-dev libssl-dev
 ```
 
 After that, using **pip3** is sufficient again:

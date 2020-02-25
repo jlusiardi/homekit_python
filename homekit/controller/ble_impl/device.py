@@ -19,8 +19,9 @@ import time
 import atexit
 import dbus
 from gi.repository import GObject
+import dbus.exceptions
 
-from homekit.exceptions import AccessoryNotFoundError
+from homekit.exceptions import AccessoryNotFoundError, BluetoothAdapterError
 
 import gatt
 from .manufacturer_data import parse_manufacturer_specific
@@ -51,7 +52,11 @@ class Device(gatt.Device):
     def __init__(self, *args, **kwargs):
         gatt.Device.__init__(self, *args, **kwargs, managed=False)
 
-        self.name = self._properties.Get('org.bluez.Device1', 'Alias')
+        try:
+            self.name = self._properties.Get('org.bluez.Device1', 'Alias')
+        except dbus.exceptions.DBusException:
+            raise BluetoothAdapterError('Does the selected adapter support BLE?')
+
         self.homekit_discovery_data = self.get_homekit_discovery_data()
 
     def get_homekit_discovery_data(self):

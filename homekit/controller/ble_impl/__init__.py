@@ -500,7 +500,8 @@ class BleSession(object):
 
     def close(self):
         logger.debug('closing session')
-        self.device.disconnect()
+        if self.device:
+            self.device.disconnect()
 
     def find_characteristic_by_iid(self, cid):
         return self.iid_map.get(cid, (None, None))

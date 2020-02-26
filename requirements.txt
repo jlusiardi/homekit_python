@@ -10,3 +10,4 @@ coverage
 flake8
 pytest
 tlv8
+pillow

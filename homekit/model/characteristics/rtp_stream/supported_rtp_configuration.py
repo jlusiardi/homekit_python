@@ -21,6 +21,9 @@ from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFo
 
 
 class CameraSRTPCryptoSuite(IntEnum):
+    """
+    Page 209 / Table 9-15 Values for key 'SRTP Crypto Suite'
+    """
     AES_CM_128_HMAC_SHA1_80 = 0
     AES_256_CM_HMAC_SHA1_80 = 1
     DISABLED = 2

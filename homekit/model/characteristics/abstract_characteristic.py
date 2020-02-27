@@ -122,7 +122,8 @@ class AbstractCharacteristic(ToDictMixin):
                 raise FormatError(HapStatusCodes.INVALID_VALUE)
 
         if self.format == CharacteristicFormats.tlv8 and new_val is not None:
-            new_val = tlv8.decode(self.tlv_type, base64.decodebytes(new_val.encode()))
+            new_val_bytes = base64.b64decode(new_val)
+            new_val = tlv8.decode(new_val_bytes)
 
         self.value = new_val
         if self._set_value_callback:

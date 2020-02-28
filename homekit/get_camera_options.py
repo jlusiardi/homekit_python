@@ -26,7 +26,8 @@ from enum import IntEnum
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
 from homekit.model.characteristics import CharacteristicsTypes
-from homekit.model.characteristics.rtp_stream.supported_rtp_configuration import CameraSRTPCryptoSuite, SupportedRtpConfigurationKeys
+from homekit.model.characteristics.rtp_stream.supported_rtp_configuration import CameraSRTPCryptoSuite, \
+    SupportedRtpConfigurationKeys
 from homekit.model.characteristics.rtp_stream.streaming_status import StreamingStatusValue, StreamingStatusKey
 
 

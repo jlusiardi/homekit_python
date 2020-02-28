@@ -26,12 +26,11 @@ import base64
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
 from homekit.model.characteristics import CharacteristicsTypes
-from homekit.model.characteristics.rtp_stream.supported_video_stream_configuration import VideoCodecType
-from homekit.model.characteristics.rtp_stream.setup_endpoints import SRTPParameters, \
-    SetupEndpointsKeys, IPVersion, ControllerAddressKeys, Address, SetupEndpointsResponse
+from homekit.model.characteristics.rtp_stream.setup_endpoints import SRTPParameters, SetupEndpointsKeys, Address, \
+    SetupEndpointsResponse
 from homekit.model.characteristics.rtp_stream.supported_rtp_configuration import CameraSRTPCryptoSuite
 from homekit.model.characteristics.rtp_stream.supported_video_stream_configuration import VideoAttributes, \
-    VideoCodecType, VideoCodecConfiguration, VideoCodecParameters, H264Level, H264Profile, PacketizationMode, CVOEnabled
+    VideoCodecType, VideoCodecParameters, H264Level, H264Profile, PacketizationMode, CVOEnabled
 from homekit.model.characteristics.rtp_stream.supported_audio_stream_configuration import AudioCodecType, \
     AudioCodecParameters, BitRate, SampleRate
 from homekit.model.characteristics.rtp_stream.selected_rtp_stream_configuration import SelectedRTPStreamConfiguration, \
@@ -119,7 +118,8 @@ if __name__ == '__main__':
     sc = SessionControl(session_id, Command.START)
     svp = SelectedVideoParameters(
         VideoCodecType.H264,
-        VideoCodecParameters(H264Profile.MAIN_PROFILE, H264Level.L_4, PacketizationMode.NON_INTERLEAVED, CVOEnabled.NOT_SUPPORTED),
+        VideoCodecParameters(H264Profile.MAIN_PROFILE, H264Level.L_4, PacketizationMode.NON_INTERLEAVED,
+                             CVOEnabled.NOT_SUPPORTED),
         VideoAttributes(1280, 720, 30),
         VideoRTPParameters(VideoCodecType.H264, video_ssrc, 1024, 0.5)
     )

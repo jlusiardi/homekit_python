@@ -19,6 +19,7 @@ from enum import IntEnum
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
     AbstractCharacteristic
 
+
 class SupportedRtpConfigurationKeys:
     """
     Page 218 / Table 9-24

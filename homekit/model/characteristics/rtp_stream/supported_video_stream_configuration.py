@@ -20,68 +20,136 @@ from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFo
     AbstractCharacteristic
 
 
-# from homekit.protocol.tlv import TLVItem
-
-
 class H264Profile(IntEnum):
+    """
+    Page 220 / Table 9-27 Values for key 'ProfileID'
+    """
     CONSTRAINED_BASELINE_PROFILE = 0
     MAIN_PROFILE = 1
     HIGH_PROFILE = 2
 
 
 class H264Level(IntEnum):
+    """
+    Page 220 / Table 9-27 Values for key 'Level'
+    """
     L_3_1 = 0
     L_3_2 = 1
     L_4 = 2
 
 
 class VideoCodecType(IntEnum):
+    """
+    Page 219 / Table 9-26 value for 'Video Codec Type'
+    """
     H264 = 0
 
 
 class PacketizationMode(IntEnum):
+    """
+    Page 220 / Table 9-27 Values for key 'Packetization mode'
+    """
     NON_INTERLEAVED = 0
 
 
 class CVOEnabled(IntEnum):
+    """
+    Page 220 / Table 9-27 Values for key 'CVO Enabled'
+    """
     NOT_SUPPORTED = 0
     SUPPORTED = 1
 
 
-class VideoCodecParameters:
-    #    profile = TLVItem(1, H264Profile)
-    #    level = TLVItem(2, H264Level)
-    #    packetization_mode = TLVItem(3, PacketizationMode)
-    #    cvo_enabled = TLVItem(4, CVOEnabled)
+class VideoCodecParametersKeys(IntEnum):
+    """
+    Page 220 / Table 9-27
+    """
+    PROFILE_ID = 1
+    LEVEL = 2
+    PACKETIZATION_MODE = 3
+    CVO_ENABLED = 4
+    CVO_ID = 5
 
-    def __init__(self, profile, level, packetization_mode=PacketizationMode.NON_INTERLEAVED,
-                 cvo_enabled=CVOEnabled.NOT_SUPPORTED):
+
+class VideoCodecParameters:
+    """
+    Page 220 / Table 9-27
+    """
+
+    def __init__(self,
+                 profile: H264Profile,
+                 level: H264Level,
+                 packetization_mode: PacketizationMode,
+                 cvo_enabled: CVOEnabled):
         self.profile = profile
         self.level = level
         self.packetization_mode = packetization_mode
         self.cvo_enabled = cvo_enabled
 
+    def to_entry_list(self):
+        return tlv8.EntryList([
+            tlv8.Entry(VideoCodecParametersKeys.PROFILE_ID, self.profile),
+            tlv8.Entry(VideoCodecParametersKeys.LEVEL, self.level),
+            tlv8.Entry(VideoCodecParametersKeys.PACKETIZATION_MODE, self.packetization_mode),
+            tlv8.Entry(VideoCodecParametersKeys.CVO_ENABLED, self.cvo_enabled),
+        ])
+
+
+class VideoAttributesKeys(IntEnum):
+    """
+    Page 220 / Table 9-28
+    """
+    IMAGE_WIDTH = 1
+    IMAGE_HEIGHT = 2
+    FRAME_RATE = 3
+
 
 class VideoAttributes:
-    #    width = TLVItem(1, int)
-    #    height = TLVItem(2, int)
-    #    frame_rate = TLVItem(3, int)
+    """
+    Page 220 / Table 9-28
+    """
 
     def __init__(self, width, height, frame_rate):
         self.width = width
         self.height = height
         self.frame_rate = frame_rate
 
+    def to_entry_list(self):
+        return tlv8.EntryList([
+            tlv8.Entry(VideoAttributesKeys.IMAGE_WIDTH, self.width),
+            tlv8.Entry(VideoAttributesKeys.IMAGE_HEIGHT, self.height),
+            tlv8.Entry(VideoAttributesKeys.FRAME_RATE, self.frame_rate),
+        ])
+
+
+class VideoCodecConfigurationKeys(IntEnum):
+    """
+    Page 219 / Table 9-26 value for 'Video Codec Type'
+    """
+    VIDEO_CODEC_TYPE = 1
+    VIDEO_CODEC_PARAMETERS = 2
+    VIDEO_ATTRIBUTES = 3
+
 
 class VideoCodecConfiguration:
-    #    codec_type = TLVItem(1, VideoCodecType)
-    #    codec_parameters = TLVItem(2, VideoCodecParameters)
-    #    attributes = TLVItem(3, VideoAttributes)
+    """
+    Page 219 / Table 9-26 value for 'Video Codec Type'
+    """
 
-    def __init__(self, codec_parameters, attributes, codec_type=VideoCodecType.H264):
+    def __init__(self,
+                 codec_type: VideoCodecType,
+                 codec_parameters: VideoCodecParameters,
+                 attributes: VideoAttributes):
         self.codec_type = codec_type
         self.codec_parameters = codec_parameters
         self.attributes = attributes
+
+    def to_entry_list(self):
+        return tlv8.EntryList([
+            tlv8.Entry(VideoCodecConfigurationKeys.VIDEO_CODEC_TYPE, self.codec_type),
+            tlv8.Entry(VideoCodecConfigurationKeys.VIDEO_CODEC_PARAMETERS, self.codec_parameters.to_entry_list()),
+            tlv8.Entry(VideoCodecConfigurationKeys.VIDEO_ATTRIBUTES, self.attributes.to_entry_list()),
+        ])
 
 
 class SupportedVideoStreamConfiguration:

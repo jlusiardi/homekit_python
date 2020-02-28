@@ -19,9 +19,16 @@ from enum import IntEnum
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
     AbstractCharacteristic
 
+class SupportedRtpConfigurationKeys:
+    """
+    Page 218 / Table 9-24
+    """
+    SRTP_CRYPTO_SUITE = 2
+
 
 class CameraSRTPCryptoSuite(IntEnum):
     """
+    Page 218 / Table 9-24 Values for key 'SRTP Crypto Suite'
     Page 209 / Table 9-15 Values for key 'SRTP Crypto Suite'
     """
     AES_CM_128_HMAC_SHA1_80 = 0
@@ -30,6 +37,9 @@ class CameraSRTPCryptoSuite(IntEnum):
 
 
 class SupportedRTPConfiguration:
+    """
+    Page 218 / Table 9-24
+    """
     def __init__(self, crypto_suites):
         self.crypto_suites = crypto_suites
 

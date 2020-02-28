@@ -21,6 +21,9 @@ from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFo
 
 
 class AudioCodecType(IntEnum):
+    """
+    Page 207 / Table 9-11 Values for key 'Selected Audio Codec type'
+    """
     AAC_ELD = 2
     OPUS = 3
     AMR = 5
@@ -28,27 +31,49 @@ class AudioCodecType(IntEnum):
 
 
 class BitRate(IntEnum):
+    """
+    Page 217 / Table 9-21 values for key 'Bit-rate'
+    """
     VARIABLE = 0
     CONSTANT = 1
 
 
 class SampleRate(IntEnum):
+    """
+    Page 217 / Table 9-21 values for key 'Sample rate'
+    """
     KHZ_8 = 0
     KHZ_16 = 1
     KHZ_24 = 2
 
 
+class AudioCodecParametersKeys(IntEnum):
+    """
+    Page 217 / Table 9-21
+    """
+    AUDIO_CHANNELS = 1
+    BIT_RATE = 2
+    SAMPLE_RATE = 3
+    RTP_TIME = 4
+
+
 class AudioCodecParameters:
-    def __init__(self, channels, bitrate, samplerate):
+    """
+    Page 217 / Table 9-21
+    """
+    def __init__(self, channels, bitrate, samplerate, rtp_time=None):
         self.channels = channels
         self.bitrate = bitrate
         self.samplerate = samplerate
+        self.rtp_time = rtp_time
 
     def to_entry_list(self):
         entryList = tlv8.EntryList()
-        entryList.append(tlv8.Entry(1, self.channels))
-        entryList.append(tlv8.Entry(2, self.bitrate))
-        entryList.append(tlv8.Entry(3, self.samplerate))
+        entryList.append(tlv8.Entry(AudioCodecParametersKeys.AUDIO_CHANNELS, self.channels))
+        entryList.append(tlv8.Entry(AudioCodecParametersKeys.BIT_RATE, self.bitrate))
+        entryList.append(tlv8.Entry(AudioCodecParametersKeys.SAMPLE_RATE, self.samplerate))
+        if self.rtp_time:
+            entryList.append(tlv8.Entry(AudioCodecParametersKeys.RTP_TIME, self.rtp_time))
         return entryList
 
 

@@ -26,6 +26,7 @@ from enum import IntEnum
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
 from homekit.model.characteristics import CharacteristicsTypes
+from homekit.model.characteristics.rtp_stream.supported_rtp_configuration import CameraSRTPCryptoSuite, SupportedRtpConfigurationKeys
 from homekit.model.characteristics.rtp_stream.streaming_status import StreamingStatusValue, StreamingStatusKey
 
 
@@ -34,6 +35,8 @@ SUPPORTED_AUDIO_STREAM_CONFIGURATION_CHARACTERISTIC = \
     CharacteristicsTypes.get_uuid(CharacteristicsTypes.SUPPORTED_AUDIO_CONFIGURATION)
 SUPPORTED_VIDEO_STREAM_CONFIGURATION_CHARACTERISTIC = \
     CharacteristicsTypes.get_uuid(CharacteristicsTypes.SUPPORTED_VIDEO_STREAM_CONFIGURATION)
+SUPPORTED_RTP_CONFIGURATION_CHARACTERISTIC = \
+    CharacteristicsTypes.get_uuid(CharacteristicsTypes.SUPPORTED_RTP_CONFIGURATION)
 
 
 def setup_args_parser():
@@ -53,6 +56,14 @@ def analyse_streaming_status(in_data):
         StreamingStatusKey.STATUS: StreamingStatusValue,
     })
     print('Streaming Status', tlv8.format_string(data))
+
+
+def analyse_supported_rtp_configuration(in_data):
+    # 218
+    data = tlv8.decode(in_data, {
+        SupportedRtpConfigurationKeys.SRTP_CRYPTO_SUITE: CameraSRTPCryptoSuite,
+    })
+    print('Supported RTP configuration', tlv8.format_string(data))
 
 
 def analyse_supported_audio_stream_configuration(in_data):
@@ -205,3 +216,6 @@ if __name__ == '__main__':
                 if c_type == SUPPORTED_VIDEO_STREAM_CONFIGURATION_CHARACTERISTIC:
                     value = base64.b64decode(characteristic['value'])
                     analyse_supported_video_stream_configuration(value)
+                if c_type == SUPPORTED_RTP_CONFIGURATION_CHARACTERISTIC:
+                    value = base64.b64decode(characteristic['value'])
+                    analyse_supported_rtp_configuration(value)

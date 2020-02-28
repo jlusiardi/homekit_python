@@ -30,6 +30,12 @@ from homekit.model.characteristics.rtp_stream.supported_video_stream_configurati
 from homekit.model.characteristics.rtp_stream.setup_endpoints import SRTPParameters, \
     SetupEndpointsKeys, IPVersion, ControllerAddressKeys, Address, SetupEndpointsResponse
 from homekit.model.characteristics.rtp_stream.supported_rtp_configuration import CameraSRTPCryptoSuite
+from homekit.model.characteristics.rtp_stream.supported_video_stream_configuration import VideoAttributes, \
+    VideoCodecType, VideoCodecConfiguration, VideoCodecParameters, H264Level, H264Profile, PacketizationMode, CVOEnabled
+from homekit.model.characteristics.rtp_stream.supported_audio_stream_configuration import AudioCodecType, \
+    AudioCodecParameters, BitRate, SampleRate
+from homekit.model.characteristics.rtp_stream.selected_rtp_stream_configuration import SelectedRTPStreamConfiguration, \
+    SessionControl, Command, SelectedVideoParameters, SelectedAudioParameters, AudioRTPParameters, VideoRTPParameters
 
 SETUP_ENDPOINTS_CHARACTERISTIC = CharacteristicsTypes.get_uuid(CharacteristicsTypes.SETUP_ENDPOINTS)
 
@@ -91,7 +97,7 @@ if __name__ == '__main__':
     srtp_audio = SRTPParameters(CameraSRTPCryptoSuite.DISABLED)
     el.append(tlv8.Entry(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_AUDIO, srtp_audio.to_entry_list()))
 
-    print('SetupEndpoints write', tlv8.format_string(el))
+    print('\nSetupEndpoints write\n', tlv8.format_string(el))
 
     val = base64.b64encode(el.encode()).decode('ascii')
     p = [(aid, setup_endpoints_iid, val)]
@@ -103,82 +109,30 @@ if __name__ == '__main__':
     r = pairing.get_characteristics(p)
     # print(r)
     val = base64.b64decode(r[(aid, setup_endpoints_iid)]['value'])
-    SetupEndpointsResponse.parse(val)
-    val = tlv8.decode(val, {
-        1: tlv8.DataType.BYTES,
-        2: tlv8.DataType.INTEGER,
-        3: {
-            1: tlv8.DataType.INTEGER,
-            2: tlv8.DataType.STRING,
-            3: tlv8.DataType.INTEGER,
-            4: tlv8.DataType.INTEGER
-        },
-        4: {
-            1: tlv8.DataType.INTEGER,
-            2: tlv8.DataType.BYTES,
-            3: tlv8.DataType.BYTES,
-        },
-        5: {
-            1: tlv8.DataType.INTEGER,
-            2: tlv8.DataType.BYTES,
-            3: tlv8.DataType.BYTES,
-        },
-        6: tlv8.DataType.BYTES,
-        7: tlv8.DataType.BYTES,
-    })
-    # print(tlv8.format_string(val))
+    val = SetupEndpointsResponse.parse(val)
+
+    print('\nSetupEndpoints read\n', tlv8.format_string(val))
     video_ssrc = val.first_by_id(6).data
     audio_ssrc = val.first_by_id(7).data
 
     # write selected stream configuration
-    el = tlv8.EntryList()
-    # session control
-    el.append(tlv8.Entry(1, [  # session control command (page 205, table 9-8)
-        tlv8.Entry(1, session_id),  # session id from above
-        tlv8.Entry(2, 1),  # session command: start session
-    ]))
-    # video parameters
-    el.append(tlv8.Entry(2, [  # page 205, table 9-9
-        tlv8.Entry(1, VideoCodecType.H264),  # selected video codec type (page 205)
-        tlv8.Entry(2, [
-            tlv8.Entry(1, 1),  # Main Profile
-            tlv8.Entry(2, 2),  # Level 4
-            tlv8.Entry(3, 0),  # Packetization mode
-        ]),
-        tlv8.Entry(3, [  # video attributes (page 220, table 9-28)
-            tlv8.Entry(1, 640),  # width
-            tlv8.Entry(2, 480),  # height
-            tlv8.Entry(3, 30),  # fps
-        ]),
-        tlv8.Entry(4, [  # page 206 table 9-10
-            tlv8.Entry(1, VideoCodecType.H264),
-            tlv8.Entry(2, video_ssrc),
-            tlv8.Entry(3, 1024),
-            tlv8.Entry(4, 0.5)
-        ]),
-    ]))
-    # audio parameters
-    el.append(tlv8.Entry(3, [
-        tlv8.Entry(1, 3),
-        tlv8.Entry(2, [
-            tlv8.Entry(1, 3),
-            tlv8.Entry(2, [
-                tlv8.Entry(1, 1),
-                tlv8.Entry(2, 0),
-                tlv8.Entry(3, 1),
-                tlv8.Entry(4, 40),
-            ])
-        ]),
-        tlv8.Entry(3, [  # page 207, table 9-12
-            tlv8.Entry(1, 3),
-            tlv8.Entry(2, audio_ssrc),
-            tlv8.Entry(3, 300),
-            tlv8.Entry(4, 1.0),
-        ]),
-        tlv8.Entry(4, 0),
-    ]))
-    print(tlv8.format_string(el))
-
+    sc = SessionControl(session_id, Command.START)
+    svp = SelectedVideoParameters(
+        VideoCodecType.H264,
+        VideoCodecParameters(H264Profile.MAIN_PROFILE, H264Level.L_4, PacketizationMode.NON_INTERLEAVED, CVOEnabled.NOT_SUPPORTED),
+        VideoAttributes(1280, 720, 30),
+        VideoRTPParameters(VideoCodecType.H264, video_ssrc, 1024, 0.5)
+    )
+    sap = SelectedAudioParameters(
+        AudioCodecType.OPUS,
+        AudioCodecParameters(1, BitRate.VARIABLE, SampleRate.KHZ_16, rtp_time=30),
+        AudioRTPParameters(0, audio_ssrc, 32, 10.0, 0),
+        0
+    )
+    srsc = SelectedRTPStreamConfiguration(sc, svp, sap)
+    el = srsc.to_entry_list()
+    print('\nSelect RTP Stream Config write\n', tlv8.format_string(el))
+    print(el.encode().hex())
     val = base64.b64encode(el.encode()).decode('ascii')
     p = [(aid, select_rtp_iid, val)]
     r = pairing.put_characteristics(p)

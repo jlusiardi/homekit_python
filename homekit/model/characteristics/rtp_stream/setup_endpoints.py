@@ -44,6 +44,7 @@ class Address:
     """
     Page 208 / Table 9-14
     """
+
     def __init__(self, ip_address, video_rtp_port, audio_rtp_port, ip_version=IPVersion.IPV4):
         self.ip_version = ip_version
         self.ip_address = ip_address
@@ -57,6 +58,17 @@ class Address:
             tlv8.Entry(ControllerAddressKeys.VIDEO_RTP_PORT, self.video_rtp_port),
             tlv8.Entry(ControllerAddressKeys.AUDIO_RTP_PORT, self.audio_rtp_port),
         ])
+
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            ControllerAddressKeys.IP_ADDRESS_VERSION: IPVersion,
+            ControllerAddressKeys.IP_ADDRESS: tlv8.DataType.STRING,
+            ControllerAddressKeys.VIDEO_RTP_PORT: tlv8.DataType.INTEGER,
+            ControllerAddressKeys.AUDIO_RTP_PORT: tlv8.DataType.INTEGER,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        return el
 
 
 class ControllerAddressKeys(IntEnum):
@@ -82,6 +94,7 @@ class SRTPParameters:
     """
     page 209 / table 9-15
     """
+
     def __init__(self, crypto_suite, master_key=b'', master_salt=b''):
         self.crypto_suite = crypto_suite
         self.master_key = master_key
@@ -93,6 +106,16 @@ class SRTPParameters:
             tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_KEY, self.master_key),
             tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_SALT, self.master_salt)
         ])
+
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            SrtpParameterKeys.SRTP_CRYPTO_SUITE: CameraSRTPCryptoSuite,
+            SrtpParameterKeys.SRTP_MASTER_KEY: tlv8.DataType.BYTES,
+            SrtpParameterKeys.SRTP_MASTER_SALT: tlv8.DataType.BYTES,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        return el
 
 
 class SetupEndpointsRequest:
@@ -129,6 +152,7 @@ class SetupEndpointsResponse:
     """
     Page 210 / Table 9-16
     """
+
     def __init__(self, id, status, accessory_address=None, srtp_params_video=None, srtp_params_audio=None,
                  ssrc_video=None, ssrc_audio=None):
         self.id = id
@@ -151,7 +175,13 @@ class SetupEndpointsResponse:
             SetupEndpointsResponseKeys.AUDIO_RTP_SSRC: tlv8.DataType.BYTES,
         }
         el = tlv8.decode(source_bytes, data_format)
-        print(tlv8.format_string(el))
+        entry = el.first_by_id(SetupEndpointsResponseKeys.ACCESSORY_ADDRESS)
+        entry.data = Address.parse(entry.data)
+        entry = el.first_by_id(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO)
+        entry.data = SRTPParameters.parse(entry.data)
+        entry = el.first_by_id(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_AUDIO)
+        entry.data = SRTPParameters.parse(entry.data)
+        return el
 
 
 class SetupEndpointsCharacteristic(AbstractCharacteristic):

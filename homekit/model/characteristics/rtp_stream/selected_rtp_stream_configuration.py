@@ -45,7 +45,9 @@ class SessionControlKeys(IntEnum):
 
 
 class SessionControl:
-    def __init__(self, session_id, command):
+    def __init__(self,
+                 session_id: bytes,
+                 command: Command):
         self.session_id = session_id
         self.command = command
 
@@ -54,6 +56,21 @@ class SessionControl:
             tlv8.Entry(SessionControlKeys.SESSION_IDENTIFIER, self.session_id),
             tlv8.Entry(SessionControlKeys.COMMAND, self.command)
         ])
+
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            SessionControlKeys.SESSION_IDENTIFIER: tlv8.DataType.BYTES,
+            SessionControlKeys.COMMAND: Command,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        return el
+
+    @staticmethod
+    def from_entry_list(data: tlv8.EntryList):
+        session_id = data.first_by_id(SessionControlKeys.SESSION_IDENTIFIER).data
+        command = data.first_by_id(SessionControlKeys.COMMAND).data
+        return SessionControl(session_id, command)
 
 
 class AudioRtpParametersKey(IntEnum):
@@ -86,6 +103,29 @@ class AudioRTPParameters:
             tlv8.Entry(AudioRtpParametersKey.MAX_BITRATE, self.max_bitrate),
             tlv8.Entry(AudioRtpParametersKey.MIN_RTCP, self.min_rtcp),
         ])
+
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            AudioRtpParametersKey.PAYLOAD_TYPE: tlv8.DataType.INTEGER,
+            AudioRtpParametersKey.SSRC_FOR_AUDIO: tlv8.DataType.BYTES,
+            AudioRtpParametersKey.MAX_BITRATE: tlv8.DataType.INTEGER,
+            AudioRtpParametersKey.MIN_RTCP: tlv8.DataType.FLOAT,
+            AudioRtpParametersKey.COMFORT_NOISE: tlv8.DataType.INTEGER,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        return el
+
+    @staticmethod
+    def from_entry_list(data: tlv8.EntryList):
+        payload_type = data.first_by_id(AudioRtpParametersKey.PAYLOAD_TYPE).data
+        ssrc_for_audio = data.first_by_id(AudioRtpParametersKey.SSRC_FOR_AUDIO).data
+        max_bitrate = data.first_by_id(AudioRtpParametersKey.MAX_BITRATE).data
+        min_rtcp = data.first_by_id(AudioRtpParametersKey.MIN_RTCP).data
+        comfort_noise = data.first_by_id(AudioRtpParametersKey.COMFORT_NOISE)
+        if comfort_noise:
+            comfort_noise = comfort_noise.data
+        return AudioRTPParameters(payload_type, ssrc_for_audio, max_bitrate, min_rtcp, comfort_noise)
 
 
 class SelectedAudioParametersKeys(IntEnum):
@@ -122,6 +162,31 @@ class SelectedAudioParameters:
                        self.selected_audio_rtp_parameters.to_entry_list()),
             tlv8.Entry(SelectedAudioParametersKeys.COMFORT_NOISE, self.comfort_noise),
         ])
+
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            SelectedAudioParametersKeys.SELECTED_AUDIO_CODEC_TYPE: AudioCodecType,
+            SelectedAudioParametersKeys.SELECTED_AUDIO_CODEC_PARAMETERS: tlv8.DataType.BYTES,
+            SelectedAudioParametersKeys.SELECTED_AUDIO_RTP_PARAMETERS: tlv8.DataType.BYTES,
+            SelectedAudioParametersKeys.COMFORT_NOISE: tlv8.DataType.INTEGER,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        return el
+
+    @staticmethod
+    def from_entry_list(data: tlv8.EntryList):
+        codec_type = data.first_by_id(SelectedAudioParametersKeys.SELECTED_AUDIO_CODEC_TYPE).data
+
+        el = AudioCodecParameters.parse(
+            data.first_by_id(SelectedAudioParametersKeys.SELECTED_AUDIO_CODEC_PARAMETERS).data)
+        codec_params = AudioCodecParameters.from_entry_list(el)
+
+        el = AudioRTPParameters.parse(data.first_by_id(SelectedAudioParametersKeys.SELECTED_AUDIO_RTP_PARAMETERS).data)
+        rtp_params = AudioRTPParameters.from_entry_list(el)
+
+        comfort_noise = data.first_by_id(SelectedAudioParametersKeys.SELECTED_AUDIO_CODEC_TYPE).data
+        return SelectedAudioParameters(codec_type, codec_params, rtp_params, comfort_noise)
 
 
 class VideoRTPParametersKeys(IntEnum):
@@ -160,6 +225,25 @@ class VideoRTPParameters:
             tlv8.Entry(VideoRTPParametersKeys.MIN_RTCP, self.min_rtcp),
         ])
 
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            VideoRTPParametersKeys.PAYLOAD_TYPE: VideoCodecType,
+            VideoRTPParametersKeys.SSRC_FOR_VIDEO: tlv8.DataType.BYTES,
+            VideoRTPParametersKeys.MAX_BITRATE: tlv8.DataType.INTEGER,
+            VideoRTPParametersKeys.MIN_RTCP: tlv8.DataType.FLOAT,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        return el
+
+    @staticmethod
+    def from_entry_list(data: tlv8.EntryList):
+        codec = data.first_by_id(VideoRTPParametersKeys.PAYLOAD_TYPE).data
+        ssrc = data.first_by_id(VideoRTPParametersKeys.SSRC_FOR_VIDEO).data
+        bitrate = data.first_by_id(VideoRTPParametersKeys.MAX_BITRATE).data
+        min_rtcp = data.first_by_id(VideoRTPParametersKeys.MIN_RTCP).data
+        return VideoRTPParameters(codec, ssrc, bitrate, min_rtcp)
+
 
 class SelectedVideoParametersKeys(IntEnum):
     """
@@ -197,6 +281,33 @@ class SelectedVideoParameters:
                        self.selected_video_rtp_parameters.to_entry_list()),
         ])
 
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            SelectedVideoParametersKeys.SELECTED_VIDEO_CODEC_TYPE: VideoCodecType,
+            SelectedVideoParametersKeys.SELECTED_VIDEO_CODEC_PARAMETERS: tlv8.DataType.BYTES,
+            SelectedVideoParametersKeys.SELECTED_VIDEO_ATTRIBUTES: tlv8.DataType.BYTES,
+            SelectedVideoParametersKeys.SELECTED_VIDEO_RTP_PARAMETERS: tlv8.DataType.BYTES,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        return el
+
+    @staticmethod
+    def from_entry_list(data: tlv8.EntryList):
+        codec_type = data.first_by_id(SelectedVideoParametersKeys.SELECTED_VIDEO_CODEC_TYPE).data
+
+        el = VideoCodecParameters.parse(
+            data.first_by_id(SelectedVideoParametersKeys.SELECTED_VIDEO_CODEC_PARAMETERS).data)
+        codec_params = VideoCodecParameters.from_entry_list(el)
+
+        el = VideoAttributes.parse(data.first_by_id(SelectedVideoParametersKeys.SELECTED_VIDEO_ATTRIBUTES).data)
+        video_attributes = VideoAttributes.from_entry_list(el)
+
+        el = VideoRTPParameters.parse(data.first_by_id(SelectedVideoParametersKeys.SELECTED_VIDEO_RTP_PARAMETERS).data)
+        rtp_parameters = VideoRTPParameters.from_entry_list(el)
+
+        return SelectedVideoParameters(codec_type, codec_params, video_attributes, rtp_parameters)
+
 
 class SelectedRtpStreamConfigurationKeys(IntEnum):
     """
@@ -228,6 +339,21 @@ class SelectedRTPStreamConfiguration:
             tlv8.Entry(SelectedRtpStreamConfigurationKeys.SELECTED_AUDIO_PARAMS,
                        self.selected_audio_parameters.to_entry_list()),
         ])
+
+    @staticmethod
+    def from_entry_list(data: tlv8.EntryList):
+        el = SessionControl.parse(data.first_by_id(SelectedRtpStreamConfigurationKeys.SESSION_CONTROL).data)
+        session_control = SessionControl.from_entry_list(el)
+
+        el = SelectedVideoParameters.parse(
+            data.first_by_id(SelectedRtpStreamConfigurationKeys.SELECTED_VIDEO_PARAMS).data)
+        selected_video_params = SelectedVideoParameters.from_entry_list(el)
+
+        el = SelectedAudioParameters.parse(
+            data.first_by_id(SelectedRtpStreamConfigurationKeys.SELECTED_AUDIO_PARAMS).data)
+        selected_audio_params = SelectedAudioParameters.from_entry_list(el)
+
+        return SelectedRTPStreamConfiguration(session_control, selected_video_params, selected_audio_params)
 
 
 class SelectedRTPStreamConfigurationCharacteristic(AbstractCharacteristic):

@@ -75,11 +75,13 @@ if __name__ == '__main__':
 
     aid = 1
     # demo
-    setup_endpoints_iid = 11
-    select_rtp_iid = 12
+    if args.alias == 'demo':
+        setup_endpoints_iid = 11
+        select_rtp_iid = 12
     # circle2
-    setup_endpoints_iid = 21
-    select_rtp_iid = 22
+    else:
+        setup_endpoints_iid = 21
+        select_rtp_iid = 22
 
     session_id = uuid.uuid4().bytes
     # write setup endpoint
@@ -89,11 +91,11 @@ if __name__ == '__main__':
     controller_address = Address('192.168.178.32', 32100, 32101)
     el.append(tlv8.Entry(SetupEndpointsKeys.CONTROLLER_ADDRESS, controller_address.to_entry_list()))
     # SRTP Parameters for Video
-    srtp_video = SRTPParameters(CameraSRTPCryptoSuite.DISABLED)
+    srtp_video = SRTPParameters(CameraSRTPCryptoSuite.AES_CM_128_HMAC_SHA1_80, b'0123456789abcdef', b'0123456789abcd')
     el.append(tlv8.Entry(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO, srtp_video.to_entry_list()))
 
     # SRTP Parameters for Audio
-    srtp_audio = SRTPParameters(CameraSRTPCryptoSuite.DISABLED)
+    srtp_audio = SRTPParameters(CameraSRTPCryptoSuite.AES_CM_128_HMAC_SHA1_80, b'0123456789abcdef', b'0123456789abcd')
     el.append(tlv8.Entry(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_AUDIO, srtp_audio.to_entry_list()))
 
     print('\nSetupEndpoints write\n', tlv8.format_string(el))
@@ -120,7 +122,7 @@ if __name__ == '__main__':
         VideoCodecType.H264,
         VideoCodecParameters(H264Profile.MAIN_PROFILE, H264Level.L_4, PacketizationMode.NON_INTERLEAVED,
                              CVOEnabled.NOT_SUPPORTED),
-        VideoAttributes(1280, 720, 30),
+        VideoAttributes(1920, 1080, 30),
         VideoRTPParameters(VideoCodecType.H264, video_ssrc, 1024, 0.5)
     )
     sap = SelectedAudioParameters(

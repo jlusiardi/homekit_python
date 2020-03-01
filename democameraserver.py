@@ -26,7 +26,8 @@ from homekit.model.characteristics.rtp_stream.supported_rtp_configuration import
     CameraSRTPCryptoSuite
 from homekit.model.characteristics.rtp_stream.supported_video_stream_configuration import \
     SupportedVideoStreamConfiguration, VideoCodecConfiguration, VideoCodecParameters, H264Profile, H264Level, \
-    VideoAttributes
+    VideoAttributes, PacketizationMode, CVOEnabled, VideoCodecType
+from homekit.model.characteristics.rtp_stream.selected_rtp_stream_configuration import SelectedVideoParameters
 from homekit.exceptions import ConfigLoadingError
 
 import subprocess
@@ -59,14 +60,14 @@ if __name__ == '__main__':
     args = setup_args_parser()
     config_file = os.path.expanduser(args.file)
     logger = logging.getLogger('accessory')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     ch.setFormatter(logging.Formatter('%(asctime)s %(filename)s:%(lineno)04d %(levelname)s %(message)s'))
     logger.addHandler(ch)
     logger.info('starting')
 
     try:
-        httpd = AccessoryServer('demoserver.json')
+        httpd = AccessoryServer(args.file)
 
         accessory = CameraAccessory('Testkamera', 'wiomoc', 'Demoserver', '0001', '0.1')
 
@@ -78,32 +79,31 @@ if __name__ == '__main__':
                 self.controller_address = controller_address
                 self.ffmpeg_process = None
 
-            def on_start(self, attrs):
-                # 
+            def on_start(self, attrs: SelectedVideoParameters):
+                #
                 #   more information on ffmpeg and web cams:
                 #       https://trac.ffmpeg.org/wiki/Capture/Webcam
                 #
                 command_linux = ['ffmpeg', 
                      '-re',
                      # chose input driver
-                     '-f', args.driver,  # linux
+                     #'-f', args.driver,  # linux
                      #                     '-f', 'avfoundation', # mac
                      # set frame rate
                      #                     '-r', '30.000030',
                      # chose proper input device aka camera
-                     '-i', args.camera, #'/dev/video0',  # first device on linux
+                     #'-i', args.camera, #'/dev/video0',  # first device on linux
                      #                     '-i', 'Integrierte iSight-Kamera',  # mac device may also be 'FaceTime HD-Kamera (integriert)'
                      #                     '-threads', '0',
                      # set the video codec to H.264 (Spec R2, chapter 11.8, page 245)
+                     '-framerate', '1/10', '-i', 'foo.jpg',
                      '-vcodec', 'libx264',
-                     # no audio
-                     #                     '-an',
                      '-pix_fmt', 'yuv420p',
                      # set frame rate
-                     '-r', str(attrs.attributes.frame_rate),
+                     '-r', str(attrs.selected_video_attributes.frame_rate),
                      '-f', 'rawvideo',
                      '-tune', 'zerolatency',
-                     '-vf', f'scale={attrs.attributes.width}:{attrs.attributes.height}',
+                     '-vf', f'scale={attrs.selected_video_attributes.width}:{attrs.selected_video_attributes.height}',
                      # set video bandwidth
                      '-b:v', '300k',
                      # set size of buffer
@@ -132,7 +132,7 @@ if __name__ == '__main__':
                      '-pix_fmt', 'yuv420p',
                      '-f', 'rawvideo', 
                      '-tune', 'zerolatency', 
-                     '-vf', f'scale={attrs.attributes.width}:{attrs.attributes.height}',
+                     '-vf', f'scale={attrs.selected_video_attributes.width}:{attrs.selected_video_attributes.height}',
                      '-b:v', '300k', 
                      '-bufsize', '300k',
                      '-payload_type', '99', 
@@ -162,7 +162,7 @@ if __name__ == '__main__':
                 return (32, 32)
 
             def get_address(self):
-                return Address(IPVersion.IPV4, httpd.data.ip, self.controller_address.video_rtp_port,
+                return Address(httpd.data.ip, self.controller_address.video_rtp_port,
                                self.controller_address.audio_rtp_port)
 
 
@@ -174,18 +174,14 @@ if __name__ == '__main__':
                 ]),
             SupportedVideoStreamConfiguration(
                 VideoCodecConfiguration(
+                    VideoCodecType.H264,
                     VideoCodecParameters(
-                        [H264Profile.CONSTRAINED_BASELINE_PROFILE, H264Profile.MAIN_PROFILE, H264Profile.HIGH_PROFILE],
-                        [H264Level.L_3_1, H264Level.L_3_2, H264Level.L_4]
-                    ), [
-                        VideoAttributes(1920, 1080, 30),
-                        VideoAttributes(320, 240, 15),
-                        VideoAttributes(1280, 960, 30),
-                        VideoAttributes(1280, 720, 30),
-                        VideoAttributes(1280, 768, 30),
-                        VideoAttributes(640, 480, 30),
-                        VideoAttributes(640, 360, 30)
-                    ]
+                        H264Profile.MAIN_PROFILE,
+                        H264Level.L_4,
+                        PacketizationMode.NON_INTERLEAVED,
+                        CVOEnabled.NOT_SUPPORTED
+                    ),
+                    VideoAttributes(1920, 1080, 30)
                 )
             ),
             SupportedAudioStreamConfiguration([
@@ -193,7 +189,8 @@ if __name__ == '__main__':
                                         AudioCodecParameters(1, BitRate.VARIABLE, SampleRate.KHZ_24)),
                 AudioCodecConfiguration(AudioCodecType.AAC_ELD,
                                         AudioCodecParameters(1, BitRate.VARIABLE, SampleRate.KHZ_16))
-            ], 0))
+            ], 0)
+        )
         accessory.services.append(stream_service)
         microphone_service = MicrophoneService()
         accessory.services.append(microphone_service)

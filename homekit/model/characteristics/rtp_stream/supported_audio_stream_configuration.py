@@ -47,6 +47,16 @@ class SampleRate(IntEnum):
     KHZ_24 = 2
 
 
+class RtpTimeValues(IntEnum):
+    """
+    Page 217 / Table 9-21 values for key 'RTP Time'
+    """
+    _20_MS = 20
+    _30_MS = 30
+    _40_MS = 40
+    _60_MS = 60
+
+
 class AudioCodecParametersKeys(IntEnum):
     """
     Page 217 / Table 9-21
@@ -61,7 +71,10 @@ class AudioCodecParameters:
     """
     Page 217 / Table 9-21
     """
-    def __init__(self, channels, bitrate, samplerate, rtp_time=None):
+    def __init__(self, channels,
+                 bitrate: BitRate,
+                 samplerate: SampleRate,
+                 rtp_time: RtpTimeValues = None):
         self.channels = channels
         self.bitrate = bitrate
         self.samplerate = samplerate
@@ -75,6 +88,25 @@ class AudioCodecParameters:
         if self.rtp_time:
             entryList.append(tlv8.Entry(AudioCodecParametersKeys.RTP_TIME, self.rtp_time))
         return entryList
+
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            AudioCodecParametersKeys.AUDIO_CHANNELS: tlv8.DataType.INTEGER,
+            AudioCodecParametersKeys.BIT_RATE: BitRate,
+            AudioCodecParametersKeys.SAMPLE_RATE: SampleRate,
+            AudioCodecParametersKeys.RTP_TIME: RtpTimeValues,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        return el
+
+    @staticmethod
+    def from_entry_list(data: tlv8.EntryList):
+        channel = data.first_by_id(AudioCodecParametersKeys.AUDIO_CHANNELS).data
+        bitrate = data.first_by_id(AudioCodecParametersKeys.BIT_RATE).data
+        samplerate = data.first_by_id(AudioCodecParametersKeys.SAMPLE_RATE).data
+        rtp_time = data.first_by_id(AudioCodecParametersKeys.RTP_TIME).data
+        return AudioCodecParameters(channel, bitrate, samplerate, rtp_time)
 
 
 class AudioCodecConfiguration:

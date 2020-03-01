@@ -28,7 +28,11 @@ from homekit.exceptions import CharacteristicPermissionError, FormatError
 
 
 class AbstractCharacteristic(ToDictMixin):
-    def __init__(self, iid: int, characteristic_type: str, characteristic_format: str, characteristic_tlv_type=None):
+    def __init__(self,
+                 iid: int,
+                 characteristic_type: str,
+                 characteristic_format: str,
+                 characteristic_tlv_type=None):
         if type(self) is AbstractCharacteristic:
             raise Exception('AbstractCharacteristic is an abstract class and cannot be instantiated directly')
         self.type = CharacteristicsTypes.get_uuid(characteristic_type)  # page 65, see ServicesTypes
@@ -167,6 +171,8 @@ class AbstractCharacteristic(ToDictMixin):
         if self._get_value_callback is not None:
             value = self._get_value_callback()
 
+#        if value is not None and self.format == CharacteristicFormats.tlv8:
+#            el = value.to_entry_list()
         if self.value is not None and self.format == CharacteristicFormats.tlv8:
             el = self.value.to_entry_list()
             return base64.b64encode(el.encode()).decode("ascii")

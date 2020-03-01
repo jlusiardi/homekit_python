@@ -284,10 +284,10 @@ class AccessoryServerData:
 
 class AccessoryRequestHandler(BaseHTTPRequestHandler):
     VALID_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE']
-    DEBUG_PUT_CHARACTERISTICS = False
+    DEBUG_PUT_CHARACTERISTICS = True
     DEBUG_CRYPT = False
     DEBUG_PAIR_VERIFY = False
-    DEBUG_GET_CHARACTERISTICS = False
+    DEBUG_GET_CHARACTERISTICS = True
     timeout = 300
 
     def __init__(self, request, client_address, server):
@@ -560,6 +560,9 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                     for characteristic in service.characteristics:
                         if characteristic.iid != cid:
                             continue
+                        if AccessoryRequestHandler.DEBUG_GET_CHARACTERISTICS:
+                            self.log_message('get characteristic: %s', type(characteristic))
+                            self.log_message('get characteristic: %s', characteristic.get_value())
                         found = True
                         # try to read the characteristic and report possible exceptions as error
                         try:
@@ -651,6 +654,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                         if characteristic.iid != cid:
                             continue
                         found = True
+                        if AccessoryRequestHandler.DEBUG_PUT_CHARACTERISTICS:
+                            self.log_message('put characteristic: %s', type(characteristic))
                         if 'ev' in characteristic_to_set:
                             if AccessoryRequestHandler.DEBUG_PUT_CHARACTERISTICS:
                                 self.log_message('set ev >%s< >%s< >%s<', aid, cid, characteristic_to_set['ev'])
@@ -676,6 +681,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                                     {'aid': aid, 'iid': cid, 'status': HapStatusCodes.INVALID_VALUE})
                                 errors += 1
                             except Exception as e:
+                                import traceback
+                                traceback.print_exc(file=sys.stdout)
                                 self.log_error('Exception while setting value for %s.%s: %s', aid, cid, str(e))
                                 result['characteristics'].append(
                                     {'aid': aid, 'iid': cid, 'status': HapStatusCodes.OUT_OF_RESOURCES})

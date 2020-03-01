@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 from uuid import UUID
+import tlv8
 
 from homekit.model import get_id
 from homekit.model.characteristics.rtp_stream import SetupEndpointsCharacteristicMixin, \
@@ -26,13 +27,15 @@ from homekit.model.characteristics.rtp_stream.setup_endpoints import SetupEndpoi
     SetupEndpointsResponse
 from homekit.model.characteristics.rtp_stream.streaming_status import StreamingStatus, StreamingStatusValue
 from homekit.model.services import ServicesTypes, AbstractService
+from homekit.model.characteristics.rtp_stream.setup_endpoints import Address
 
 
 class RTPStreamService(AbstractService, StreamingStatusCharacteristicMixin,
                        SetupEndpointsCharacteristicMixin,
                        SelectedRTPStreamConfigurationCharacteristicMixin):
     """
-    Defined on page 137; RTP stream management service used to negotiate (camera) live streaming
+    Defined on page 137 / Chapter 8.6;
+    RTP stream management service used to negotiate (camera) live streaming
     """
 
     def __init__(self, supported_rtp_configuration, supported_video_stream_config, supported_audio_stream_config):
@@ -51,7 +54,8 @@ class RTPStreamService(AbstractService, StreamingStatusCharacteristicMixin,
 
 
 class Stream:
-    def __init__(self, uuid, status, srtp_params_video, srtp_params_audio, handler, address):
+    def __init__(self, uuid, status, srtp_params_video, srtp_params_audio, handler,
+                 address: Address):
         self.uuid = uuid
         self.status = status
         self.srtp_params_video = srtp_params_video
@@ -61,9 +65,14 @@ class Stream:
 
 
 class ManagedRTPStreamService(RTPStreamService):
-    def __init__(self, stream_handler_factory, supported_rtp_configuration, supported_video_stream_config,
+
+    def __init__(self,
+                 stream_handler_factory,
+                 supported_rtp_configuration,
+                 supported_video_stream_config,
                  supported_audio_stream_config):
-        super().__init__(supported_rtp_configuration, supported_video_stream_config,
+        super().__init__(supported_rtp_configuration,
+                         supported_video_stream_config,
                          supported_audio_stream_config)
         self.set_selected_rtp_stream_configuration_set_callback(self.select_rtp_stream_configuration)
         self.set_selected_rtp_stream_configuration_get_callback(self.get_rtp_stream_configuration)
@@ -75,14 +84,22 @@ class ManagedRTPStreamService(RTPStreamService):
         self.last_added = None
         self.last_rtp_stream_config = None
 
-    def setup_endpoints_req(self, val: SetupEndpointsRequest):
-        uuid = UUID(bytes=bytes(val.id))
+    def setup_endpoints_req(self, val: tlv8.EntryList):
+        """
+
+        """
+        ser = SetupEndpointsRequest.from_entry_list(val)
+        uuid = UUID(bytes=bytes(ser.session_id))
         stream_handler = self.stream_handler_factory(uuid=uuid,
-                                                     controller_address=val.controller_address,
-                                                     srtp_params_video=val.srtp_params_video,
-                                                     srtp_params_audio=val.srtp_params_audio)
-        stream = Stream(uuid, EndpointStatus.SUCCESS, srtp_params_video=val.srtp_params_video,
-                        srtp_params_audio=val.srtp_params_audio, handler=stream_handler, address=val.controller_address)
+                                                     controller_address=ser.controller_address,
+                                                     srtp_params_video=ser.srtp_params_video,
+                                                     srtp_params_audio=ser.srtp_params_audio)
+        stream = Stream(uuid,
+                        EndpointStatus.SUCCESS,
+                        srtp_params_video=ser.srtp_params_video,
+                        srtp_params_audio=ser.srtp_params_audio,
+                        handler=stream_handler,
+                        address=ser.controller_address)
         self.streams[uuid] = stream
         self.last_added = stream
 
@@ -100,9 +117,11 @@ class ManagedRTPStreamService(RTPStreamService):
         else:
             return SetupEndpointsResponse(id=self.last_added.uuid.bytes, status=EndpointStatus.ERROR)
 
-    def select_rtp_stream_configuration(self, rtp_stream_config: SelectedRTPStreamConfiguration):
+    def select_rtp_stream_configuration(self,
+                                        val: tlv8.EntryList):
+        rtp_stream_config = SelectedRTPStreamConfiguration.from_entry_list(val)
         if rtp_stream_config is not None:
-            uuid = UUID(bytes=bytes(rtp_stream_config.session_control.id))
+            uuid = UUID(bytes=bytes(rtp_stream_config.session_control.session_id))
             stream = self.streams[uuid]
             self.last_rtp_stream_config = rtp_stream_config
             cmd = rtp_stream_config.session_control.command

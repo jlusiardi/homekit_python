@@ -94,6 +94,25 @@ class VideoCodecParameters:
             tlv8.Entry(VideoCodecParametersKeys.CVO_ENABLED, self.cvo_enabled),
         ])
 
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            VideoCodecParametersKeys.PROFILE_ID: H264Profile,
+            VideoCodecParametersKeys.LEVEL: H264Level,
+            VideoCodecParametersKeys.PACKETIZATION_MODE: PacketizationMode,
+            VideoCodecParametersKeys.CVO_ENABLED: CVOEnabled,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        return el
+
+    @staticmethod
+    def from_entry_list(data: tlv8.EntryList):
+        profile = data.first_by_id(VideoCodecParametersKeys.PROFILE_ID).data
+        level = data.first_by_id(VideoCodecParametersKeys.LEVEL).data
+        mode = data.first_by_id(VideoCodecParametersKeys.PACKETIZATION_MODE).data
+        cvo = data.first_by_id(VideoCodecParametersKeys.CVO_ENABLED).data
+        return VideoCodecParameters(profile, level, mode, cvo)
+
 
 class VideoAttributesKeys(IntEnum):
     """
@@ -120,6 +139,23 @@ class VideoAttributes:
             tlv8.Entry(VideoAttributesKeys.IMAGE_HEIGHT, self.height),
             tlv8.Entry(VideoAttributesKeys.FRAME_RATE, self.frame_rate),
         ])
+
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            VideoAttributesKeys.IMAGE_WIDTH: tlv8.DataType.INTEGER,
+            VideoAttributesKeys.IMAGE_HEIGHT: tlv8.DataType.INTEGER,
+            VideoAttributesKeys.FRAME_RATE: tlv8.DataType.INTEGER,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        return el
+
+    @staticmethod
+    def from_entry_list(data: tlv8.EntryList):
+        width = data.first_by_id(VideoAttributesKeys.IMAGE_WIDTH).data
+        height = data.first_by_id(VideoAttributesKeys.IMAGE_HEIGHT).data
+        rate = data.first_by_id(VideoAttributesKeys.FRAME_RATE).data
+        return VideoAttributes(width, height, rate)
 
 
 class VideoCodecConfigurationKeys(IntEnum):
@@ -159,8 +195,9 @@ class SupportedVideoStreamConfiguration:
         self.config = config
 
     def to_entry_list(self):
-        entryList = tlv8.EntryList()
-        return entryList
+        return tlv8.EntryList([
+            tlv8.Entry(1, self.config.to_entry_list())
+        ])
 
 
 class SupportedVideoStreamConfigurationCharacteristic(AbstractCharacteristic):

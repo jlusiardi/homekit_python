@@ -46,6 +46,11 @@ After that, using **pip3** is sufficient again:
 pip3 install --user homekit[BLE]
 ```
 
+If you get an error `Does the selected adapter support BLE?` there are XXX things to check:
+
+ - is this really the BLE supporting adapter? `hciconfig` shows all adapters, `--adapter hciX` selects the proper one.
+ - `bluetoothctl` can be used to activate the adapter with `scan on`
+
 ## Installation for both type of accessories
 
 In this case, install the packages for your operating system and afterwards use **pip3**:

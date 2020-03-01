@@ -353,8 +353,8 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
         self.assertIn('perms', result[(1, 4)])
         self.assertEqual(['pr'], result[(1, 4)]['perms'])
-        result = pairing.get_characteristics([(1, 3)], include_perms=True)
-        self.assertEqual(['pw'], result[(1, 3)]['perms'])
+        result = pairing.get_characteristics([(1, 10)], include_perms=True)
+        self.assertEqual(['pw', 'pr', 'ev'], result[(1, 10)]['perms'])
 
     def test_04_4_get_characteristic_with_meta(self):
         """This tests the include_meta flag on get_characteristics"""

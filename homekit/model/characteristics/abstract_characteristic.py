@@ -20,6 +20,7 @@ import binascii
 from decimal import Decimal
 import struct
 import tlv8
+import logging
 
 from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions
@@ -131,6 +132,7 @@ class AbstractCharacteristic(ToDictMixin):
 
         self.value = new_val
         if self._set_value_callback:
+            logging.error('Performing_call_to:  %s', self._set_value_callback)
             self._set_value_callback(new_val)
 
     def set_value_from_ble(self, value):
@@ -169,12 +171,14 @@ class AbstractCharacteristic(ToDictMixin):
 
         value = self.value
         if self._get_value_callback is not None:
+            logging.error('Performing callback to: %s', self._get_value_callback)
             value = self._get_value_callback()
+            logging.error('got value: %s', value)
 
-#        if value is not None and self.format == CharacteristicFormats.tlv8:
-#            el = value.to_entry_list()
-        if self.value is not None and self.format == CharacteristicFormats.tlv8:
-            el = self.value.to_entry_list()
+        if value is not None and self.format == CharacteristicFormats.tlv8:
+            logging.error('Description of characteristic: %s', self.description)
+            logging.error('Type of value of characteristic: %s', type(self.value))
+            el = value.to_entry_list()
             return base64.b64encode(el.encode()).decode("ascii")
         else:
             return value

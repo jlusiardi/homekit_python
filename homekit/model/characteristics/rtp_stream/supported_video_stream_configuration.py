@@ -189,15 +189,32 @@ class VideoCodecConfiguration:
 
 
 class SupportedVideoStreamConfiguration:
-    #    config = TLVItem(1, VideoCodecConfiguration)
-
-    def __init__(self, config):
+    """
+    Page 219 / Table 9-25
+    """
+    def __init__(self, config: VideoCodecConfiguration):
         self.config = config
 
     def to_entry_list(self):
         return tlv8.EntryList([
             tlv8.Entry(1, self.config.to_entry_list())
         ])
+
+    @staticmethod
+    def parse(source_bytes):
+        data_format = {
+            1: tlv8.DataType.BYTES,
+        }
+        el = tlv8.decode(source_bytes, data_format)
+        entry = el.first_by_id(1)
+        entry.data = VideoCodecConfiguration.parse(entry.data)
+        return el
+
+    @staticmethod
+    def from_entry_list(data: tlv8.EntryList):
+
+        config = VideoCodecConfiguration.from_entry_list()
+        return SupportedVideoStreamConfiguration(config)
 
 
 class SupportedVideoStreamConfigurationCharacteristic(AbstractCharacteristic):

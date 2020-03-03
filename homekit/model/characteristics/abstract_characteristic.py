@@ -19,6 +19,7 @@ import base64
 import binascii
 from decimal import Decimal
 import struct
+import logging
 
 from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions
@@ -69,6 +70,7 @@ class AbstractCharacteristic(ToDictMixin):
         :param new_val:
         :raises CharacteristicPermissionError: if the characteristic cannot be written
         """
+        logging.error('Performing set on: %s %s', self.type, self.description)
         if CharacteristicPermissions.paired_write not in self.perms:
             raise CharacteristicPermissionError(HapStatusCodes.CANT_WRITE_READ_ONLY)
         try:
@@ -126,6 +128,7 @@ class AbstractCharacteristic(ToDictMixin):
 
         self.value = new_val
         if self._set_value_callback:
+            logging.error('Performing set callback to: %s', self._set_value_callback)
             self._set_value_callback(new_val)
 
     def set_value_from_ble(self, value):
@@ -159,12 +162,15 @@ class AbstractCharacteristic(ToDictMixin):
         :raises CharacteristicPermissionError: if the characteristic cannot be read
         :return: the value of the characteristic
         """
+        logging.error('Performing get on: %s %s', self.type, self.description)
         if CharacteristicPermissions.paired_read not in self.perms:
             raise CharacteristicPermissionError(HapStatusCodes.CANT_READ_WRITE_ONLY)
 
         value = self.value
         if self._get_value_callback is not None:
+            logging.error('Performing get callback to: %s', self._get_value_callback)
             value = self._get_value_callback()
+            logging.error('got value: %s', value)
 
         if self.value is not None and self.format == CharacteristicFormats.tlv8:
             return base64.b64encode(TLVItem.encode(value)).decode("ascii")

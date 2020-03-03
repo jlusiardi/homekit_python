@@ -38,11 +38,18 @@ class Address:
         self.video_rtp_port = video_rtp_port
         self.audio_rtp_port = audio_rtp_port
 
+    def __str__(self):
+        return '<Address version={} address={} video={} audio={}>'.format(self.ip_version, self.ip_address,
+                                                                          self.video_rtp_port, self.audio_rtp_port)
+
 
 class SRTPParameters:
     crypto_suite = TLVItem(1, CameraSRTPCryptoSuite)
     master_key = TLVItem(2, bytes)
     master_salt = TLVItem(3, bytes)
+
+    def __str__(self):
+        return '<SRTPParameters suite={} key={} salt={}>'.format(self.crypto_suite, self.master_key, self.master_salt)
 
 
 class SetupEndpointsRequest:
@@ -50,6 +57,11 @@ class SetupEndpointsRequest:
     controller_address = TLVItem(3, Address)
     srtp_params_video = TLVItem(4, SRTPParameters)
     srtp_params_audio = TLVItem(5, SRTPParameters)
+
+    def __str__(self):
+        return '<SetupEndpointsRequest id={} address={} video={} audio={}>'.format(self.id, self.controller_address,
+                                                                                   self.srtp_params_video,
+                                                                                   self.srtp_params_audio)
 
 
 class EndpointStatus:

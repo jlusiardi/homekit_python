@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 from uuid import UUID
+import logging
 
 from homekit.model import get_id
 from homekit.model.characteristics.rtp_stream import SetupEndpointsCharacteristicMixin, \
@@ -76,6 +77,7 @@ class ManagedRTPStreamService(RTPStreamService):
         self.last_rtp_stream_config = None
 
     def setup_endpoints_req(self, val: SetupEndpointsRequest):
+        logging.error('setup_endpoints_req: %s', val)
         uuid = UUID(bytes=bytes(val.id))
         stream_handler = self.stream_handler_factory(uuid=uuid,
                                                      controller_address=val.controller_address,
@@ -87,20 +89,24 @@ class ManagedRTPStreamService(RTPStreamService):
         self.last_added = stream
 
     def setup_endpoints_res(self):
+        logging.error('setup_endpoints_res')
         if self.last_added is not None:
             ssrc = self.last_added.handler.get_ssrc()
             address = self.last_added.handler.get_address()
-            return SetupEndpointsResponse(id=self.last_added.uuid.bytes,
-                                          status=EndpointStatus.SUCCESS,
-                                          accessory_address=address,
-                                          srtp_params_video=self.last_added.srtp_params_video,
-                                          srtp_params_audio=self.last_added.srtp_params_audio,
-                                          ssrc_video=ssrc[0],
-                                          ssrc_audio=ssrc[1])
+            result = SetupEndpointsResponse(id=self.last_added.uuid.bytes,
+                                            status=EndpointStatus.SUCCESS,
+                                            accessory_address=address,
+                                            srtp_params_video=self.last_added.srtp_params_video,
+                                            srtp_params_audio=self.last_added.srtp_params_audio,
+                                            ssrc_video=ssrc[0],
+                                            ssrc_audio=ssrc[1])
         else:
-            return SetupEndpointsResponse(id=self.last_added.uuid.bytes, status=EndpointStatus.ERROR)
+            result = SetupEndpointsResponse(id=self.last_added.uuid.bytes, status=EndpointStatus.ERROR)
+        logging.error('setup_endpoints_res: %s', result)
+        return result
 
     def select_rtp_stream_configuration(self, rtp_stream_config: SelectedRTPStreamConfiguration):
+        logging.error('select_rtp_stream_configuration: %s', rtp_stream_config)
         if rtp_stream_config is not None:
             uuid = UUID(bytes=bytes(rtp_stream_config.session_control.id))
             stream = self.streams[uuid]
@@ -112,6 +118,7 @@ class ManagedRTPStreamService(RTPStreamService):
                 stream.handler.on_end()
 
     def get_rtp_stream_configuration(self):
+        logging.error('get_rtp_stream_configuration')
         return self.last_rtp_stream_config
 
     def get_status(self):

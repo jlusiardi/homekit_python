@@ -248,10 +248,13 @@ class TLVItem:
                         children.extend((tlv_type, TLVItem.encode(value)) for value in value)
                     else:
                         children.append((tlv_type, TLVItem.encode(value)))
-            return TLV.encode_list(children)
+            result = TLV.encode_list(children)
+            logger.error('TLVItem.encode %s %s', type(obj), result)
+            return result
 
     @staticmethod
     def decode(cls, payload):
+        logger.error('TLVItem.decode %s', payload)
         values = TLV.decode_bytes(payload)
         instance = cls.__new__(cls)
         for key, value in values:

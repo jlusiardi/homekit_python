@@ -15,6 +15,7 @@
 #
 from uuid import UUID
 import tlv8
+import logging
 
 from homekit.model import get_id
 from homekit.model.characteristics.rtp_stream import SetupEndpointsCharacteristicMixin, \
@@ -104,6 +105,7 @@ class ManagedRTPStreamService(RTPStreamService):
         self.last_added = stream
 
     def setup_endpoints_res(self):
+        logging.error('setup_endpoints_res,  %s', self.last_added is not None)
         if self.last_added is not None:
             ssrc = self.last_added.handler.get_ssrc()
             address = self.last_added.handler.get_address()
@@ -115,7 +117,7 @@ class ManagedRTPStreamService(RTPStreamService):
                                           ssrc_video=ssrc[0],
                                           ssrc_audio=ssrc[1])
         else:
-            return SetupEndpointsResponse(id=self.last_added.uuid.bytes, status=EndpointStatus.ERROR)
+            return SetupEndpointsResponse(id=b'', status=EndpointStatus.ERROR)
 
     def select_rtp_stream_configuration(self,
                                         val: tlv8.EntryList):

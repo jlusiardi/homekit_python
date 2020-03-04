@@ -224,11 +224,18 @@ class AbstractCharacteristic(ToDictMixin):
             'format': self.format,
         }
         if CharacteristicPermissions.paired_read in self.perms:
-            if self.value is not None and self.format == CharacteristicFormats.tlv8:
-                el = self.value.to_entry_list()
+            value = self.value
+
+            if self._get_value_callback is not None:
+                logging.error('Performing callback to: %s', self._get_value_callback)
+                value = self._get_value_callback()
+                logging.error('got value: %s', value)
+
+            if value is not None and self.format == CharacteristicFormats.tlv8:
+                el = value.to_entry_list()
                 d['value'] = base64.b64encode(el.encode()).decode("ascii")
             else:
-                d['value'] = self.value
+                d['value'] = value
         if self.ev:
             d['ev'] = self.ev
         if self.description:

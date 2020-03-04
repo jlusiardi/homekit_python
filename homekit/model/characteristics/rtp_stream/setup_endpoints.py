@@ -212,12 +212,17 @@ class SetupEndpointsResponse:
         el = tlv8.EntryList([
             tlv8.Entry(SetupEndpointsResponseKeys.SESSION_ID, self.id),
             tlv8.Entry(SetupEndpointsResponseKeys.STATUS, self.status),
-            tlv8.Entry(SetupEndpointsResponseKeys.ACCESSORY_ADDRESS, self.accessory_address.to_entry_list()),
-            tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO, self.srtp_params_video.to_entry_list()),
-            tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_AUDIO, self.srtp_params_audio.to_entry_list()),
-            tlv8.Entry(SetupEndpointsResponseKeys.VIDEO_RTP_SSRC, self.ssrc_video),
-            tlv8.Entry(SetupEndpointsResponseKeys.AUDIO_RTP_SSRC, self.ssrc_audio),
         ])
+        if self.accessory_address:
+            el.append(tlv8.Entry(SetupEndpointsResponseKeys.ACCESSORY_ADDRESS, self.accessory_address.to_entry_list()))
+        if self.srtp_params_video:
+            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO, self.srtp_params_video.to_entry_list()))
+        if self.srtp_params_audio:
+            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO, self.srtp_params_audio.to_entry_list()))
+        if self.ssrc_video:
+            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO, self.ssrc_video))
+        if self.ssrc_audio:
+            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO, self.ssrc_audio))
         return el
 
     @staticmethod

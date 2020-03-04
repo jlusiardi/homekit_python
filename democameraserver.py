@@ -75,82 +75,50 @@ if __name__ == '__main__':
 
         class StreamHandler:
             def __init__(self, controller_address, srtp_params_video, **_):
+                print('Stream Handler')
                 self.srtp_params_video = srtp_params_video
                 self.controller_address = controller_address
                 self.ffmpeg_process = None
 
             def on_start(self, attrs: SelectedVideoParameters):
-                #
-                #   more information on ffmpeg and web cams:
-                #       https://trac.ffmpeg.org/wiki/Capture/Webcam
-                #
-                command_linux = ['ffmpeg', 
-                     '-re',
-                     # chose input driver
-                     #'-f', args.driver,  # linux
-                     #                     '-f', 'avfoundation', # mac
-                     # set frame rate
-                     #                     '-r', '30.000030',
-                     # chose proper input device aka camera
-                     #'-i', args.camera, #'/dev/video0',  # first device on linux
-                     #                     '-i', 'Integrierte iSight-Kamera',  # mac device may also be 'FaceTime HD-Kamera (integriert)'
-                     #                     '-threads', '0',
-                     # set the video codec to H.264 (Spec R2, chapter 11.8, page 245)
-                     '-framerate', '1/10', '-i', 'foo.jpg',
-                     '-vcodec', 'libx264',
-                     '-pix_fmt', 'yuv420p',
-                     # set frame rate
-                     '-r', str(attrs.selected_video_attributes.frame_rate),
-                     '-f', 'rawvideo',
-                     '-tune', 'zerolatency',
-                     '-vf', f'scale={attrs.selected_video_attributes.width}:{attrs.selected_video_attributes.height}',
-                     # set video bandwidth
-                     '-b:v', '300k',
-                     # set size of buffer
-                     '-bufsize', '300k',
-                     '-payload_type', '99',
-                     '-ssrc', '32',
-                     '-f', 'rtp',
-                     '-srtp_out_suite', 'AES_CM_128_HMAC_SHA1_80',
-                     '-srtp_out_params', base64.b64encode(
-                        self.srtp_params_video.master_key + self.srtp_params_video.master_salt).decode('ascii'),
-                     f'srtp://{self.controller_address.ip_address}:{self.controller_address.video_rtp_port}'
-                     f'?rtcpport={self.controller_address.video_rtp_port}'
-                     f'&localrtcpport={self.controller_address.video_rtp_port}'
-                     # packet size for IPv4 (1378 bytes) / IPv6 (1228) as defined by spec r2 chapter 11.8.1 page 246
-                     '&pkt_size=1378'
-                     ]
+                command = ['ffmpeg',
+                           '-re',
+                           # chose input driver
+                           # '-f', args.driver,  # linux
+                           #                     '-f', 'avfoundation', # mac
+                           # set frame rate
+                           #                     '-r', '30.000030',
+                           # chose proper input device aka camera
+                           # '-i', args.camera, #'/dev/video0',  # first device on linux
+                           '-i', 'out.mp4',
+                           #                     '-i', 'Integrierte iSight-Kamera',  # mac device may also be 'FaceTime HD-Kamera (integriert)'
+                           #                     '-threads', '0',
+                           # set the video codec to H.264 (Spec R2, chapter 11.8, page 245)
+                           '-vcodec', 'libx264',
+                           # no audio
+                           #                     '-an',
+                           '-pix_fmt', 'yuv420p',
+                           # set frame rate
+                           '-r', str(attrs.attributes.frame_rate),
+                           '-f', 'rawvideo',
+                           '-tune', 'zerolatency',
+                           '-vf', f'scale={attrs.attributes.width}:{attrs.attributes.height}',
+                           # set video bandwidth
+                           '-b:v', '300k',
+                           # set size of buffer
+                           '-bufsize', '300k',
+                           '-payload_type', '99',
+                           '-ssrc', '32',
+                           '-f', 'rtp',
+                           '-srtp_out_suite', 'AES_CM_128_HMAC_SHA1_80',
+                           '-srtp_out_params', base64.b64encode(self.srtp_params_video.master_key + self.srtp_params_video.master_salt).decode('ascii'),
+                           f'srtp://{self.controller_address.ip_address}:{self.controller_address.video_rtp_port}'
+                           f'?rtcpport={self.controller_address.video_rtp_port}'
+                           f'&localrtcpport={self.controller_address.video_rtp_port}'
+                           # packet size for IPv4 (1378 bytes) / IPv6 (1228) as defined by spec r2 chapter 11.8.1 page 246
+                           '&pkt_size=1378'
+                           ]
 
-                command_mac = ['ffmpeg', 
-                     '-re',
-                     '-f', args.driver,
-                     '-r', '30.000030', 
-                     '-i', args.camera, 
-                     '-threads', '0',
-                     '-vcodec', 'libx264', 
-                     '-an', 
-                     '-pix_fmt', 'yuv420p',
-                     '-f', 'rawvideo', 
-                     '-tune', 'zerolatency', 
-                     '-vf', f'scale={attrs.selected_video_attributes.width}:{attrs.selected_video_attributes.height}',
-                     '-b:v', '300k', 
-                     '-bufsize', '300k',
-                     '-payload_type', '99', 
-                     '-ssrc', '32', 
-                     '-f', 'rtp',
-                     '-srtp_out_suite', 'AES_CM_128_HMAC_SHA1_80',
-                     '-srtp_out_params', base64.b64encode(
-                        self.srtp_params_video.master_key + self.srtp_params_video.master_salt).decode('ascii'),
-                     f'srtp://{self.controller_address.ip_address}:{self.controller_address.video_rtp_port}'
-                     f'?rtcpport={self.controller_address.video_rtp_port}'
-                     f'&localrtcpport={self.controller_address.video_rtp_port}'
-                     '&pkt_size=1378'
-                     ]
-
-                if platform.system() == 'Darwin':
-                    command = command_mac
-                else:
-                    command = command_linux
                 logger.info('starting ffmpeg: %s', ' '.join(command))
                 self.ffmpeg_process = subprocess.Popen(command)
 
@@ -176,17 +144,15 @@ if __name__ == '__main__':
                 VideoCodecConfiguration(
                     VideoCodecType.H264,
                     VideoCodecParameters(
-                        H264Profile.MAIN_PROFILE,
+                        H264Profile.HIGH_PROFILE,
                         H264Level.L_4,
                         PacketizationMode.NON_INTERLEAVED,
                         CVOEnabled.NOT_SUPPORTED
                     ),
-                    VideoAttributes(1920, 1080, 30)
+                    VideoAttributes(1280, 720, 30)
                 )
             ),
             SupportedAudioStreamConfiguration([
-                AudioCodecConfiguration(AudioCodecType.OPUS,
-                                        AudioCodecParameters(1, BitRate.VARIABLE, SampleRate.KHZ_24)),
                 AudioCodecConfiguration(AudioCodecType.AAC_ELD,
                                         AudioCodecParameters(1, BitRate.VARIABLE, SampleRate.KHZ_16))
             ], 0)

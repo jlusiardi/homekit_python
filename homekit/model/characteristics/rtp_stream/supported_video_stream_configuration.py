@@ -196,9 +196,11 @@ class SupportedVideoStreamConfiguration:
         self.config = config
 
     def to_entry_list(self):
-        return tlv8.EntryList([
+        result = tlv8.EntryList([
             tlv8.Entry(1, self.config.to_entry_list())
         ])
+        print(tlv8.format_string(result))
+        return result
 
     @staticmethod
     def parse(source_bytes):

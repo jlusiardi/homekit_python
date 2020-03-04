@@ -120,15 +120,17 @@ if __name__ == '__main__':
     sc = SessionControl(session_id, Command.START)
     svp = SelectedVideoParameters(
         VideoCodecType.H264,
-        VideoCodecParameters(H264Profile.MAIN_PROFILE, H264Level.L_4, PacketizationMode.NON_INTERLEAVED,
+        VideoCodecParameters(H264Profile.HIGH_PROFILE,
+                             H264Level.L_4,
+                             PacketizationMode.NON_INTERLEAVED,
                              CVOEnabled.NOT_SUPPORTED),
         VideoAttributes(1920, 1080, 30),
-        VideoRTPParameters(VideoCodecType.H264, video_ssrc, 1024, 0.5)
+        VideoRTPParameters(0x63, video_ssrc, 299, 0.5, 1378)
     )
     sap = SelectedAudioParameters(
         AudioCodecType.OPUS,
         AudioCodecParameters(1, BitRate.VARIABLE, SampleRate.KHZ_16, rtp_time=30),
-        AudioRTPParameters(0, audio_ssrc, 32, 10.0, 0),
+        AudioRTPParameters(0x6e, audio_ssrc, 24, 5.0, 0),
         0
     )
     srsc = SelectedRTPStreamConfiguration(sc, svp, sap)

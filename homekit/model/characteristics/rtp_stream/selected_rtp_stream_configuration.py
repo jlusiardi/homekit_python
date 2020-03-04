@@ -16,6 +16,7 @@
 
 from enum import IntEnum
 import tlv8
+import logging
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
     AbstractCharacteristic
 
@@ -223,6 +224,7 @@ class VideoRTPParameters:
             tlv8.Entry(VideoRTPParametersKeys.SSRC_FOR_VIDEO, self.ssrc_for_video),
             tlv8.Entry(VideoRTPParametersKeys.MAX_BITRATE, self.max_bitrate),
             tlv8.Entry(VideoRTPParametersKeys.MIN_RTCP, self.min_rtcp),
+            tlv8.Entry(VideoRTPParametersKeys.MAX_MTU, self.max_mtu),
         ])
 
     @staticmethod
@@ -332,26 +334,36 @@ class SelectedRTPStreamConfiguration:
         self.selected_audio_parameters = selected_audio_parameters
 
     def to_entry_list(self):
-        return tlv8.EntryList([
+        result = tlv8.EntryList([
             tlv8.Entry(SelectedRtpStreamConfigurationKeys.SESSION_CONTROL, self.session_control.to_entry_list()),
-            tlv8.Entry(SelectedRtpStreamConfigurationKeys.SELECTED_VIDEO_PARAMS,
-                       self.selected_video_parameters.to_entry_list()),
-            tlv8.Entry(SelectedRtpStreamConfigurationKeys.SELECTED_AUDIO_PARAMS,
-                       self.selected_audio_parameters.to_entry_list()),
         ])
+        if self.selected_video_parameters:
+            result.append(tlv8.Entry(SelectedRtpStreamConfigurationKeys.SELECTED_VIDEO_PARAMS,
+                       self.selected_video_parameters.to_entry_list()))
+        if self.selected_audio_parameters:
+            result.append(tlv8.Entry(SelectedRtpStreamConfigurationKeys.SELECTED_AUDIO_PARAMS,
+                       self.selected_audio_parameters.to_entry_list()))
+        return result
 
     @staticmethod
     def from_entry_list(data: tlv8.EntryList):
+        logging.error('SelectedRTPStreamConfiguration: %s', tlv8.format_string(data))
         el = SessionControl.parse(data.first_by_id(SelectedRtpStreamConfigurationKeys.SESSION_CONTROL).data)
         session_control = SessionControl.from_entry_list(el)
 
-        el = SelectedVideoParameters.parse(
-            data.first_by_id(SelectedRtpStreamConfigurationKeys.SELECTED_VIDEO_PARAMS).data)
-        selected_video_params = SelectedVideoParameters.from_entry_list(el)
+        video_params = data.first_by_id(SelectedRtpStreamConfigurationKeys.SELECTED_VIDEO_PARAMS)
+        if video_params:
+            el = SelectedVideoParameters.parse(video_params.data)
+            selected_video_params = SelectedVideoParameters.from_entry_list(el)
+        else:
+            selected_video_params = None
 
-        el = SelectedAudioParameters.parse(
-            data.first_by_id(SelectedRtpStreamConfigurationKeys.SELECTED_AUDIO_PARAMS).data)
-        selected_audio_params = SelectedAudioParameters.from_entry_list(el)
+        audio_params = data.first_by_id(SelectedRtpStreamConfigurationKeys.SELECTED_AUDIO_PARAMS)
+        if audio_params:
+            el = SelectedAudioParameters.parse(audio_params.data)
+            selected_audio_params = SelectedAudioParameters.from_entry_list(el)
+        else:
+            selected_audio_params = None
 
         return SelectedRTPStreamConfiguration(session_control, selected_video_params, selected_audio_params)
 

@@ -110,24 +110,23 @@ class AudioCodecParameters:
 
 
 class AudioCodecConfiguration:
-    #    codec_type = TLVItem(1, AudioCodecType)
-    #    parameters = TLVItem(2, AudioCodecParameters)
-
-    def __init__(self, codec_type, parameters):
+    """
+    Page 216 / Table 9-19
+    """
+    def __init__(self,
+                 codec_type:AudioCodecType,
+                 parameters: AudioCodecParameters):
         self.codec_type = codec_type
         self.parameters = parameters
 
     def to_entry_list(self):
         entryList = tlv8.EntryList()
         entryList.append(tlv8.Entry(1, self.codec_type))
-        print(self.parameters)
+        entryList.append(tlv8.Entry(2, self.parameters.to_entry_list()))
         return entryList
 
 
 class SupportedAudioStreamConfiguration:
-    #    config = TLVItem(1, AudioCodecConfiguration)
-    #    comfort_noise_support = TLVItem(2, int)
-
     def __init__(self, configs, comfort_noise_support):
         self.configs = configs
         self.comfort_noise_support = comfort_noise_support

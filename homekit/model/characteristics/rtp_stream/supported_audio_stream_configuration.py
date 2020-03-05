@@ -114,7 +114,7 @@ class AudioCodecConfiguration:
     Page 216 / Table 9-19
     """
     def __init__(self,
-                 codec_type:AudioCodecType,
+                 codec_type: AudioCodecType,
                  parameters: AudioCodecParameters):
         self.codec_type = codec_type
         self.parameters = parameters

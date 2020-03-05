@@ -139,6 +139,7 @@ class SetupEndpointsRequest:
     """
     Page 208 / Table 9-13
     """
+
     def __init__(self,
                  session_id,
                  controller_address: Address,
@@ -216,9 +217,11 @@ class SetupEndpointsResponse:
         if self.accessory_address:
             el.append(tlv8.Entry(SetupEndpointsResponseKeys.ACCESSORY_ADDRESS, self.accessory_address.to_entry_list()))
         if self.srtp_params_video:
-            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO, self.srtp_params_video.to_entry_list()))
+            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO,
+                                 self.srtp_params_video.to_entry_list()))
         if self.srtp_params_audio:
-            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO, self.srtp_params_audio.to_entry_list()))
+            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO,
+                                 self.srtp_params_audio.to_entry_list()))
         if self.ssrc_video:
             el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO, self.ssrc_video))
         if self.ssrc_audio:

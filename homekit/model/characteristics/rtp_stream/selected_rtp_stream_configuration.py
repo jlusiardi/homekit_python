@@ -339,10 +339,10 @@ class SelectedRTPStreamConfiguration:
         ])
         if self.selected_video_parameters:
             result.append(tlv8.Entry(SelectedRtpStreamConfigurationKeys.SELECTED_VIDEO_PARAMS,
-                       self.selected_video_parameters.to_entry_list()))
+                          self.selected_video_parameters.to_entry_list()))
         if self.selected_audio_parameters:
             result.append(tlv8.Entry(SelectedRtpStreamConfigurationKeys.SELECTED_AUDIO_PARAMS,
-                       self.selected_audio_parameters.to_entry_list()))
+                          self.selected_audio_parameters.to_entry_list()))
         return result
 
     @staticmethod

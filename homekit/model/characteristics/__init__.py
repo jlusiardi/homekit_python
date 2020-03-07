@@ -27,7 +27,7 @@ __all__ = [
     'TargetHeatingCoolingStateCharacteristicMixin', 'TargetTemperatureCharacteristic',
     'TargetTemperatureCharacteristicMixin', 'TemperatureDisplayUnitCharacteristic', 'TemperatureDisplayUnitsMixin',
     'VolumeCharacteristic', 'VolumeCharacteristicMixin', 'MicrophoneMuteCharacteristicMixin',
-    'MicrophoneMuteCharacteristic'
+    'MicrophoneMuteCharacteristic', 'AbstractTlv8Characteristic', 'AbstractTlv8CharacteristicValue'
 ]
 
 from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
@@ -35,7 +35,8 @@ from homekit.model.characteristics.characteristic_types import CharacteristicsTy
 from homekit.model.characteristics.characteristic_units import CharacteristicUnits
 from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
 
-from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic
+from homekit.model.characteristics.abstract_characteristic import AbstractCharacteristic, AbstractTlv8Characteristic, \
+    AbstractTlv8CharacteristicValue
 from homekit.model.characteristics.battery_level import BatteryLevelCharacteristic, BatteryLevelCharacteristicMixin
 from homekit.model.characteristics.brightness import BrightnessCharacteristicMixin, BrightnessCharacteristic
 from homekit.model.characteristics.current_heating_cooling_state import CurrentHeatingCoolingStateCharacteristicMixin, \

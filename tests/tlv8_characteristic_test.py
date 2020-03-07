@@ -18,12 +18,13 @@ import unittest
 import tempfile
 import threading
 import time
+
 import tlv8
 
 from homekit import Controller
 from homekit import AccessoryServer
-from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, AbstractCharacteristic, \
-    CharacteristicPermissions
+from homekit.model.characteristics import CharacteristicsTypes, AbstractTlv8Characteristic, CharacteristicPermissions, \
+    AbstractTlv8CharacteristicValue
 from homekit.model import Accessory
 from homekit.model.services import LightBulbService
 from homekit.model import mixin as model_mixin
@@ -40,7 +41,7 @@ class T(threading.Thread):
         self.a_s.serve_forever()
 
 
-class Tlv8CharacteristicValue:
+class Tlv8CharacteristicValue(AbstractTlv8CharacteristicValue):
     def __init__(self, val):
         self.val = val
 
@@ -54,16 +55,9 @@ class Tlv8CharacteristicValue:
         return Tlv8CharacteristicValue(val)
 
 
-class AbstractTlv8Characteristic(AbstractCharacteristic):
-    def __init__(self, iid, value, characteristic_tlv_type):
-        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.SETUP_ENDPOINTS, CharacteristicFormats.tlv8,
-                                        characteristic_tlv_type)
-        self.value = value
-
-
 class Tlv8Characteristic(AbstractTlv8Characteristic):
     def __init__(self, iid, value):
-        AbstractTlv8Characteristic.__init__(self, iid, value, Tlv8CharacteristicValue)
+        AbstractTlv8Characteristic.__init__(self, iid, value, CharacteristicsTypes.SETUP_ENDPOINTS)
         self.maxLen = 64
         self.description = 'Name'
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write]

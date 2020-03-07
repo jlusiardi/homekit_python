@@ -20,6 +20,7 @@ import binascii
 from decimal import Decimal
 import struct
 import logging
+from abc import ABCMeta, abstractmethod
 
 from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions
@@ -246,3 +247,49 @@ class AbstractCharacteristic(ToDictMixin):
             d['maxLen'] = self.maxLen
 
         return d
+
+
+class AbstractTlv8CharacteristicValue(metaclass=ABCMeta):
+    """
+    Abstract base class for all value objects of a characteristic of tlv8 type.
+    """
+
+    @abstractmethod
+    def to_bytes(self) -> bytes:
+        """
+        Convert the complex tlv value into a bytes representation.
+
+        :returns: the `bytes` representation of the value
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def from_bytes(data: bytes):
+        """
+        Create an complex tlv instance from a bytes value. This involves decoding the bytes using
+        `tlv8.decode()`.
+
+        :param data: the `bytes` representation of the value
+        :returns: a new instance of the value class
+        """
+        pass
+
+
+class AbstractTlv8Characteristic(AbstractCharacteristic):
+    """
+
+    """
+
+    def __init__(self,
+                 iid: int,
+                 value: AbstractTlv8CharacteristicValue,
+                 characteristic_type: str):
+        """
+
+        :params iid:
+        :params value:
+        :params characteristic_type: 
+        """
+        AbstractCharacteristic.__init__(self, iid, characteristic_type, CharacteristicFormats.tlv8, value.__class__)
+        self.value = value

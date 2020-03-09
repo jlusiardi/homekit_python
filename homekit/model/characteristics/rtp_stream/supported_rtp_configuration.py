@@ -17,7 +17,7 @@
 import tlv8
 from enum import IntEnum
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
-    AbstractCharacteristic
+    AbstractTlv8Characteristic, AbstractTlv8CharacteristicValue
 
 
 class SupportedRtpConfigurationKeys:
@@ -37,7 +37,7 @@ class CameraSRTPCryptoSuite(IntEnum):
     DISABLED = 2
 
 
-class SupportedRTPConfiguration:
+class SupportedRTPConfiguration(AbstractTlv8CharacteristicValue):
     """
     Page 218 / Table 9-24
     """
@@ -51,14 +51,14 @@ class SupportedRTPConfiguration:
         return entryList
 
 
-class SupportedRTPConfigurationCharacteristic(AbstractCharacteristic):
+class SupportedRTPConfigurationCharacteristic(AbstractTlv8Characteristic):
     """
     Defined on page 218
     """
 
     def __init__(self, iid, value):
-        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.SUPPORTED_RTP_CONFIGURATION,
-                                        CharacteristicFormats.tlv8, SupportedRTPConfiguration)
+        AbstractTlv8Characteristic.__init__(self, iid, CharacteristicsTypes.SUPPORTED_RTP_CONFIGURATION,
+                                            CharacteristicFormats.tlv8, SupportedRTPConfiguration)
         self.perms = [CharacteristicPermissions.paired_read]
         self.description = 'supported rtp configurations management service'
         self.value = value

@@ -18,42 +18,18 @@ import unittest
 import tempfile
 import time
 
-import tlv8
-
 from homekit import Controller
 from homekit import AccessoryServer
-from homekit.model.characteristics import CharacteristicsTypes, AbstractTlv8Characteristic, CharacteristicPermissions, \
-    AbstractTlv8CharacteristicValue
 from homekit.model import Accessory
 from homekit.model.services import LightBulbService
 from homekit.model import mixin as model_mixin
 from homekit.model import get_id
 from tests.tools import AccessoryThread
+from homekit.model.characteristics.rtp_stream.streaming_status import StreamingStatusCharacteristic, StreamingStatus, \
+    StreamingStatusValue
 
 
-class Tlv8CharacteristicValue(AbstractTlv8CharacteristicValue):
-    def __init__(self, val):
-        self.val = val
-
-    def to_bytes(self) -> bytes:
-        return tlv8.EntryList([tlv8.Entry(1, self.val)]).encode()
-
-    @staticmethod
-    def from_bytes(data: bytes):
-        el = tlv8.decode(data, {1: tlv8.DataType.INTEGER})
-        val = el.first_by_id(1).data
-        return Tlv8CharacteristicValue(val)
-
-
-class Tlv8Characteristic(AbstractTlv8Characteristic):
-    def __init__(self, iid, value):
-        AbstractTlv8Characteristic.__init__(self, iid, value, CharacteristicsTypes.SETUP_ENDPOINTS)
-        self.maxLen = 64
-        self.description = 'Name'
-        self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write]
-
-
-class TestTlvCharacteristic(unittest.TestCase):
+class TestStreamingStatusCharacteristic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.config_file = tempfile.NamedTemporaryFile()
@@ -83,7 +59,7 @@ class TestTlvCharacteristic(unittest.TestCase):
         cls.httpd = AccessoryServer(cls.config_file.name, None)
         accessory = Accessory('Testlicht', 'lusiardi.de', 'Demoserver', '0001', '0.1')
         lightBulbService = LightBulbService()
-        cls.tlvChar = Tlv8Characteristic(get_id(), Tlv8CharacteristicValue(0))
+        cls.tlvChar = StreamingStatusCharacteristic(get_id())
         lightBulbService.append_characteristic(cls.tlvChar)
         accessory.services.append(lightBulbService)
         cls.httpd.add_accessory(accessory)
@@ -121,29 +97,30 @@ class TestTlvCharacteristic(unittest.TestCase):
         self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.list_accessories_and_characteristics()
-        for characteristic in result[0]['services'][0]['characteristics']:
-            if characteristic['iid'] == self.__class__.tlvChar.iid:
-                self.assertIn('value', characteristic)
-                self.assertEqual('AQEA', characteristic['value'])
-                self.assertIn('format', characteristic)
-                self.assertEqual('tlv8', characteristic['format'])
+        for service in result[0]['services']:
+            for characteristic in service['characteristics']:
+                if characteristic['iid'] == self.__class__.tlvChar.iid:
+                    self.assertIn('value', characteristic)
+                    self.assertEqual('AQEA', characteristic['value'])
+                    self.assertIn('format', characteristic)
+                    self.assertEqual('tlv8', characteristic['format'])
 
     def test_get_characteristic(self):
         self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
 
-        self.__class__.tlvChar.value.val = 420023
+        self.__class__.tlvChar.value.status = StreamingStatusValue.AVAILABLE
         result = pairing.get_characteristics([(1, 11)])
         self.assertIn((1, 11), result)
         self.assertIn('value', result[(1, 11)])
-        self.assertEqual('AQS3aAYA', result[(1, 11)]['value'])
+        self.assertEqual('AQEA', result[(1, 11)]['value'])
         self.assertEqual(['value'], list(result[(1, 11)].keys()))
 
-        self.__class__.tlvChar.value.val = 230042
+        self.__class__.tlvChar.value.status = StreamingStatusValue.UNAVAILABLE
         result = pairing.get_characteristics([(1, 11)])
         self.assertIn((1, 11), result)
         self.assertIn('value', result[(1, 11)])
-        self.assertEqual('AQSaggMA', result[(1, 11)]['value'])
+        self.assertEqual('AQEC', result[(1, 11)]['value'])
         self.assertEqual(['value'], list(result[(1, 11)].keys()))
 
     def test_get_characteristic_with_getter(self):
@@ -151,35 +128,22 @@ class TestTlvCharacteristic(unittest.TestCase):
         pairing = self.controller.get_pairings()['alias']
 
         def get():
-            return Tlv8CharacteristicValue(123)
+            return StreamingStatus(StreamingStatusValue.IN_USE)
 
         self.__class__.tlvChar.set_get_value_callback(get)
         result = pairing.get_characteristics([(1, 11)])
         self.__class__.tlvChar.set_get_value_callback(None)
         self.assertIn((1, 11), result)
         self.assertIn('value', result[(1, 11)])
-        self.assertEqual('AQF7', result[(1, 11)]['value'])
+        self.assertEqual('AQEB', result[(1, 11)]['value'])
         self.assertEqual(['value'], list(result[(1, 11)].keys()))
 
-    def test_put_characteristic(self):
-        """"""
-        self.controller.load_data(self.controller_file.name)
-        pairing = self.controller.get_pairings()['alias']
+    def test_StreamingStatus_from_bytes(self):
+        data = StreamingStatus.from_bytes(b'\x01\x01\x02')
+        self.assertEqual(StreamingStatusValue.UNAVAILABLE, data.status)
 
-        result = pairing.put_characteristics([(1, 11, 'AQS3aAYA')])
-        self.assertEqual(result, {})
-        self.assertEqual(self.__class__.tlvChar.value.val, 420023)
+        data = StreamingStatus.from_bytes(b'\x01\x01\x01')
+        self.assertEqual(StreamingStatusValue.IN_USE, data.status)
 
-    def test_put_characteristic_with_setter(self):
-        """"""
-        self.controller.load_data(self.controller_file.name)
-        pairing = self.controller.get_pairings()['alias']
-
-        def set(val):
-            self.assertEqual(val.val, 420023)
-
-        self.__class__.tlvChar.set_set_value_callback(set)
-        result = pairing.put_characteristics([(1, 11, 'AQS3aAYA')])
-        self.__class__.tlvChar.set_set_value_callback(None)
-        self.assertEqual(result, {})
-        self.assertEqual(self.__class__.tlvChar.value.val, 420023)
+        data = StreamingStatus.from_bytes(b'\x01\x01\x00')
+        self.assertEqual(StreamingStatusValue.AVAILABLE, data.status)

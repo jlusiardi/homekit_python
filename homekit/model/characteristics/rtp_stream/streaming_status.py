@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Joachim Lusiardi
+# Copyright 2018-2020 Joachim Lusiardi
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 import tlv8
 from enum import IntEnum
-from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
-    AbstractCharacteristic
+from homekit.model.characteristics import CharacteristicsTypes, CharacteristicPermissions, AbstractTlv8Characteristic, \
+    AbstractTlv8CharacteristicValue
 
 
 class StreamingStatusKey(IntEnum):
@@ -30,25 +30,30 @@ class StreamingStatusValue(IntEnum):
     UNAVAILABLE = 2
 
 
-class StreamingStatus:
-    def __init__(self, status):
+class StreamingStatus(AbstractTlv8CharacteristicValue):
+    def __init__(self, status: StreamingStatusValue):
         self.status = status
 
-    def to_entry_list(self):
-        return tlv8.EntryList([tlv8.Entry(StreamingStatusKey.STATUS, self.status)])
+    def to_bytes(self) -> bytes:
+        return tlv8.EntryList([tlv8.Entry(StreamingStatusKey.STATUS, self.status)]).encode()
+
+    @staticmethod
+    def from_bytes(data: bytes):
+        el = tlv8.decode(data, {StreamingStatusKey.STATUS: tlv8.DataType.INTEGER})
+        val = el.first_by_id(StreamingStatusKey.STATUS).data
+        return __class__(val)
 
 
-class StreamingStatusCharacteristic(AbstractCharacteristic):
+class StreamingStatusCharacteristic(AbstractTlv8Characteristic):
     """
     Defined on page 214
     """
 
     def __init__(self, iid):
-        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.STREAMING_STATUS, CharacteristicFormats.tlv8,
-                                        StreamingStatus)
+        AbstractTlv8Characteristic.__init__(self, iid, StreamingStatus(StreamingStatusValue.AVAILABLE),
+                                            CharacteristicsTypes.STREAMING_STATUS)
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.events]
         self.description = 'status of the stream RTP management service'
-        self.value = StreamingStatus(StreamingStatusValue.AVAILABLE)
 
 
 class StreamingStatusCharacteristicMixin(object):

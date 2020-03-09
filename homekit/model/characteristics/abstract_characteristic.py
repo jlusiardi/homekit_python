@@ -275,6 +275,23 @@ class AbstractTlv8CharacteristicValue(metaclass=ABCMeta):
         """
         pass
 
+    def __eq__(self, other: object) -> bool:
+        """
+        Test two objects for equality. This generic solution compares the classes of the objects and the field's values.
+        Hence this function is done recursive on the fields of the objects.
+        """
+        if isinstance(other, self.__class__):
+            if len(self.__dict__) != len(other.__dict__):
+                return False
+            for field_name in self.__dict__:
+                field_value_self = self.__dict__[field_name]
+                field_value_other = other.__dict__[field_name]
+                if not field_value_self.__eq__(field_value_other):
+                    return False
+            return True
+        else:
+            return False
+
 
 class AbstractTlv8Characteristic(AbstractCharacteristic):
     """
@@ -289,7 +306,7 @@ class AbstractTlv8Characteristic(AbstractCharacteristic):
 
         :params iid:
         :params value:
-        :params characteristic_type: 
+        :params characteristic_type:
         """
         AbstractCharacteristic.__init__(self, iid, characteristic_type, CharacteristicFormats.tlv8, value.__class__)
         self.value = value

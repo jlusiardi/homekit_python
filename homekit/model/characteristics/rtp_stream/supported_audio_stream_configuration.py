@@ -16,8 +16,16 @@
 
 import tlv8
 from enum import IntEnum
-from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
-    AbstractCharacteristic
+from homekit.model.characteristics import CharacteristicsTypes, CharacteristicPermissions, AbstractTlv8Characteristic, \
+    AbstractTlv8CharacteristicValue
+
+
+class ComfortNoiseSupport(IntEnum):
+    """
+    Page 215 / Table 9-18 Values for key 'Comfort Noise support'
+    """
+    NO_COMFORT_NOISE = 0
+    COMFORT_NOISE = 1
 
 
 class AudioCodecType(IntEnum):
@@ -67,86 +75,144 @@ class AudioCodecParametersKeys(IntEnum):
     RTP_TIME = 4
 
 
-class AudioCodecParameters:
+class AudioCodecParameters(AbstractTlv8CharacteristicValue):
     """
     Page 217 / Table 9-21
     """
+
     def __init__(self, channels,
-                 bitrate: BitRate,
-                 samplerate: SampleRate,
+                 bit_rate: BitRate,
+                 sample_rate: SampleRate,
                  rtp_time: RtpTimeValues = None):
+        """
+        :param rtp_time: This is the optional value of the length represented in the packet. Only available when used
+            in the context of "Selected Audio Codec Parameters TLV".
+        """
         self.channels = channels
-        self.bitrate = bitrate
-        self.samplerate = samplerate
+        self.bit_rate = bit_rate
+        self.sample_rate = sample_rate
         self.rtp_time = rtp_time
 
-    def to_entry_list(self):
-        entryList = tlv8.EntryList()
-        entryList.append(tlv8.Entry(AudioCodecParametersKeys.AUDIO_CHANNELS, self.channels))
-        entryList.append(tlv8.Entry(AudioCodecParametersKeys.BIT_RATE, self.bitrate))
-        entryList.append(tlv8.Entry(AudioCodecParametersKeys.SAMPLE_RATE, self.samplerate))
+    def to_bytes(self) -> bytes:
+        entry_list = tlv8.EntryList()
+        entry_list.append(tlv8.Entry(AudioCodecParametersKeys.AUDIO_CHANNELS, self.channels))
+        entry_list.append(tlv8.Entry(AudioCodecParametersKeys.BIT_RATE, self.bit_rate))
+        entry_list.append(tlv8.Entry(AudioCodecParametersKeys.SAMPLE_RATE, self.sample_rate))
         if self.rtp_time:
-            entryList.append(tlv8.Entry(AudioCodecParametersKeys.RTP_TIME, self.rtp_time))
-        return entryList
+            entry_list.append(tlv8.Entry(AudioCodecParametersKeys.RTP_TIME, self.rtp_time))
+        return entry_list.encode()
 
     @staticmethod
-    def parse(source_bytes):
+    def from_bytes(data: bytes):
         data_format = {
             AudioCodecParametersKeys.AUDIO_CHANNELS: tlv8.DataType.INTEGER,
             AudioCodecParametersKeys.BIT_RATE: BitRate,
             AudioCodecParametersKeys.SAMPLE_RATE: SampleRate,
             AudioCodecParametersKeys.RTP_TIME: RtpTimeValues,
         }
-        el = tlv8.decode(source_bytes, data_format)
-        return el
-
-    @staticmethod
-    def from_entry_list(data: tlv8.EntryList):
-        channel = data.first_by_id(AudioCodecParametersKeys.AUDIO_CHANNELS).data
-        bitrate = data.first_by_id(AudioCodecParametersKeys.BIT_RATE).data
-        samplerate = data.first_by_id(AudioCodecParametersKeys.SAMPLE_RATE).data
-        rtp_time = data.first_by_id(AudioCodecParametersKeys.RTP_TIME).data
-        return AudioCodecParameters(channel, bitrate, samplerate, rtp_time)
+        el = tlv8.decode(data, data_format)
+        channel = el.first_by_id(AudioCodecParametersKeys.AUDIO_CHANNELS).data
+        bit_rate = el.first_by_id(AudioCodecParametersKeys.BIT_RATE).data
+        sample_rate = el.first_by_id(AudioCodecParametersKeys.SAMPLE_RATE).data
+        rtp_time = el.first_by_id(AudioCodecParametersKeys.RTP_TIME)
+        if rtp_time:
+            rtp_time = rtp_time.data
+        return AudioCodecParameters(channel, bit_rate, sample_rate, rtp_time)
 
 
-class AudioCodecConfiguration:
+class AudioCodecConfigurationKeys(IntEnum):
+    """
+    Page 215 / Table 9-18
+    """
+    CODEC_TYPE = 1
+    AUDIO_CODEC_PARAMETERS = 2
+
+
+class AudioCodecConfiguration(AbstractTlv8CharacteristicValue):
     """
     Page 216 / Table 9-19
     """
+
     def __init__(self,
                  codec_type: AudioCodecType,
                  parameters: AudioCodecParameters):
         self.codec_type = codec_type
         self.parameters = parameters
 
-    def to_entry_list(self):
-        entryList = tlv8.EntryList()
-        entryList.append(tlv8.Entry(1, self.codec_type))
-        entryList.append(tlv8.Entry(2, self.parameters.to_entry_list()))
-        return entryList
+    def to_bytes(self) -> bytes:
+        entry_list = tlv8.EntryList()
+        entry_list.append(tlv8.Entry(AudioCodecConfigurationKeys.CODEC_TYPE, self.codec_type))
+        entry_list.append(
+            tlv8.Entry(AudioCodecConfigurationKeys.AUDIO_CODEC_PARAMETERS, self.parameters.to_bytes()))
+        return entry_list.encode()
+
+    @staticmethod
+    def from_bytes(data: bytes):
+        el = tlv8.decode(data, {
+            AudioCodecConfigurationKeys.CODEC_TYPE: AudioCodecType,
+            AudioCodecConfigurationKeys.AUDIO_CODEC_PARAMETERS: tlv8.DataType.BYTES
+        })
+        codec_type = el.first_by_id(AudioCodecConfigurationKeys.CODEC_TYPE).data
+        parameters = AudioCodecParameters.from_bytes(
+            el.first_by_id(AudioCodecConfigurationKeys.AUDIO_CODEC_PARAMETERS).data)
+        return __class__(codec_type, parameters)
 
 
-class SupportedAudioStreamConfiguration:
-    def __init__(self, configs, comfort_noise_support):
-        self.configs = configs
+class SupportedAudioStreamConfigurationKeys(IntEnum):
+    """
+    Page 215 / Table 9-18
+    """
+    AUDIO_CODEC_CONFIGURATION = 1
+    COMFORT_NOISE_SUPPORT = 2
+
+
+class SupportedAudioStreamConfiguration(AbstractTlv8CharacteristicValue):
+    """
+    Page 215 / Table 9-18
+    """
+
+    def __init__(self,
+                 config,
+                 comfort_noise_support: ComfortNoiseSupport):
+        self.config = config
         self.comfort_noise_support = comfort_noise_support
 
-    def to_entry_list(self):
-        entryList = tlv8.EntryList()
-        for config in self.configs:
-            entryList.append(tlv8.Entry(1, config.to_entry_list(), tlv8.DataType.TLV8))
-        entryList.append(tlv8.Entry(2, self.comfort_noise_support))
-        return entryList
+    def to_bytes(self) -> bytes:
+        entry_list = tlv8.EntryList()
+        entry_list.append(
+            tlv8.Entry(SupportedAudioStreamConfigurationKeys.AUDIO_CODEC_CONFIGURATION, self.config.to_bytes()))
+        entry_list.append(
+            tlv8.Entry(SupportedAudioStreamConfigurationKeys.COMFORT_NOISE_SUPPORT, self.comfort_noise_support))
+        return entry_list.encode()
+
+    @staticmethod
+    def from_bytes(data: bytes):
+        el = tlv8.decode(data, {
+            SupportedAudioStreamConfigurationKeys.AUDIO_CODEC_CONFIGURATION: tlv8.DataType.BYTES,
+            SupportedAudioStreamConfigurationKeys.COMFORT_NOISE_SUPPORT: ComfortNoiseSupport
+        })
+        config = AudioCodecConfiguration.from_bytes(
+            el.first_by_id(SupportedAudioStreamConfigurationKeys.AUDIO_CODEC_CONFIGURATION).data)
+        comfort_noise = el.first_by_id(SupportedAudioStreamConfigurationKeys.COMFORT_NOISE_SUPPORT).data
+        return __class__(config, comfort_noise)
 
 
-class SupportedAudioStreamConfigurationCharacteristic(AbstractCharacteristic):
+class SupportedAudioStreamConfigurationCharacteristic(AbstractTlv8Characteristic):
     """
     Defined on page 215
     """
 
     def __init__(self, iid, value):
-        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.SUPPORTED_AUDIO_CONFIGURATION,
-                                        CharacteristicFormats.tlv8, SupportedAudioStreamConfiguration)
+        AbstractTlv8Characteristic.__init__(self, iid, value, CharacteristicsTypes.SUPPORTED_AUDIO_CONFIGURATION)
         self.perms = [CharacteristicPermissions.paired_read]
         self.description = 'parameters supported for streaming audio over an RTP session'
         self.value = value
+
+
+class SupportedAudioStreamConfigurationCharacteristicMixin(object):
+    def __init__(self, iid):
+        self._supportedAudioStreamConfigurationCharacteristic = SupportedAudioStreamConfigurationCharacteristic(iid)
+        self.characteristics.append(self._supportedAudioStreamConfigurationCharacteristic)
+
+    def set_streaming_status_get_callback(self, callback):
+        self._supportedAudioStreamConfigurationCharacteristic.set_get_value_callback(callback)

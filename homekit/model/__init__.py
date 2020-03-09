@@ -17,7 +17,7 @@
 __all__ = [
     'AccessoryInformationService', 'BHSLightBulbService', 'RTPStreamService', 'ManagedRTPStreamService', 'FanService',
     'LightBulbService', 'ThermostatService', 'MicrophoneService', 'Categories', 'CharacteristicPermissions',
-    'CharacteristicFormats', 'FeatureFlags', 'Accessory', 'CameraAccessory'
+    'CharacteristicFormats', 'FeatureFlags', 'Accessory', 'CameraAccessory', 'get_id'
 ]
 
 import json

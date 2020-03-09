@@ -17,19 +17,23 @@
 from enum import IntEnum
 import tlv8
 
-from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions, \
-    AbstractCharacteristic
+from homekit.model.characteristics import CharacteristicsTypes, CharacteristicPermissions, \
+    AbstractTlv8Characteristic, AbstractTlv8CharacteristicValue
 from homekit.model.characteristics.rtp_stream.supported_rtp_configuration import CameraSRTPCryptoSuite
 
 
 class SetupEndpointsKeys(IntEnum):
     """
     Page 208 / Table 9-13
+    Page 210 / Table 9-16
     """
     SESSION_ID = 1
-    CONTROLLER_ADDRESS = 3
+    STATUS = 2
+    ADDRESS = 3
     SRTP_PARAMETERS_FOR_VIDEO = 4
     SRTP_PARAMETERS_FOR_AUDIO = 5
+    VIDEO_RTP_SSRC = 6
+    AUDIO_RTP_SSRC = 7
 
 
 class IPVersion(IntEnum):
@@ -38,46 +42,6 @@ class IPVersion(IntEnum):
     """
     IPV4 = 0
     IPV6 = 1
-
-
-class Address:
-    """
-    Page 208 / Table 9-14
-    """
-
-    def __init__(self, ip_address, video_rtp_port, audio_rtp_port, ip_version=IPVersion.IPV4):
-        self.ip_version = ip_version
-        self.ip_address = ip_address
-        self.video_rtp_port = video_rtp_port
-        self.audio_rtp_port = audio_rtp_port
-
-    def to_entry_list(self):
-        el = tlv8.EntryList([
-            tlv8.Entry(ControllerAddressKeys.IP_ADDRESS_VERSION, self.ip_version),
-            tlv8.Entry(ControllerAddressKeys.IP_ADDRESS, self.ip_address),
-            tlv8.Entry(ControllerAddressKeys.VIDEO_RTP_PORT, self.video_rtp_port),
-            tlv8.Entry(ControllerAddressKeys.AUDIO_RTP_PORT, self.audio_rtp_port),
-        ])
-        return el
-
-    @staticmethod
-    def parse(source_bytes):
-        data_format = {
-            ControllerAddressKeys.IP_ADDRESS_VERSION: IPVersion,
-            ControllerAddressKeys.IP_ADDRESS: tlv8.DataType.STRING,
-            ControllerAddressKeys.VIDEO_RTP_PORT: tlv8.DataType.INTEGER,
-            ControllerAddressKeys.AUDIO_RTP_PORT: tlv8.DataType.INTEGER,
-        }
-        el = tlv8.decode(source_bytes, data_format)
-        return el
-
-    @staticmethod
-    def from_entry_list(data: tlv8.EntryList):
-        ip_version = data.first_by_id(ControllerAddressKeys.IP_ADDRESS_VERSION).data
-        ip_address = data.first_by_id(ControllerAddressKeys.IP_ADDRESS).data
-        video_rtp_port = data.first_by_id(ControllerAddressKeys.VIDEO_RTP_PORT).data
-        audio_rtp_port = data.first_by_id(ControllerAddressKeys.AUDIO_RTP_PORT).data
-        return Address(ip_address, video_rtp_port, audio_rtp_port, ip_version)
 
 
 class ControllerAddressKeys(IntEnum):
@@ -90,6 +54,46 @@ class ControllerAddressKeys(IntEnum):
     AUDIO_RTP_PORT = 4
 
 
+class Address(AbstractTlv8CharacteristicValue):
+    """
+    Page 208 / Table 9-14
+    """
+
+    def __init__(self,
+                 ip_address: str,
+                 video_rtp_port: int,
+                 audio_rtp_port: int,
+                 ip_version: IPVersion = IPVersion.IPV4):
+        self.ip_version = ip_version
+        self.ip_address = ip_address
+        self.video_rtp_port = video_rtp_port
+        self.audio_rtp_port = audio_rtp_port
+
+    def to_bytes(self) -> bytes:
+        el = tlv8.EntryList([
+            tlv8.Entry(ControllerAddressKeys.IP_ADDRESS_VERSION, self.ip_version),
+            tlv8.Entry(ControllerAddressKeys.IP_ADDRESS, self.ip_address),
+            tlv8.Entry(ControllerAddressKeys.VIDEO_RTP_PORT, self.video_rtp_port),
+            tlv8.Entry(ControllerAddressKeys.AUDIO_RTP_PORT, self.audio_rtp_port),
+        ])
+        return el.encode()
+
+    @staticmethod
+    def from_bytes(data: bytes):
+        data_format = {
+            ControllerAddressKeys.IP_ADDRESS_VERSION: IPVersion,
+            ControllerAddressKeys.IP_ADDRESS: tlv8.DataType.STRING,
+            ControllerAddressKeys.VIDEO_RTP_PORT: tlv8.DataType.INTEGER,
+            ControllerAddressKeys.AUDIO_RTP_PORT: tlv8.DataType.INTEGER,
+        }
+        el = tlv8.decode(data, data_format)
+        ip_version = el.first_by_id(ControllerAddressKeys.IP_ADDRESS_VERSION).data
+        ip_address = el.first_by_id(ControllerAddressKeys.IP_ADDRESS).data
+        video_rtp_port = el.first_by_id(ControllerAddressKeys.VIDEO_RTP_PORT).data
+        audio_rtp_port = el.first_by_id(ControllerAddressKeys.AUDIO_RTP_PORT).data
+        return Address(ip_address, video_rtp_port, audio_rtp_port, ip_version)
+
+
 class SrtpParameterKeys(IntEnum):
     """
     Page 209 / Table 9-15
@@ -99,49 +103,48 @@ class SrtpParameterKeys(IntEnum):
     SRTP_MASTER_SALT = 3
 
 
-class SRTPParameters:
+class SRTPParameters(AbstractTlv8CharacteristicValue):
     """
     page 209 / table 9-15
     """
 
-    def __init__(self, crypto_suite, master_key=b'', master_salt=b''):
+    def __init__(self,
+                 crypto_suite: CameraSRTPCryptoSuite,
+                 master_key: bytes = b'',
+                 master_salt: bytes = b''):
         self.crypto_suite = crypto_suite
         self.master_key = master_key
         self.master_salt = master_salt
 
-    def to_entry_list(self):
+    def to_bytes(self) -> bytes:
         return tlv8.EntryList([
             tlv8.Entry(SrtpParameterKeys.SRTP_CRYPTO_SUITE, self.crypto_suite),
             tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_KEY, self.master_key),
             tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_SALT, self.master_salt)
-        ])
+        ]).encode()
 
     @staticmethod
-    def parse(source_bytes):
+    def from_bytes(data: bytes):
         data_format = {
             SrtpParameterKeys.SRTP_CRYPTO_SUITE: CameraSRTPCryptoSuite,
             SrtpParameterKeys.SRTP_MASTER_KEY: tlv8.DataType.BYTES,
             SrtpParameterKeys.SRTP_MASTER_SALT: tlv8.DataType.BYTES,
         }
-        el = tlv8.decode(source_bytes, data_format)
-        return el
-
-    @staticmethod
-    def from_entry_list(data: tlv8.EntryList):
+        el = tlv8.decode(data, data_format)
         return SRTPParameters(
-            data.first_by_id(SrtpParameterKeys.SRTP_CRYPTO_SUITE).data,
-            data.first_by_id(SrtpParameterKeys.SRTP_MASTER_KEY).data,
-            data.first_by_id(SrtpParameterKeys.SRTP_MASTER_SALT).data,
+            el.first_by_id(SrtpParameterKeys.SRTP_CRYPTO_SUITE).data,
+            el.first_by_id(SrtpParameterKeys.SRTP_MASTER_KEY).data,
+            el.first_by_id(SrtpParameterKeys.SRTP_MASTER_SALT).data,
         )
 
 
-class SetupEndpointsRequest:
+class SetupEndpointsRequest(AbstractTlv8CharacteristicValue):
     """
     Page 208 / Table 9-13
     """
 
     def __init__(self,
-                 session_id,
+                 session_id: bytes,
                  controller_address: Address,
                  srtp_params_video: SRTPParameters,
                  srtp_params_audio: SRTPParameters):
@@ -150,18 +153,29 @@ class SetupEndpointsRequest:
         self.srtp_params_video = srtp_params_video
         self.srtp_params_audio = srtp_params_audio
 
+    def to_bytes(self) -> bytes:
+        return tlv8.EntryList([
+            tlv8.Entry(SetupEndpointsKeys.SESSION_ID, self.session_id),
+            tlv8.Entry(SetupEndpointsKeys.ADDRESS, self.controller_address.to_bytes()),
+            tlv8.Entry(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO, self.srtp_params_video.to_bytes()),
+            tlv8.Entry(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_AUDIO, self.srtp_params_audio.to_bytes()),
+        ]).encode()
+
     @staticmethod
-    def from_entry_list(data: tlv8.EntryList):
-        session_id = data.first_by_id(SetupEndpointsKeys.SESSION_ID).data
+    def from_bytes(data: bytes):
+        el = tlv8.decode(data, {
+            SetupEndpointsKeys.SESSION_ID: tlv8.DataType.BYTES,
+            SetupEndpointsKeys.ADDRESS: tlv8.DataType.BYTES,
+            SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO: tlv8.DataType.BYTES,
+            SetupEndpointsKeys.SRTP_PARAMETERS_FOR_AUDIO: tlv8.DataType.BYTES,
+        })
+        session_id = el.first_by_id(SetupEndpointsKeys.SESSION_ID).data
 
-        el = Address.parse(data.first_by_id(SetupEndpointsKeys.CONTROLLER_ADDRESS).data)
-        controller_address = Address.from_entry_list(el)
+        controller_address = Address.from_bytes(el.first_by_id(SetupEndpointsKeys.ADDRESS).data)
 
-        el = SRTPParameters.parse(data.first_by_id(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO).data)
-        srtp_params_video = SRTPParameters.from_entry_list(el)
+        srtp_params_video = SRTPParameters.from_bytes(el.first_by_id(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO).data)
 
-        el = SRTPParameters.parse(data.first_by_id(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO).data)
-        srtp_params_audio = SRTPParameters.from_entry_list(el)
+        srtp_params_audio = SRTPParameters.from_bytes(el.first_by_id(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO).data)
 
         return SetupEndpointsRequest(session_id, controller_address, srtp_params_video, srtp_params_audio)
 
@@ -175,32 +189,19 @@ class EndpointStatus(IntEnum):
     ERROR = 2
 
 
-class SetupEndpointsResponseKeys(IntEnum):
-    """
-    Page 208 / Table 9-13
-    """
-    SESSION_ID = 1
-    STATUS = 2
-    ACCESSORY_ADDRESS = 3
-    SRTP_PARAMETERS_FOR_VIDEO = 4
-    SRTP_PARAMETERS_FOR_AUDIO = 5
-    VIDEO_RTP_SSRC = 6
-    AUDIO_RTP_SSRC = 7
-
-
-class SetupEndpointsResponse:
+class SetupEndpointsResponse(AbstractTlv8CharacteristicValue):
     """
     Page 210 / Table 9-16
     """
 
     def __init__(self,
                  id,
-                 status,
+                 status: EndpointStatus,
                  accessory_address: Address = None,
-                 srtp_params_video=None,
-                 srtp_params_audio=None,
-                 ssrc_video=None,
-                 ssrc_audio=None):
+                 srtp_params_video: SRTPParameters = None,
+                 srtp_params_audio: SRTPParameters = None,
+                 ssrc_video: bytes = None,
+                 ssrc_audio: bytes = None):
         self.id = id
         self.status = status
         self.accessory_address = accessory_address
@@ -209,54 +210,57 @@ class SetupEndpointsResponse:
         self.ssrc_video = ssrc_video
         self.ssrc_audio = ssrc_audio
 
-    def to_entry_list(self):
+    def to_bytes(self) -> bytes:
         el = tlv8.EntryList([
-            tlv8.Entry(SetupEndpointsResponseKeys.SESSION_ID, self.id),
-            tlv8.Entry(SetupEndpointsResponseKeys.STATUS, self.status),
+            tlv8.Entry(SetupEndpointsKeys.SESSION_ID, self.id),
+            tlv8.Entry(SetupEndpointsKeys.STATUS, self.status),
         ])
         if self.accessory_address:
-            el.append(tlv8.Entry(SetupEndpointsResponseKeys.ACCESSORY_ADDRESS, self.accessory_address.to_entry_list()))
+            el.append(tlv8.Entry(SetupEndpointsKeys.ADDRESS, self.accessory_address.to_bytes()))
         if self.srtp_params_video:
-            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO,
-                                 self.srtp_params_video.to_entry_list()))
+            el.append(tlv8.Entry(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO,
+                                 self.srtp_params_video.to_bytes()))
         if self.srtp_params_audio:
-            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO,
-                                 self.srtp_params_audio.to_entry_list()))
+            el.append(tlv8.Entry(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_AUDIO,
+                                 self.srtp_params_audio.to_bytes()))
         if self.ssrc_video:
-            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO, self.ssrc_video))
+            el.append(tlv8.Entry(SetupEndpointsKeys.VIDEO_RTP_SSRC, self.ssrc_video))
         if self.ssrc_audio:
-            el.append(tlv8.Entry(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO, self.ssrc_audio))
-        return el
+            el.append(tlv8.Entry(SetupEndpointsKeys.AUDIO_RTP_SSRC, self.ssrc_audio))
+        return el.encode()
 
     @staticmethod
-    def parse(source_bytes):
+    def from_bytes(data: bytes):
         data_format = {
-            SetupEndpointsResponseKeys.SESSION_ID: tlv8.DataType.BYTES,
-            SetupEndpointsResponseKeys.STATUS: EndpointStatus,
-            SetupEndpointsResponseKeys.ACCESSORY_ADDRESS: tlv8.DataType.BYTES,
-            SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO: tlv8.DataType.BYTES,
-            SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_AUDIO: tlv8.DataType.BYTES,
-            SetupEndpointsResponseKeys.VIDEO_RTP_SSRC: tlv8.DataType.BYTES,
-            SetupEndpointsResponseKeys.AUDIO_RTP_SSRC: tlv8.DataType.BYTES,
+            SetupEndpointsKeys.SESSION_ID: tlv8.DataType.BYTES,
+            SetupEndpointsKeys.STATUS: EndpointStatus,
+            SetupEndpointsKeys.ADDRESS: tlv8.DataType.BYTES,
+            SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO: tlv8.DataType.BYTES,
+            SetupEndpointsKeys.SRTP_PARAMETERS_FOR_AUDIO: tlv8.DataType.BYTES,
+            SetupEndpointsKeys.VIDEO_RTP_SSRC: tlv8.DataType.BYTES,
+            SetupEndpointsKeys.AUDIO_RTP_SSRC: tlv8.DataType.BYTES,
         }
-        el = tlv8.decode(source_bytes, data_format)
-        entry = el.first_by_id(SetupEndpointsResponseKeys.ACCESSORY_ADDRESS)
-        entry.data = Address.parse(entry.data)
-        entry = el.first_by_id(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_VIDEO)
-        entry.data = SRTPParameters.parse(entry.data)
-        entry = el.first_by_id(SetupEndpointsResponseKeys.SRTP_PARAMETERS_FOR_AUDIO)
-        entry.data = SRTPParameters.parse(entry.data)
-        return el
+        el = tlv8.decode(data, data_format)
+        session_id = el.first_by_id(SetupEndpointsKeys.SESSION_ID).data
+        status = el.first_by_id(SetupEndpointsKeys.STATUS).data
+        address = Address.from_bytes(el.first_by_id(SetupEndpointsKeys.ADDRESS).data)
+        srtp_params_video = SRTPParameters.from_bytes(
+            el.first_by_id(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO).data)
+        srtp_params_audio = SRTPParameters.from_bytes(
+            el.first_by_id(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_AUDIO).data)
+        ssrc_video = el.first_by_id(SetupEndpointsKeys.VIDEO_RTP_SSRC).data
+        ssrc_audio = el.first_by_id(SetupEndpointsKeys.AUDIO_RTP_SSRC).data
+        return SetupEndpointsResponse(session_id, status, address, srtp_params_video, srtp_params_audio, ssrc_video,
+                                      ssrc_audio)
 
 
-class SetupEndpointsCharacteristic(AbstractCharacteristic):
+class SetupEndpointsCharacteristic(AbstractTlv8Characteristic):
     """
     Defined on page 219
     """
 
-    def __init__(self, iid):
-        AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.SETUP_ENDPOINTS,
-                                        CharacteristicFormats.tlv8, SetupEndpointsRequest)
+    def __init__(self, iid, value):
+        AbstractTlv8Characteristic.__init__(self, iid, value, CharacteristicsTypes.SETUP_ENDPOINTS)
         self.perms = [CharacteristicPermissions.paired_read, CharacteristicPermissions.paired_write]
         self.description = 'setup camera endpoint'
 

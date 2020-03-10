@@ -210,7 +210,10 @@ class AccessoryServerData:
         except KeyError:
             raise ConfigurationError('category missing in "{f}"'.format(f=self.data_file))
         if category not in Categories:
-            raise ConfigurationError('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))
+            valid_categories = '", "'.join(Categories._categories.values())
+            raise ConfigurationError(
+                'invalid category "{c}" in "{f}". Valid categories are "{v}"'.format(c=category, f=self.data_file,
+                                                                                     v=valid_categories))
         return category
 
     def remove_peer(self, pairing_id: bytes):
@@ -384,7 +387,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
                 len_bytes = len(block).to_bytes(2, byteorder='little')
                 a2c_key = self.server.sessions[self.session_id]['accessory_to_controller_key']
-                cnt_bytes = self.server.sessions[self.session_id]['accessory_to_controller_count'].\
+                cnt_bytes = self.server.sessions[self.session_id]['accessory_to_controller_count']. \
                     to_bytes(8, byteorder='little')
                 ciper_and_mac = chacha20_aead_encrypt(len_bytes, a2c_key, cnt_bytes, bytes([0, 0, 0, 0]), block)
                 self.server.sessions[self.session_id]['accessory_to_controller_count'] += 1

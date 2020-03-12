@@ -69,4 +69,3 @@ if __name__ == '__main__':
     logger.info('unpublish device')
     httpd.unpublish_device()
     httpd.shutdown()
-

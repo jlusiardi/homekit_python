@@ -47,95 +47,6 @@ from homekit.protocol import TLV
 from homekit.protocol.statuscodes import HapStatusCodes
 
 
-class AccessoryServer(ThreadingMixIn, HTTPServer):
-    """
-    This server makes accessories accessible via the HomeKit protocol.
-    """
-
-    def __init__(self, config_file, logger=sys.stderr):
-        """
-        Create a new server that acts like a homekit accessory. The config file is loaded and checked.
-
-        :param config_file: the file that contains the configuration data. Must be a string representing an absolute
-        path to the file
-        :param logger: this can be None to disable logging, sys.stderr to use the default behaviour of the python
-        implementation or an instance of logging.Logger to use this.
-        :raises HomeKitConfigurationException: if the config file is malformed. Reason will be in the message.
-        """
-        if logger is None or logger == sys.stderr or isinstance(logger, logging.Logger):
-            self.logger = logger
-        else:
-            raise ConfigurationError('Invalid logger given.')
-
-        self.data = AccessoryServerData(config_file)
-        self.data.increase_configuration_number()
-        self.sessions = {}
-        self.zeroconf = Zeroconf()
-        self.mdns_type = '_hap._tcp.local.'
-        self.mdns_name = self.data.name + '._hap._tcp.local.'
-        self.identify_callback = None
-        self.zeroconf_info = None
-
-        self.accessories = Accessories()
-
-        HTTPServer.__init__(self, (self.data.ip, self.data.port), AccessoryRequestHandler)
-
-    def write_event(self, characteristics, source=None):
-        dead_sessions = []
-        for session_id, session in self.sessions.items():
-            if source and session_id == source:
-                continue
-            try:
-                session['handler'].write_event(characteristics)
-            except DisconnectedControllerError:
-                dead_sessions.append(session_id)
-        for session_id in dead_sessions:
-            del self.sessions[session_id]
-
-    def add_accessory(self, accessory):
-        self.accessories.add_accessory(accessory)
-
-    def set_identify_callback(self, func):
-        """
-        Sets the callback function for this accessory server. This will NOT be applied to all accessories registered
-        with. This function will be called on unpaired calls to identify.
-
-        :param func: a function without any parameters and without return type.
-        """
-        self.identify_callback = func
-
-    def publish_device(self):
-        desc = {'md': str(self.data.name),  # model name of accessory
-                # category identifier (page 254, 2 means bridge), must be a String
-                'ci': str(Categories[self.data.category]),
-                'pv': '1.0',  # protocol version
-                'c#': str(self.data.configuration_number),
-                # configuration (consecutive number, 1 or greater, must be changed on every configuration change)
-                'id': self.data.accessory_pairing_id_bytes,  # id MUST look like Mac Address
-                'ff': '0',  # feature flags (Table 5-8, page 69)
-                's#': '1',  # must be 1
-                'sf': '1'  # status flag, lowest bit encodes pairing status, 1 means unpaired
-                }
-        if self.data.is_paired:
-            desc['sf'] = '0'
-
-        self.zeroconf_info = ServiceInfo(self.mdns_type, self.mdns_name, addresses=[socket.inet_aton(self.data.ip)],
-                                         port=self.data.port, properties=desc)
-        self.zeroconf.unregister_service(self.zeroconf_info)
-        self.zeroconf.register_service(self.zeroconf_info, allow_name_change=True)
-
-    def unpublish_device(self):
-        if self.zeroconf_info:
-            self.zeroconf.unregister_service(self.zeroconf_info)
-
-    def shutdown(self):
-        # tell all handlers to close the connection
-        for session in self.sessions:
-            self.sessions[session]['handler'].close_connection = True
-        self.socket.close()
-        HTTPServer.shutdown(self)
-
-
 class AccessoryServerData:
     """
     This class is used to take care of the servers persistence to be able to manage restarts,
@@ -319,6 +230,9 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             },
             '/pairings': {
                 'POST': self._post_pairings
+            },
+            '/resource': {
+                'POST': self._post_resource
             }
         }
         self.protocol_version = 'HTTP/1.1'
@@ -864,6 +778,9 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
         self.send_error(HttpStatusCodes.METHOD_NOT_ALLOWED)
 
+    def _post_resource(self):
+        self.send_error(HttpStatusCodes.NOT_FOUND)
+
     def _post_pairings(self):
         d_req = TLV.decode_bytes(self.body)
 
@@ -1320,3 +1237,98 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             BaseHTTPRequestHandler.log_error(self, format, *args)
         else:
             self.server.logger.error("%s" % (format % args))
+
+
+class AccessoryServer(ThreadingMixIn, HTTPServer):
+    """
+    This server makes accessories accessible via the HomeKit protocol.
+    """
+
+    def __init__(self, config_file, logger=sys.stderr, request_handler_class=AccessoryRequestHandler):
+        """
+        Create a new server that acts like a homekit accessory. The config file is loaded and checked.
+
+        :param config_file: the file that contains the configuration data. Must be a string representing an absolute
+        path to the file
+        :param logger: this can be None to disable logging, sys.stderr to use the default behaviour of the python
+        implementation or an instance of logging.Logger to use this.
+        :param request_handler_class: this defaults to `AccessoryRequestHandler` but can be set to any subclass of this
+        :raises HomeKitConfigurationException: if the config file is malformed. Reason will be in the message.
+        :raises ConfigurationError: if either the logger cannot be used or the request_handler_class is not a subclass
+        of AccessoryRequestHandler
+        """
+        if logger is None or logger == sys.stderr or isinstance(logger, logging.Logger):
+            self.logger = logger
+        else:
+            raise ConfigurationError('Invalid logger given.')
+
+        if not issubclass(request_handler_class, AccessoryRequestHandler):
+            raise ConfigurationError('Invalid request_handler_class given.')
+
+        self.data = AccessoryServerData(config_file)
+        self.data.increase_configuration_number()
+        self.sessions = {}
+        self.zeroconf = Zeroconf()
+        self.mdns_type = '_hap._tcp.local.'
+        self.mdns_name = self.data.name + '._hap._tcp.local.'
+        self.identify_callback = None
+        self.zeroconf_info = None
+
+        self.accessories = Accessories()
+
+        HTTPServer.__init__(self, (self.data.ip, self.data.port), request_handler_class)
+
+    def write_event(self, characteristics, source=None):
+        dead_sessions = []
+        for session_id, session in self.sessions.items():
+            if source and session_id == source:
+                continue
+            try:
+                session['handler'].write_event(characteristics)
+            except DisconnectedControllerError:
+                dead_sessions.append(session_id)
+        for session_id in dead_sessions:
+            del self.sessions[session_id]
+
+    def add_accessory(self, accessory):
+        self.accessories.add_accessory(accessory)
+
+    def set_identify_callback(self, func):
+        """
+        Sets the callback function for this accessory server. This will NOT be applied to all accessories registered
+        with. This function will be called on unpaired calls to identify.
+
+        :param func: a function without any parameters and without return type.
+        """
+        self.identify_callback = func
+
+    def publish_device(self):
+        desc = {'md': str(self.data.name),  # model name of accessory
+                # category identifier (page 254, 2 means bridge), must be a String
+                'ci': str(Categories[self.data.category]),
+                'pv': '1.0',  # protocol version
+                'c#': str(self.data.configuration_number),
+                # configuration (consecutive number, 1 or greater, must be changed on every configuration change)
+                'id': self.data.accessory_pairing_id_bytes,  # id MUST look like Mac Address
+                'ff': '0',  # feature flags (Table 5-8, page 69)
+                's#': '1',  # must be 1
+                'sf': '1'  # status flag, lowest bit encodes pairing status, 1 means unpaired
+                }
+        if self.data.is_paired:
+            desc['sf'] = '0'
+
+        self.zeroconf_info = ServiceInfo(self.mdns_type, self.mdns_name, addresses=[socket.inet_aton(self.data.ip)],
+                                         port=self.data.port, properties=desc)
+        self.zeroconf.unregister_service(self.zeroconf_info)
+        self.zeroconf.register_service(self.zeroconf_info, allow_name_change=True)
+
+    def unpublish_device(self):
+        if self.zeroconf_info:
+            self.zeroconf.unregister_service(self.zeroconf_info)
+
+    def shutdown(self):
+        # tell all handlers to close the connection
+        for session in self.sessions:
+            self.sessions[session]['handler'].close_connection = True
+        self.socket.close()
+        HTTPServer.shutdown(self)

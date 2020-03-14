@@ -23,6 +23,7 @@ import sys
 import json
 import tlv8
 import base64
+import importlib
 
 from homekit import AccessoryServer, Controller
 from homekit.accessoryserver import AccessoryRequestHandler
@@ -59,20 +60,47 @@ class ProxyCharacteristic(AbstractCharacteristic):
         AbstractCharacteristic.__init__(self, iid, characteristic_type, characteristic_format)
 
 
+class DecoderLoader:
+    def __init__(self):
+        self.decoders = {}
+        self.modules_loaded = set()
+
+    def load(self, char_type):
+        characteristic_name = CharacteristicsTypes.get_short(char_type)
+        mod_name = characteristic_name.replace('-', '_')
+        logger.info('loading module %s for type %s', mod_name, char_type)
+        if mod_name not in self.modules_loaded:
+            try:
+                module = importlib.import_module('homekit.model.characteristics.' + mod_name)
+                char_id = getattr(module, 'CHARACTERISTIC_ID')
+                decoder = getattr(module, 'decoder')
+                self.decoders[char_id] = decoder
+            except Exception as e:
+                logger.error('Error loading decoder: %s for type %s', e, char_type)
+            self.modules_loaded.add(mod_name)
+
+
+decoder_loader = DecoderLoader()
+
+
 def generate_set_value_callback(aid, characteristic: AbstractCharacteristic):
     def callback(value):
         iid = int(characteristic.iid)
         characteristics = [(int(aid), iid, value)]
         pairing.put_characteristics(characteristics)
         debug_value = value
+        characteristic_name = CharacteristicsTypes.get_short(characteristic.type)
         if characteristic.format == CharacteristicFormats.tlv8:
             bytes_value = base64.b64decode(value)
-            debug_value = tlv8.format_string(tlv8.deep_decode(bytes_value))
+            decoder_loader.load(characteristic.type)
+            if characteristic.type in decoder_loader.decoders:
+                debug_value = tlv8.format_string(decoder_loader.decoders[characteristic.type](bytes_value))
+            else:
+                debug_value = tlv8.format_string(tlv8.deep_decode(bytes_value))
         logger.info(
             'write value to {a}.{i} (type {t} / {u}): \n{v}'.format(a=aid, i=iid,
                                                                     u=characteristic.type,
-                                                                    t=CharacteristicsTypes.get_short(
-                                                                        characteristic.type),
+                                                                    t=characteristic_name,
                                                                     v=debug_value))
 
     return callback
@@ -84,14 +112,18 @@ def generate_get_value_callback(aid, characteristic: AbstractCharacteristic):
         characteristics = [(int(aid), iid)]
         value = pairing.get_characteristics(characteristics)[(int(aid), int(iid))]['value']
         debug_value = value
+        characteristic_name = CharacteristicsTypes.get_short(characteristic.type)
         if characteristic.format == CharacteristicFormats.tlv8:
             bytes_value = base64.b64decode(value)
-            debug_value = tlv8.format_string(tlv8.deep_decode(bytes_value))
+            decoder_loader.load(characteristic.type)
+            if characteristic.type in decoder_loader.decoders:
+                debug_value = tlv8.format_string(decoder_loader.decoders[characteristic.type](bytes_value))
+            else:
+                debug_value = tlv8.format_string(tlv8.deep_decode(bytes_value))
         logger.info(
             'get value from {a}.{i} (type {t} / {u}): \n{v}'.format(a=aid, i=iid,
                                                                     u=characteristic.type,
-                                                                    t=CharacteristicsTypes.get_short(
-                                                                        characteristic.type),
+                                                                    t=characteristic_name,
                                                                     v=debug_value))
 
         return value

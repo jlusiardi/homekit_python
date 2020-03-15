@@ -779,6 +779,10 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         self.send_error(HttpStatusCodes.METHOD_NOT_ALLOWED)
 
     def _post_resource(self):
+        """
+        Defined chapter 11.5 (page 245 spec revision 1 / page 242 spec revision 2)
+        :return:
+        """
         self.send_error(HttpStatusCodes.NOT_FOUND)
 
     def _post_pairings(self):

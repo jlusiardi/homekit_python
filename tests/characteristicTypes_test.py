@@ -52,6 +52,10 @@ class CharacteristicTypesTest(unittest.TestCase):
         self.assertEqual('0000006D-1234-1234-1234-012345678901',
                          CharacteristicsTypes.get_short_uuid('0000006D-1234-1234-1234-012345678901'))
 
+    def test_get_uuid_passthrough(self):
+        self.assertEqual('4AAAF936-0DEC-11E5-B939-0800200C9A66',
+                         CharacteristicsTypes.get_uuid('4AAAF936-0DEC-11E5-B939-0800200C9A66'))
+
     def test_get_short_full_uuid(self):
         self.assertEqual('position.current', CharacteristicsTypes.get_short('0000006D-0000-1000-8000-0026BB765291'))
 

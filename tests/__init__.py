@@ -17,7 +17,7 @@
 __all__ = [
     'TestServerData', 'BleCharacteristicFormatsTest', 'BleCharacteristicUnitsTest', 'CharacteristicTypesTest',
     'TestBLEController', 'TestChacha20poly1305', 'TestCharacteristicsTypes', 'TestController', 'TestControllerIpPaired',
-    'TestControllerIpUnpaired', 'TestHttpResponse', 'TestHttpStatusCodes', 'TestMfrData', 'TestSrp', 'TestTLV',
+    'TestControllerIpUnpaired', 'TestHttpResponse', 'TestHttpStatusCodes', 'TestMfrData', 'TestSrp',
     'TestZeroconf', 'TestBLEPairing', 'TestServiceTypes', 'TestSecureHttp', 'TestHTTPPairing', 'TestSecureSession'
 ]
 
@@ -36,5 +36,4 @@ from tests.secure_http_test import TestSecureHttp
 from tests.serverdata_test import TestServerData
 from tests.serviceTypes_test import TestServiceTypes
 from tests.srp_test import TestSrp
-from tests.tlv_test import TestTLV
 from tests.zeroconf_test import TestZeroconf

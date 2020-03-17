@@ -20,6 +20,7 @@ import logging
 import random
 import uuid
 import re
+import tlv8
 
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError, TransportNotSupportedError, MalformedPinError
@@ -209,8 +210,8 @@ class Controller(object):
                     mac_address=accessory_mac)
             )
 
-        value = TLV.encode_list([
-            (1, b'\x01')
+        value = tlv8.encode([
+            tlv8.Entry(TLV.kTLVHAPParamValue, b'\x01')
         ])
         body = len(value).to_bytes(length=2, byteorder='little') + value
 
@@ -529,10 +530,10 @@ class Controller(object):
             pairingIdToDelete = pairingId
 
         # Prepare the common (for IP and BLE) request data
-        request_tlv = TLV.encode_list([
-            (TLV.kTLVType_State, TLV.M1),
-            (TLV.kTLVType_Method, TLV.RemovePairing),
-            (TLV.kTLVType_Identifier, pairingIdToDelete.encode())
+        request_tlv = tlv8.encode([
+            tlv8.Entry(TLV.kTLVType_State, TLV.M1),
+            tlv8.Entry(TLV.kTLVType_Method, TLV.RemovePairing),
+            tlv8.Entry(TLV.kTLVType_Identifier, pairingIdToDelete.encode())
         ])
 
         if connection_type == 'IP':
@@ -542,13 +543,13 @@ class Controller(object):
             response = session.post('/pairings', request_tlv)
             session.close()
             data = response.read()
-            data = TLV.decode_bytes(data)
+            data = tlv8.decode(data)
         elif connection_type == 'BLE':
             if not BLE_TRANSPORT_SUPPORTED:
                 raise TransportNotSupportedError('BLE')
-            inner = TLV.encode_list([
-                (TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-                (TLV.kTLVHAPParamValue, request_tlv)
+            inner = tlv8.encode([
+                tlv8.Entry(TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
+                tlv8.Entry(TLV.kTLVHAPParamValue, request_tlv)
             ])
 
             body = len(inner).to_bytes(length=2, byteorder='little') + inner
@@ -565,14 +566,15 @@ class Controller(object):
 
             session = BleSession(pairing_data, self.ble_adapter)
             response = session.request(pair_remove_char, pair_remove_char_id, HapBleOpCodes.CHAR_WRITE, body)
-            data = TLV.decode_bytes(response[1])
+            data = tlv8.decode(response.first_by_id(TLV.kTLVHAPParamValue).data)
         else:
             raise Exception('not implemented (neither IP nor BLE)')
 
         # act upon the response (the same is returned for IP and BLE accessories)
         # handle the result, spec says, if it has only one entry with state == M2 we unpaired, else its an error.
-        logging.debug('response data: %s', data)
-        if len(data) == 1 and data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2:
+        logging.debug('response data: %s', tlv8.format_string(data))
+        state = data.first_by_id(TLV.kTLVType_State).data
+        if len(data) == 1 and state == TLV.M2:
             if not pairingId:
                 del self.pairings[alias]
         else:

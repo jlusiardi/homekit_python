@@ -170,6 +170,10 @@ class TestControllerIpPaired(unittest.TestCase):
                 "decc6fa3-de3e-41c9-adba-ef7409821bfc": {
                     "admin": true,
                     "key": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8"
+                },
+                "ABCDEFfa3-de3e-41c9-adba-ef7409821bfc": {
+                    "admin": false,
+                    "key": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8"
                 }
             },
             "unsuccessful_tries": 0
@@ -353,7 +357,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.list_pairings()
-        self.assertEqual(1, len(result))
+        self.assertEqual(2, len(result))
         result = result[0]
         self.assertIn('controllerType', result)
         self.assertEqual(result['controllerType'], 'admin')

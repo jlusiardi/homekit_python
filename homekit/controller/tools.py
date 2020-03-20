@@ -182,7 +182,7 @@ def check_convert_value(val, target_type):
     if target_type == CharacteristicFormats.tlv8:
         try:
             tmp_bytes = base64.decodebytes(val.encode())
-            tlv8.decode(tmp_bytes)
+            tlv8.decode(tmp_bytes, {})
         except (binascii.Error, ValueError):
             raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     return val

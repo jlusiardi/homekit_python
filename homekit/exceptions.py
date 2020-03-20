@@ -48,7 +48,7 @@ class ProtocolError(HomeKitException):
 
 class UnknownError(ProtocolError):
     """
-    Raised upon receipt of an unknown error (transmission of kTLVError_Unknown). The spec says that this can happen
+    Raised upon receipt of an unknown error (transmission of Errors.Unknown). The spec says that this can happen
     during "Add Pairing" (chapter 4.11 page 51) and "Remove Pairing" (chapter 4.12 page 53).
     """
     pass
@@ -69,7 +69,7 @@ class AuthenticationError(ProtocolError):
 class BackoffError(ProtocolError):
     """
     Raised upon receipt of a back off error. It seems unclear when this is raised, must be related to
-    kTLVType_RetryDelay which is defined on page 61 of the spec.
+    TlvType.RetryDelay which is defined on page 61 of the spec.
     """
     pass
 

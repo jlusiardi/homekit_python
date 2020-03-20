@@ -24,7 +24,10 @@ import tlv8
 from cryptography.hazmat.primitives.asymmetric import x25519
 from cryptography.hazmat.primitives import serialization
 
-from homekit.protocol.tlv import TLV
+from homekit.protocol.states import States
+from homekit.protocol.methods import Methods
+from homekit.protocol.errors import Errors
+from homekit.protocol.tlv_types import TlvTypes
 from homekit.exceptions import IncorrectPairingIdError, InvalidAuthTagError, InvalidSignatureError, UnavailableError, \
     AuthenticationError, InvalidError, BusyError, MaxTriesError, MaxPeersError, BackoffError
 
@@ -40,17 +43,17 @@ def error_handler(error, stage):
     :param stage: the stage it appeared in
     :return: None
     """
-    if error == TLV.kTLVError_Unavailable:
+    if error == Errors.Unavailable:
         raise UnavailableError(stage)
-    elif error == TLV.kTLVError_Authentication:
+    elif error == Errors.Authentication:
         raise AuthenticationError(stage)
-    elif error == TLV.kTLVError_Backoff:
+    elif error == Errors.Backoff:
         raise BackoffError(stage)
-    elif error == TLV.kTLVError_MaxPeers:
+    elif error == Errors.MaxPeers:
         raise MaxPeersError(stage)
-    elif error == TLV.kTLVError_MaxTries:
+    elif error == Errors.MaxTries:
         raise MaxTriesError(stage)
-    elif error == TLV.kTLVError_Busy:
+    elif error == Errors.Busy:
         raise BusyError(stage)
     else:
         raise InvalidError(stage)
@@ -106,15 +109,15 @@ def perform_pair_setup_part1():
     #
     logging.debug('#1 ios -> accessory: send SRP start request')
     request_tlv = [
-        tlv8.Entry(TLV.kTLVType_State, TLV.M1),
-        tlv8.Entry(TLV.kTLVType_Method, TLV.PairSetup)
+        tlv8.Entry(TlvTypes.State, States.M1),
+        tlv8.Entry(TlvTypes.Method, Methods.PairSetup)
     ]
 
     step2_expectations = {
-        TLV.kTLVType_State: tlv8.DataType.BYTES,
-        TLV.kTLVType_Error: tlv8.DataType.BYTES,
-        TLV.kTLVType_PublicKey: tlv8.DataType.BYTES,
-        TLV.kTLVType_Salt: tlv8.DataType.BYTES
+        TlvTypes.State: tlv8.DataType.INTEGER,
+        TlvTypes.Error: tlv8.DataType.INTEGER,
+        TlvTypes.PublicKey: tlv8.DataType.BYTES,
+        TlvTypes.Salt: tlv8.DataType.BYTES
     }
     response_tlv = yield (request_tlv, step2_expectations)
 
@@ -122,22 +125,22 @@ def perform_pair_setup_part1():
     # Step #3 ios --> accessory (send SRP verify request) (see page 41)
     #
     logging.debug('#3 ios -> accessory: send SRP verify request')
-    assert response_tlv.first_by_id(TLV.kTLVType_State) and response_tlv.first_by_id(
-        TLV.kTLVType_State).data == TLV.M2, 'perform_pair_setup: State not M2'
+    assert response_tlv.first_by_id(TlvTypes.State) and response_tlv.first_by_id(
+        TlvTypes.State).data == States.M2, 'perform_pair_setup: State not M2'
 
     # the errors here can be:
     #  * kTLVError_Unavailable: Device is paired
     #  * kTLVError_MaxTries: More than 100 unsuccessful attempts
     #  * kTLVError_Busy: There is already a pairing going on
-    error = response_tlv.first_by_id(TLV.kTLVType_Error)
+    error = response_tlv.first_by_id(TlvTypes.Error)
     if error:
         error_handler(error.data, 'step 3')
 
-    assert response_tlv.first_by_id(TLV.kTLVType_PublicKey), 'perform_pair_setup: Not a public key'
-    assert response_tlv.first_by_id(TLV.kTLVType_Salt), 'perform_pair_setup: Not a salt'
+    assert response_tlv.first_by_id(TlvTypes.PublicKey), 'perform_pair_setup: Not a public key'
+    assert response_tlv.first_by_id(TlvTypes.Salt), 'perform_pair_setup: Not a salt'
 
-    return response_tlv.first_by_id(TLV.kTLVType_Salt).data, \
-        response_tlv.first_by_id(TLV.kTLVType_PublicKey).data
+    return response_tlv.first_by_id(TlvTypes.Salt).data, \
+        response_tlv.first_by_id(TlvTypes.PublicKey).data
 
 
 def perform_pair_setup_part2(pin, ios_pairing_id, salt, server_public_key):
@@ -162,15 +165,15 @@ def perform_pair_setup_part2(pin, ios_pairing_id, salt, server_public_key):
     client_proof = srp_client.get_proof()
 
     response_tlv = [
-        tlv8.Entry(TLV.kTLVType_State, TLV.M3),
-        tlv8.Entry(TLV.kTLVType_PublicKey, SrpClient.to_byte_array(client_pub_key)),
-        tlv8.Entry(TLV.kTLVType_Proof, SrpClient.to_byte_array(client_proof)),
+        tlv8.Entry(TlvTypes.State, States.M3),
+        tlv8.Entry(TlvTypes.PublicKey, SrpClient.to_byte_array(client_pub_key)),
+        tlv8.Entry(TlvTypes.Proof, SrpClient.to_byte_array(client_proof)),
     ]
 
     step4_expectations = {
-        TLV.kTLVType_State: tlv8.DataType.BYTES,
-        TLV.kTLVType_Error: tlv8.DataType.BYTES,
-        TLV.kTLVType_Proof: tlv8.DataType.BYTES
+        TlvTypes.State: tlv8.DataType.INTEGER,
+        TlvTypes.Error: tlv8.DataType.INTEGER,
+        TlvTypes.Proof: tlv8.DataType.BYTES
     }
     response_tlv = yield (response_tlv, step4_expectations)
 
@@ -180,14 +183,14 @@ def perform_pair_setup_part2(pin, ios_pairing_id, salt, server_public_key):
     logging.debug('#5 ios -> accessory: send SRP exchange request')
 
     # M4 Verification (page 43)
-    assert response_tlv.first_by_id(TLV.kTLVType_State) and response_tlv.first_by_id(
-        TLV.kTLVType_State).data == TLV.M4, 'perform_pair_setup: State not M4'
-    error = response_tlv.first_by_id(TLV.kTLVType_Error)
+    assert response_tlv.first_by_id(TlvTypes.State) and response_tlv.first_by_id(
+        TlvTypes.State).data == States.M4, 'perform_pair_setup: State not M4'
+    error = response_tlv.first_by_id(TlvTypes.Error)
     if error:
         error_handler(error.data, 'step 5')
 
-    assert response_tlv.first_by_id(TLV.kTLVType_Proof), 'perform_pair_setup: Not a proof'
-    if not srp_client.verify_servers_proof(response_tlv.first_by_id(TLV.kTLVType_Proof).data):
+    assert response_tlv.first_by_id(TlvTypes.Proof), 'perform_pair_setup: Not a proof'
+    if not srp_client.verify_servers_proof(response_tlv.first_by_id(TlvTypes.Proof).data):
         raise AuthenticationError('Step #5: wrong proof!')
 
     # M5 Request generation (page 44)
@@ -212,9 +215,9 @@ def perform_pair_setup_part2(pin, ios_pairing_id, salt, server_public_key):
     ios_device_signature = ios_device_ltsk.sign(ios_device_info)
 
     sub_tlv = [
-        tlv8.Entry(TLV.kTLVType_Identifier, ios_device_pairing_id),
-        tlv8.Entry(TLV.kTLVType_PublicKey, ios_device_ltpk.to_bytes()),
-        tlv8.Entry(TLV.kTLVType_Signature, ios_device_signature)
+        tlv8.Entry(TlvTypes.Identifier, ios_device_pairing_id),
+        tlv8.Entry(TlvTypes.PublicKey, ios_device_ltpk.to_bytes()),
+        tlv8.Entry(TlvTypes.Signature, ios_device_signature)
     ]
     sub_tlv_b = tlv8.encode(sub_tlv)
 
@@ -227,42 +230,42 @@ def perform_pair_setup_part2(pin, ios_pairing_id, salt, server_public_key):
     tmp += encrypted_data_with_auth_tag[1]
 
     response_tlv = [
-        tlv8.Entry(TLV.kTLVType_State, TLV.M5),
-        tlv8.Entry(TLV.kTLVType_EncryptedData, tmp)
+        tlv8.Entry(TlvTypes.State, States.M5),
+        tlv8.Entry(TlvTypes.EncryptedData, tmp)
     ]
 
     step6_expectations = {
-        TLV.kTLVType_State: tlv8.DataType.BYTES,
-        TLV.kTLVType_Error: tlv8.DataType.BYTES,
-        TLV.kTLVType_EncryptedData: tlv8.DataType.BYTES
+        TlvTypes.State: tlv8.DataType.INTEGER,
+        TlvTypes.Error: tlv8.DataType.INTEGER,
+        TlvTypes.EncryptedData: tlv8.DataType.BYTES
     }
     response_tlv = yield (response_tlv, step6_expectations)
 
     #
     # Step #7 ios (Verification) (page 47)
     #
-    assert response_tlv.first_by_id(TLV.kTLVType_State) and response_tlv.first_by_id(
-        TLV.kTLVType_State).data == TLV.M6, 'perform_pair_setup: State not M6'
-    error = response_tlv.first_by_id(TLV.kTLVType_Error)
+    assert response_tlv.first_by_id(TlvTypes.State) and response_tlv.first_by_id(
+        TlvTypes.State).data == States.M6, 'perform_pair_setup: State not M6'
+    error = response_tlv.first_by_id(TlvTypes.Error)
     if error:
         error_handler(error.data, 'step 7')
 
-    assert response_tlv.first_by_id(TLV.kTLVType_EncryptedData), 'perform_pair_setup: No encrypted data'
+    assert response_tlv.first_by_id(TlvTypes.EncryptedData), 'perform_pair_setup: No encrypted data'
     decrypted_data = chacha20_aead_decrypt(bytes(), session_key, 'PS-Msg06'.encode(), bytes([0, 0, 0, 0]),
-                                           response_tlv.first_by_id(TLV.kTLVType_EncryptedData).data)
+                                           response_tlv.first_by_id(TlvTypes.EncryptedData).data)
     if decrypted_data is False:
         raise homekit.exception.IllegalData('step 7')
 
     response_tlv = tlv8.decode(decrypted_data)
 
-    assert response_tlv.first_by_id(TLV.kTLVType_Identifier), 'perform_pair_setup: No identifier'
-    accessory_pairing_id = response_tlv.first_by_id(TLV.kTLVType_Identifier).data
+    assert response_tlv.first_by_id(TlvTypes.Identifier), 'perform_pair_setup: No identifier'
+    accessory_pairing_id = response_tlv.first_by_id(TlvTypes.Identifier).data
 
-    assert response_tlv.first_by_id(TLV.kTLVType_PublicKey), 'perform_pair_setup: No public key'
-    accessory_ltpk = response_tlv.first_by_id(TLV.kTLVType_PublicKey).data
+    assert response_tlv.first_by_id(TlvTypes.PublicKey), 'perform_pair_setup: No public key'
+    accessory_ltpk = response_tlv.first_by_id(TlvTypes.PublicKey).data
 
-    assert response_tlv.first_by_id(TLV.kTLVType_Signature), 'perform_pair_setup: No signature'
-    accessory_sig = response_tlv.first_by_id(TLV.kTLVType_Signature).data
+    assert response_tlv.first_by_id(TlvTypes.Signature), 'perform_pair_setup: No signature'
+    accessory_sig = response_tlv.first_by_id(TlvTypes.Signature).data
 
     hkdf_inst = hkdf.Hkdf('Pair-Setup-Accessory-Sign-Salt'.encode(),
                           SrpClient.to_byte_array(srp_client.get_session_key()),
@@ -307,27 +310,27 @@ def get_session_keys(pairing_data):
     )
 
     request_tlv = [
-        tlv8.Entry(TLV.kTLVType_State, TLV.M1),
-        tlv8.Entry(TLV.kTLVType_PublicKey, ios_key_pub)
+        tlv8.Entry(TlvTypes.State, States.M1),
+        tlv8.Entry(TlvTypes.PublicKey, ios_key_pub)
     ]
 
     step2_expectations = {
-        TLV.kTLVType_State: tlv8.DataType.BYTES,
-        TLV.kTLVType_PublicKey: tlv8.DataType.BYTES,
-        TLV.kTLVType_EncryptedData: tlv8.DataType.BYTES
+        TlvTypes.State: tlv8.DataType.INTEGER,
+        TlvTypes.PublicKey: tlv8.DataType.BYTES,
+        TlvTypes.EncryptedData: tlv8.DataType.BYTES
     }
     response_tlv = yield (request_tlv, step2_expectations)
 
     #
     # Step #3 ios --> accessory (send SRP verify request)  (page 49)
     #
-    state = response_tlv.first_by_id(TLV.kTLVType_State).data
-    assert state == TLV.M2, 'get_session_keys: not M2'
-    assert response_tlv.first_by_id(TLV.kTLVType_PublicKey), 'get_session_keys: no public key'
-    assert response_tlv.first_by_id(TLV.kTLVType_EncryptedData), 'get_session_keys: no encrypted data'
+    state = response_tlv.first_by_id(TlvTypes.State).data
+    assert state == States.M2, 'get_session_keys: not M2'
+    assert response_tlv.first_by_id(TlvTypes.PublicKey), 'get_session_keys: no public key'
+    assert response_tlv.first_by_id(TlvTypes.EncryptedData), 'get_session_keys: no encrypted data'
 
     # 1) generate shared secret
-    accessorys_session_pub_key_bytes = bytes(response_tlv.first_by_id(TLV.kTLVType_PublicKey).data)
+    accessorys_session_pub_key_bytes = bytes(response_tlv.first_by_id(TlvTypes.PublicKey).data)
     accessorys_session_pub_key = x25519.X25519PublicKey.from_public_bytes(
         accessorys_session_pub_key_bytes
     )
@@ -338,17 +341,17 @@ def get_session_keys(pairing_data):
     session_key = hkdf_inst.expand('Pair-Verify-Encrypt-Info'.encode(), 32)
 
     # 3) verify auth tag on encrypted data and 4) decrypt
-    encrypted = response_tlv.first_by_id(TLV.kTLVType_EncryptedData).data
+    encrypted = response_tlv.first_by_id(TlvTypes.EncryptedData).data
     decrypted = chacha20_aead_decrypt(bytes(), session_key, 'PV-Msg02'.encode(), bytes([0, 0, 0, 0]),
                                       encrypted)
     if type(decrypted) == bool and not decrypted:
         raise InvalidAuthTagError('step 3')
     d1 = tlv8.decode(decrypted)
-    assert d1.first_by_id(TLV.kTLVType_Identifier), 'get_session_keys: no identifier'
-    assert d1.first_by_id(TLV.kTLVType_Signature), 'get_session_keys: no signature'
+    assert d1.first_by_id(TlvTypes.Identifier), 'get_session_keys: no identifier'
+    assert d1.first_by_id(TlvTypes.Signature), 'get_session_keys: no signature'
 
     # 5) look up pairing by accessory name
-    accessory_name = d1.first_by_id(TLV.kTLVType_Identifier).data.decode()
+    accessory_name = d1.first_by_id(TlvTypes.Identifier).data.decode()
 
     if pairing_data['AccessoryPairingID'] != accessory_name:
         raise IncorrectPairingIdError('step 3')
@@ -356,8 +359,8 @@ def get_session_keys(pairing_data):
     accessory_ltpk = ed25519.VerifyingKey(bytes.fromhex(pairing_data['AccessoryLTPK']))
 
     # 6) verify accessory's signature
-    accessory_sig = d1.first_by_id(TLV.kTLVType_Signature).data
-    accessory_session_pub_key_bytes = response_tlv.first_by_id(TLV.kTLVType_PublicKey).data
+    accessory_sig = d1.first_by_id(TlvTypes.Signature).data
+    accessory_session_pub_key_bytes = response_tlv.first_by_id(TlvTypes.PublicKey).data
     accessory_info = accessory_session_pub_key_bytes + accessory_name.encode() + ios_key_pub
     try:
         accessory_ltpk.verify(bytes(accessory_sig), bytes(accessory_info))
@@ -375,8 +378,8 @@ def get_session_keys(pairing_data):
 
     # 9) construct sub tlv
     sub_tlv = tlv8.encode([
-        tlv8.Entry(TLV.kTLVType_Identifier, pairing_data['iOSPairingId'].encode()),
-        tlv8.Entry(TLV.kTLVType_Signature, ios_device_signature)
+        tlv8.Entry(TlvTypes.Identifier, pairing_data['iOSPairingId'].encode()),
+        tlv8.Entry(TlvTypes.Signature, ios_device_signature)
     ])
 
     # 10) encrypt and sign
@@ -387,22 +390,22 @@ def get_session_keys(pairing_data):
 
     # 11) create tlv
     request_tlv = [
-        tlv8.Entry(TLV.kTLVType_State, TLV.M3),
-        tlv8.Entry(TLV.kTLVType_EncryptedData, tmp)
+        tlv8.Entry(TlvTypes.State, States.M3),
+        tlv8.Entry(TlvTypes.EncryptedData, tmp)
     ]
 
     step3_expectations = {
-        TLV.kTLVType_State: tlv8.DataType.BYTES,
-        TLV.kTLVType_Error: tlv8.DataType.BYTES
+        TlvTypes.State: tlv8.DataType.INTEGER,
+        TlvTypes.Error: tlv8.DataType.INTEGER
     }
     response_tlv = yield (request_tlv, step3_expectations)
 
     #
     #   Post Step #4 verification (page 51)
     #
-    state = response_tlv.first_by_id(TLV.kTLVType_State).data
-    assert state == TLV.M4, 'get_session_keys: not M4'
-    error = response_tlv.first_by_id(TLV.kTLVType_Error)
+    state = response_tlv.first_by_id(TlvTypes.State).data
+    assert state == States.M4, 'get_session_keys: not M4'
+    error = response_tlv.first_by_id(TlvTypes.Error)
     if len(response_tlv) == 2 and error:
         error_handler(error.data, 'verification')
 

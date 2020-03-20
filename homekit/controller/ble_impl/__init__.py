@@ -15,7 +15,8 @@
 #
 
 __all__ = [
-    'Device', 'BlePairing', 'BleSession', 'find_characteristic_by_uuid', 'create_ble_pair_setup_write'
+    'Device', 'BlePairing', 'BleSession', 'find_characteristic_by_uuid', 'create_ble_pair_setup_write',
+    'AdditionalParameterTypes'
 ]
 
 import time
@@ -28,7 +29,7 @@ from distutils.util import strtobool
 import tlv8
 
 from homekit.controller.tools import AbstractPairing
-from homekit.protocol.tlv import TLV
+from homekit.protocol import Methods, States, TlvTypes
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.protocol import get_session_keys
 from homekit.protocol.opcodes import HapBleOpCodes
@@ -38,6 +39,7 @@ from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats, CharacteristicFormats
 from homekit.model.characteristics.characteristic_units import BleCharacteristicUnits
 from homekit.exceptions import FormatError, RequestRejected, AccessoryDisconnectedError
+from homekit.controller.ble_impl.additional_parameter_types import AdditionalParameterTypes
 
 from homekit.tools import BLE_TRANSPORT_SUPPORTED
 
@@ -85,12 +87,12 @@ class BlePairing(AbstractPairing):
         if not self.session:
             self.session = BleSession(self.pairing_data, self.adapter)
         request_tlv = tlv8.encode([
-            tlv8.Entry(TLV.kTLVType_State, TLV.M1),
-            tlv8.Entry(TLV.kTLVType_Method, TLV.ListPairings)
+            tlv8.Entry(TlvTypes.State, States.M1),
+            tlv8.Entry(TlvTypes.Method, Methods.ListPairings)
         ])
         request_tlv = tlv8.encode([
-            tlv8.Entry(TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-            tlv8.Entry(TLV.kTLVHAPParamValue, request_tlv)
+            tlv8.Entry(AdditionalParameterTypes.ParamReturnResponse, bytearray(b'\x01')),
+            tlv8.Entry(AdditionalParameterTypes.Value, request_tlv)
         ])
         body = len(request_tlv).to_bytes(length=2, byteorder='little') + request_tlv
 
@@ -102,17 +104,17 @@ class BlePairing(AbstractPairing):
                         cid = c['iid']
         fc, _ = self.session.find_characteristic_by_iid(cid)
         response = self.session.request(fc, cid, HapBleOpCodes.CHAR_WRITE, body)
-        response = tlv8.decode(response.first_by_id(TLV.kTLVHAPParamValue).data)
+        response = tlv8.decode(response.first_by_id(AdditionalParameterTypes.Value).data)
         tmp = []
         r = {}
         for d in response[1:]:
-            if d.type_id == TLV.kTLVType_Identifier:
+            if d.type_id == TlvTypes.Identifier:
                 r = {}
                 tmp.append(r)
                 r['pairingId'] = d.data.decode()
-            if d.type_id == TLV.kTLVType_PublicKey:
+            if d.type_id == TlvTypes.PublicKey:
                 r['publicKey'] = d.data.hex()
-            if d.type_id == TLV.kTLVType_Permissions:
+            if d.type_id == TlvTypes.Permissions:
                 controller_type = 'regular'
                 if d.data == b'\x01':
                     controller_type = 'admin'
@@ -185,8 +187,8 @@ class BlePairing(AbstractPairing):
                 self.session = None
                 raise e
 
-            if response.first_by_id(TLV.kTLVHAPParamValue):
-                value = self._convert_to_python(aid, cid, response.first_by_id(TLV.kTLVHAPParamValue).data)
+            if response.first_by_id(AdditionalParameterTypes.Value):
+                value = self._convert_to_python(aid, cid, response.first_by_id(AdditionalParameterTypes.Value).data)
             else:
                 value = None
 
@@ -361,7 +363,9 @@ class BlePairing(AbstractPairing):
                 }
                 continue
 
-            value = tlv8.encode([tlv8.Entry(TLV.kTLVHAPParamValue, self._convert_from_python(aid, cid, value))])
+            value = tlv8.encode([
+                tlv8.Entry(AdditionalParameterTypes.Value, self._convert_from_python(aid, cid, value))
+            ])
             body = len(value).to_bytes(length=2, byteorder='little') + value
 
             try:
@@ -385,23 +389,23 @@ class BlePairing(AbstractPairing):
         if not self.session:
             self.session = BleSession(self.pairing_data, self.adapter)
         if permissions == 'User':
-            permissions = TLV.kTLVType_Permission_RegularUser
+            permissions = TlvTypes.Permission_RegularUser
         elif permissions == 'Admin':
-            permissions = TLV.kTLVType_Permission_AdminUser
+            permissions = TlvTypes.Permission_AdminUser
         else:
             print('UNKNOWN')
 
         request_tlv = tlv8.encode([
-            tlv8.Entry(TLV.kTLVType_State, TLV.M1),
-            tlv8.Entry(TLV.kTLVType_Method, TLV.AddPairing),
-            tlv8.Entry(TLV.kTLVType_Identifier, additional_controller_pairing_identifier.encode()),
-            tlv8.Entry(TLV.kTLVType_PublicKey, bytes.fromhex(ios_device_ltpk)),
-            tlv8.Entry(TLV.kTLVType_Permissions, permissions)
+            tlv8.Entry(TlvTypes.State, States.M1),
+            tlv8.Entry(TlvTypes.Method, Methods.AddPairing),
+            tlv8.Entry(TlvTypes.Identifier, additional_controller_pairing_identifier.encode()),
+            tlv8.Entry(TlvTypes.PublicKey, bytes.fromhex(ios_device_ltpk)),
+            tlv8.Entry(TlvTypes.Permissions, permissions)
         ])
 
         request_tlv = tlv8.encode([
-            tlv8.Entry(TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-            tlv8.Entry(TLV.kTLVHAPParamValue, request_tlv)
+            tlv8.Entry(AdditionalParameterTypes.ParamReturnResponse, bytearray(b'\x01')),
+            tlv8.Entry(AdditionalParameterTypes.Value, request_tlv)
         ])
         body = len(request_tlv).to_bytes(length=2, byteorder='little') + request_tlv
 
@@ -620,8 +624,8 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
         body = tlv8.encode(request)
         logger.debug('entering write function %s', tlv8.format_string(tlv8.decode(body)))
         request_tlv = tlv8.encode([
-            tlv8.Entry(TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-            tlv8.Entry(TLV.kTLVHAPParamValue, body)
+            tlv8.Entry(AdditionalParameterTypes.ParamReturnResponse, bytearray(b'\x01')),
+            tlv8.Entry(AdditionalParameterTypes.Value, body)
         ])
         transaction_id = random.randrange(0, 255)
         data = bytearray([0x00, HapBleOpCodes.CHAR_WRITE, transaction_id])
@@ -652,8 +656,8 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
         logger.debug('received %s', bytes(resp_data).hex())
         logger.debug('decode %s', bytes(resp_data[5:]).hex())
         resp_tlv = tlv8.decode(bytes([int(a) for a in resp_data[5:]]),
-                               expected={TLV.kTLVHAPParamValue: tlv8.DataType.BYTES})
-        result = tlv8.decode(resp_tlv.first_by_id(TLV.kTLVHAPParamValue).data, expected)
+                               expected={AdditionalParameterTypes.Value: tlv8.DataType.BYTES})
+        result = tlv8.decode(resp_tlv.first_by_id(AdditionalParameterTypes.Value).data, expected)
         logger.debug('leaving write function %s', tlv8.format_string(result))
         return result
 
@@ -778,30 +782,30 @@ def parse_sig_read_response(data, expected_tid):
     characteristic_range = None
     characteristic_step = None
     for t in tlv:
-        if t.type_id == TLV.kTLVHAPParamCharacteristicType:
+        if t.type_id == AdditionalParameterTypes.CharacteristicType:
             chr_type = [int(a) for a in t.data]
             chr_type.reverse()
             chr_type = str(uuid.UUID(''.join('%02x' % b for b in chr_type)))
-        if t.type_id == TLV.kTLVHAPParamServiceInstanceId:
+        if t.type_id == AdditionalParameterTypes.ServiceInstanceId:
             svc_id = int.from_bytes(t.data, byteorder='little')
-        if t.type_id == TLV.kTLVHAPParamServiceType:
+        if t.type_id == AdditionalParameterTypes.ServiceType:
             svc_type = [int(a) for a in t.data]
             svc_type.reverse()
             svc_type = str(uuid.UUID(''.join('%02x' % b for b in svc_type)))
-        if t.type_id == TLV.kTLVHAPParamHAPCharacteristicPropertiesDescriptor:
+        if t.type_id == AdditionalParameterTypes.HAPCharacteristicPropertiesDescriptor:
             chr_prop_int = int.from_bytes(t.data, byteorder='little')
-        if t.type_id == TLV.kTLVHAPParamGATTUserDescriptionDescriptor:
+        if t.type_id == AdditionalParameterTypes.GATTUserDescriptionDescriptor:
             description = t.data.decode()
-        if t.type_id == TLV.kTLVHAPParamHAPValidValuesDescriptor:
+        if t.type_id == AdditionalParameterTypes.HAPValidValuesDescriptor:
             print('valid values', t.data)
-        if t.type_id == TLV.kTLVHAPParamHAPValidValuesRangeDescriptor:
+        if t.type_id == AdditionalParameterTypes.HAPValidValuesRangeDescriptor:
             print('valid values range', t.data)
-        if t.type_id == TLV.kTLVHAPParamGATTPresentationFormatDescriptor:
+        if t.type_id == AdditionalParameterTypes.GATTPresentationFormatDescriptor:
             unit_bytes = bytearray(t.data[2:4])
             unit_bytes.reverse()
             characteristic_format = BleCharacteristicFormats.get(int(t.data[0]), 'unknown')
             unit = BleCharacteristicUnits.get(int.from_bytes(unit_bytes, byteorder='big'), 'unknown')
-        if t.type_id == TLV.kTLVHAPParamGATTValidRange:
+        if t.type_id == AdditionalParameterTypes.GATTValidRange:
             logger.debug('range: %s', t.data.hex())
             lower = None
             upper = None
@@ -813,7 +817,7 @@ def parse_sig_read_response(data, expected_tid):
                 (lower, upper) = struct.unpack('ff', t.data)
             # TODO include all formats!
             characteristic_range = (lower, upper)
-        if t.type_id == TLV.kTLVHAPParamHAPStepValueDescriptor:
+        if t.type_id == AdditionalParameterTypes.HAPStepValueDescriptor:
             characteristic_step = None
             if characteristic_format == 'int32':
                 characteristic_step = struct.unpack('i', t.data)[0]

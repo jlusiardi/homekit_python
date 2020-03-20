@@ -24,7 +24,7 @@ import tlv8
 
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError, TransportNotSupportedError, MalformedPinError
-from homekit.protocol.tlv import TLV
+from homekit.protocol import States, Methods, Errors, TlvTypes
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.protocol import perform_pair_setup_part1, perform_pair_setup_part2, create_ip_pair_setup_write
@@ -36,7 +36,7 @@ from homekit.controller.additional_pairing import AdditionalPairing
 
 if BLE_TRANSPORT_SUPPORTED:
     from homekit.controller.ble_impl import BlePairing, BleSession, find_characteristic_by_uuid, \
-        create_ble_pair_setup_write
+        create_ble_pair_setup_write, AdditionalParameterTypes
     from .ble_impl.discovery import DiscoveryDeviceManager
 
 if IP_TRANSPORT_SUPPORTED:
@@ -211,7 +211,7 @@ class Controller(object):
             )
 
         value = tlv8.encode([
-            tlv8.Entry(TLV.kTLVHAPParamValue, b'\x01')
+            tlv8.Entry(AdditionalParameterTypes.Value, b'\x01')
         ])
         body = len(value).to_bytes(length=2, byteorder='little') + value
 
@@ -531,9 +531,9 @@ class Controller(object):
 
         # Prepare the common (for IP and BLE) request data
         request_tlv = tlv8.encode([
-            tlv8.Entry(TLV.kTLVType_State, TLV.M1),
-            tlv8.Entry(TLV.kTLVType_Method, TLV.RemovePairing),
-            tlv8.Entry(TLV.kTLVType_Identifier, pairingIdToDelete.encode())
+            tlv8.Entry(TlvTypes.State, States.M1),
+            tlv8.Entry(TlvTypes.Method, Methods.RemovePairing),
+            tlv8.Entry(TlvTypes.Identifier, pairingIdToDelete.encode())
         ])
 
         if connection_type == 'IP':
@@ -543,13 +543,17 @@ class Controller(object):
             response = session.post('/pairings', request_tlv)
             session.close()
             data = response.read()
-            data = tlv8.decode(data)
+            data = tlv8.decode(data, {
+                TlvTypes.State: tlv8.DataType.INTEGER,
+                TlvTypes.Error: tlv8.DataType.INTEGER
+
+            })
         elif connection_type == 'BLE':
             if not BLE_TRANSPORT_SUPPORTED:
                 raise TransportNotSupportedError('BLE')
             inner = tlv8.encode([
-                tlv8.Entry(TLV.kTLVHAPParamParamReturnResponse, bytearray(b'\x01')),
-                tlv8.Entry(TLV.kTLVHAPParamValue, request_tlv)
+                tlv8.Entry(AdditionalParameterTypes.ParamReturnResponse, bytearray(b'\x01')),
+                tlv8.Entry(AdditionalParameterTypes.Value, request_tlv)
             ])
 
             body = len(inner).to_bytes(length=2, byteorder='little') + inner
@@ -566,19 +570,24 @@ class Controller(object):
 
             session = BleSession(pairing_data, self.ble_adapter)
             response = session.request(pair_remove_char, pair_remove_char_id, HapBleOpCodes.CHAR_WRITE, body)
-            data = tlv8.decode(response.first_by_id(TLV.kTLVHAPParamValue).data)
+            data = tlv8.decode(response.first_by_id(AdditionalParameterTypes.Value).data, {
+                TlvTypes.State: tlv8.DataType.INTEGER,
+                TlvTypes.Error: tlv8.DataType.INTEGER
+
+            })
         else:
             raise Exception('not implemented (neither IP nor BLE)')
 
         # act upon the response (the same is returned for IP and BLE accessories)
         # handle the result, spec says, if it has only one entry with state == M2 we unpaired, else its an error.
         logging.debug('response data: %s', tlv8.format_string(data))
-        state = data.first_by_id(TLV.kTLVType_State).data
-        if len(data) == 1 and state == TLV.M2:
+        state = data.first_by_id(TlvTypes.State).data
+        if len(data) == 1 and state == States.M2:
             if not pairingId:
                 del self.pairings[alias]
         else:
-            if data[1][0] == TLV.kTLVType_Error and data[1][1] == TLV.kTLVError_Authentication:
+            error = data.first_by_id(TlvTypes.Error)
+            if error and error.data == Errors.Authentication:
                 raise AuthenticationError('Remove pairing failed: missing authentication')
             else:
                 raise UnknownError('Remove pairing failed: unknown error')

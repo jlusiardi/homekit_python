@@ -19,6 +19,7 @@ import unittest
 from unittest import mock
 import uuid
 import logging
+import tlv8
 
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit import Controller
@@ -26,7 +27,7 @@ from homekit.model import Accessory
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.services import ServicesTypes, AbstractService, LightBulbService
 from homekit.model.characteristics import AbstractCharacteristic
-from homekit.protocol import TLV
+from homekit.protocol import States, Methods, TlvTypes
 from homekit import accessoryserver
 from homekit.model import mixin as model_mixin
 from homekit import exceptions
@@ -34,7 +35,7 @@ from homekit import exceptions
 from homekit.tools import BLE_TRANSPORT_SUPPORTED
 
 if BLE_TRANSPORT_SUPPORTED:
-    from homekit.controller.ble_impl import CharacteristicInstanceID
+    from homekit.controller.ble_impl import CharacteristicInstanceID, AdditionalParameterTypes
     from homekit.protocol.opcodes import HapBleOpCodes
     from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
     from homekit.controller.ble_impl.manufacturer_data import parse_manufacturer_specific
@@ -262,12 +263,12 @@ class Characteristic:
         payload = value[7:]
 
         if opcode == HapBleOpCodes.CHAR_WRITE:
-            new_value = dict(TLV.decode_bytes(payload))
+            new_value = {entry.type_id: entry.data for entry in tlv8.decode(payload)}
             self.do_char_write(tid, new_value[1])
 
         elif opcode == HapBleOpCodes.CHAR_READ:
             value = self.char.get_value_for_ble()
-            value = TLV.encode_list([(TLV.kTLVHAPParamValue, value)])
+            value = tlv8.encode([tlv8.Entry(AdditionalParameterTypes.Value, value)])
 
             response = bytearray([0x02, tid, 0x00])
             tlv = len(value).to_bytes(2, byteorder='little') + value
@@ -290,14 +291,15 @@ class Characteristic:
             gatt_fmt = fmt + unit
 
             data = [
-                (TLV.kTLVHAPParamHAPCharacteristicPropertiesDescriptor, b'\x00'),
-                (TLV.kTLVHAPParamGATTPresentationFormatDescriptor, gatt_fmt),
-                (TLV.kTLVHAPParamCharacteristicType, char_type),
-                (TLV.kTLVHAPParamServiceInstanceId, self.service.service.iid.to_bytes(length=8, byteorder='little')),
-                (TLV.kTLVHAPParamServiceType, service_type),
+                tlv8.Entry(AdditionalParameterTypes.HAPCharacteristicPropertiesDescriptor, b'\x00'),
+                tlv8.Entry(AdditionalParameterTypes.GATTPresentationFormatDescriptor, gatt_fmt),
+                tlv8.Entry(AdditionalParameterTypes.CharacteristicType, char_type),
+                tlv8.Entry(AdditionalParameterTypes.ServiceInstanceId,
+                           self.service.service.iid.to_bytes(length=8, byteorder='little')),
+                tlv8.Entry(AdditionalParameterTypes.ServiceType, service_type),
             ]
 
-            tlv = TLV.encode_list(data)
+            tlv = tlv8.encode(data)
             response.extend(len(tlv).to_bytes(2, byteorder='little') + tlv)
             self.queue_read_response(self.encrypt_value(bytes(response)))
         else:
@@ -369,16 +371,16 @@ class AccessoryRequestHandler(accessoryserver.AccessoryRequestHandler):
 
     def send_error_reply(self, state, error):
         d_res = [
-            (TLV.kTLVType_State, state),
-            (TLV.kTLVType_Error, error)
+            tlv8.Entry(TlvTypes.State, state),
+            tlv8.Entry(TlvTypes.Error, error)
         ]
         self._send_response_tlv(d_res)
 
     def _send_response_tlv(self, d_res, close=False, status=None):
-        result_bytes = TLV.encode_list(d_res)
+        result_bytes = tlv8.encode(d_res)
 
-        outer = TLV.encode_list([
-            (TLV.kTLVHAPParamValue, result_bytes),
+        outer = tlv8.encode([
+            tlv8.Entry(AdditionalParameterTypes.Value, result_bytes),
         ])
         self.value += b'\x00' + len(outer).to_bytes(length=2, byteorder='little') + outer
 
@@ -428,10 +430,10 @@ class PairingSetupCharacteristicHandler(Characteristic):
         opcode = value[1]
 
         if opcode == 2:
-            outer = dict(TLV.decode_bytes(value[7:]))
-            assert outer[TLV.kTLVHAPParamParamReturnResponse] == b'\x01'
+            outer = {entry.type_id: entry.data for entry in tlv8.decode(value[7:])}
+            assert outer[AdditionalParameterTypes.ParamReturnResponse] == b'\x01'
 
-            value = self.rh.process_setup(value[2], outer[TLV.kTLVHAPParamValue])
+            value = self.rh.process_setup(value[2], outer[AdditionalParameterTypes.Value])
             self.values.append(value)
         else:
             super().write_value(value)
@@ -462,10 +464,10 @@ class PairingVerifyCharacteristicHandler(Characteristic):
         opcode = value[1]
 
         if opcode == 2:
-            outer = dict(TLV.decode_bytes(value[7:]))
-            assert outer[TLV.kTLVHAPParamParamReturnResponse] == b'\x01'
+            outer = {entry.type_id: entry.data for entry in tlv8.decode(value[7:])}
+            assert outer[AdditionalParameterTypes.ParamReturnResponse] == b'\x01'
 
-            value = self.rh.process_verify(value[2], outer[TLV.kTLVHAPParamValue])
+            value = self.rh.process_verify(value[2], outer[AdditionalParameterTypes.Value])
             self.values.append(value)
         else:
             super().write_value(value)
@@ -492,13 +494,17 @@ class PairingPairingsCharacteristicHandler(Characteristic):
     def do_char_write(self, tid, value):
         """The value is actually a TLV with a command to perform"""
 
-        request = dict(TLV.decode_bytes(value))
+        request = {entry.type_id: entry.data for entry in tlv8.decode(value, {
+            TlvTypes.State: tlv8.DataType.INTEGER,
+            TlvTypes.Method: tlv8.DataType.INTEGER,
+            TlvTypes.Identifier: tlv8.DataType.BYTES,
+        })}
         logging.debug('%s', request)
 
-        assert request[TLV.kTLVType_State] == TLV.M1
+        assert request[TlvTypes.State] == States.M1
 
-        if request[TLV.kTLVType_Method] == TLV.RemovePairing:
-            ident = request[TLV.kTLVType_Identifier].decode()
+        if request[TlvTypes.Method] == Methods.RemovePairing:
+            ident = request[TlvTypes.Identifier].decode()
             self.service.device.peers.pop(ident, None)
 
             # If ident == this session then disconnect it
@@ -506,11 +512,11 @@ class PairingPairingsCharacteristicHandler(Characteristic):
 
         response = bytearray([0x02, tid, 0x00])
 
-        inner = TLV.encode_list([
-            (TLV.kTLVType_State, TLV.M2),
+        inner = tlv8.encode([
+            tlv8.Entry(TlvTypes.State, States.M2),
         ])
 
-        outer = TLV.encode_list([(TLV.kTLVHAPParamValue, inner)])
+        outer = tlv8.encode([tlv8.Entry(AdditionalParameterTypes.Value, inner)])
         response.extend(len(outer).to_bytes(length=2, byteorder='little'))
         response.extend(outer)
 

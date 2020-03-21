@@ -17,9 +17,9 @@
 import abc
 import base64
 import binascii
+import tlv8
 from distutils.util import strtobool
 
-from homekit.protocol.tlv import TLV, TlvParseException
 from homekit.exceptions import FormatError
 from homekit.model.characteristics import CharacteristicFormats
 
@@ -63,7 +63,7 @@ class AbstractPairing(abc.ABC):
          * permissions: bit value for the permissions
          * controllerType: either admin or regular
 
-        :return: a list of dicts
+        :return: a list of dicts sorted by the elements pairingIds
         :raises: UnknownError: if it receives unexpected data
         :raises: UnpairedError: if the polled accessory is not paired
         """
@@ -182,7 +182,7 @@ def check_convert_value(val, target_type):
     if target_type == CharacteristicFormats.tlv8:
         try:
             tmp_bytes = base64.decodebytes(val.encode())
-            TLV.decode_bytes(tmp_bytes)
-        except (binascii.Error, TlvParseException):
+            tlv8.decode(tmp_bytes, {})
+        except (binascii.Error, ValueError):
             raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     return val

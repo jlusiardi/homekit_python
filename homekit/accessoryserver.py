@@ -21,6 +21,7 @@ import json
 from json.decoder import JSONDecodeError
 import select
 import threading
+import tlv8
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
@@ -43,7 +44,7 @@ from homekit.exceptions import ConfigurationError, ConfigLoadingError, ConfigSav
 from homekit.http_impl import HttpStatusCodes
 from homekit.model import Accessories, Categories
 from homekit.model.characteristics import CharacteristicsTypes
-from homekit.protocol import TLV
+from homekit.protocol import States, Methods, Errors, TlvTypes
 from homekit.protocol.statuscodes import HapStatusCodes
 
 
@@ -642,18 +643,16 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(result_bytes)
 
     def _post_pair_verify(self):
-        d_req = TLV.decode_bytes(self.body)
-
-        # Order is not consistent, so force things in to order specified in spec
-        d_req = TLV.reorder(d_req, [
-            TLV.kTLVType_State,
-            TLV.kTLVType_PublicKey,
-            TLV.kTLVType_EncryptedData,
-        ])
+        d_req = tlv8.decode(self.body, {
+            TlvTypes.State: tlv8.DataType.INTEGER,
+            TlvTypes.PublicKey: tlv8.DataType.BYTES,
+            TlvTypes.EncryptedData: tlv8.DataType.BYTES,
+        })
 
         d_res = []
 
-        if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M1:
+        state = d_req.first_by_id(TlvTypes.State).data
+        if state == States.M1:
             # step #2 Accessory -> iOS Device Verify Start Response
             if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
                 self.log_message('Step #2 /pair-verify')
@@ -667,7 +666,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             self.server.sessions[self.session_id]['accessory_pub_key'] = accessory_spk
 
             # 2) generate shared secret
-            ios_device_curve25519_pub_key_bytes = bytes(d_req[1][1])
+            ios_device_curve25519_pub_key_bytes = bytes(d_req.first_by_id(TlvTypes.PublicKey).data)
             self.server.sessions[self.session_id]['ios_device_pub_key'] = ios_device_curve25519_pub_key_bytes
             ios_device_curve25519_pub_key = x25519.X25519PublicKey.from_public_bytes(
                 ios_device_curve25519_pub_key_bytes)
@@ -686,10 +685,10 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
             # 5) sub tlv
             sub_tlv = [
-                (TLV.kTLVType_Identifier, self.server.data.accessory_pairing_id_bytes),
-                (TLV.kTLVType_Signature, accessory_signature)
+                tlv8.Entry(TlvTypes.Identifier, self.server.data.accessory_pairing_id_bytes),
+                tlv8.Entry(TlvTypes.Signature, accessory_signature)
             ]
-            sub_tlv_b = TLV.encode_list(sub_tlv)
+            sub_tlv_b = tlv8.encode(sub_tlv)
 
             # 6) derive session key
             hkdf_inst = hkdf.Hkdf('Pair-Verify-Encrypt-Salt'.encode(), shared_secret, hash=hashlib.sha512)
@@ -706,16 +705,16 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             tmp += encrypted_data_with_auth_tag[1]
 
             # 8) construct result tlv
-            d_res.append((TLV.kTLVType_State, TLV.M2,))
-            d_res.append((TLV.kTLVType_PublicKey, accessory_spk))
-            d_res.append((TLV.kTLVType_EncryptedData, tmp))
+            d_res.append(tlv8.Entry(TlvTypes.State, States.M2))
+            d_res.append(tlv8.Entry(TlvTypes.PublicKey, accessory_spk))
+            d_res.append(tlv8.Entry(TlvTypes.EncryptedData, tmp))
 
             self._send_response_tlv(d_res)
             if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
-                self.log_message('after step #2\n%s', TLV.to_string(d_res))
+                self.log_message('after step #2\n%s', tlv8.format_string(d_res))
             return
 
-        if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M3:
+        if state == States.M3:
             # step #4 Accessory -> iOS Device Verify Finish Response
             if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
                 self.log_message('Step #4 /pair-verify')
@@ -724,36 +723,39 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
             # 1) verify ios' authtag
             # 2) decrypt
-            encrypted = d_req[1][1]
+            encrypted = d_req.first_by_id(TlvTypes.EncryptedData).data
             decrypted = chacha20_aead_decrypt(bytes(), session_key, 'PV-Msg03'.encode(), bytes([0, 0, 0, 0]),
                                               encrypted)
             if decrypted is False:
-                self.send_error_reply(TLV.M4, TLV.kTLVError_Authentication)
+                self.send_error_reply(States.M4, Errors.Authentication)
                 self.log_error('error in step #4: authtag %s %s', d_res, self.server.sessions)
                 return
-            d1 = TLV.decode_bytes(decrypted)
-            assert d1[0][0] == TLV.kTLVType_Identifier
-            assert d1[1][0] == TLV.kTLVType_Signature
+            d1 = tlv8.decode(decrypted, {
+                TlvTypes.Identifier: tlv8.DataType.BYTES,
+                TlvTypes.Signature: tlv8.DataType.BYTES,
+            })
+            assert d1.first_by_id(TlvTypes.Identifier)
+            assert d1.first_by_id(TlvTypes.Signature)
 
             # 3) get ios_device_ltpk
-            ios_device_pairing_id = d1[0][1]
+            ios_device_pairing_id = d1.first_by_id(TlvTypes.Identifier).data
             self.server.sessions[self.session_id]['ios_device_pairing_id'] = ios_device_pairing_id
             ios_device_ltpk_bytes = self.server.data.get_peer_key(ios_device_pairing_id)
             if ios_device_ltpk_bytes is None:
-                self.send_error_reply(TLV.M4, TLV.kTLVError_Authentication)
+                self.send_error_reply(States.M4, Errors.Authentication)
                 self.log_error('error in step #4: not paired %s %s', d_res, self.server.sessions)
                 return
             ios_device_lptk = ed25519.VerifyingKey(ios_device_ltpk_bytes)
 
             # 4) verify ios_device_info
-            ios_device_sig = d1[1][1]
+            ios_device_sig = d1.first_by_id(TlvTypes.Signature).data
             ios_device_curve25519_pub_key_bytes = self.server.sessions[self.session_id]['ios_device_pub_key']
             accessory_spk = self.server.sessions[self.session_id]['accessory_pub_key']
             ios_device_info = ios_device_curve25519_pub_key_bytes + ios_device_pairing_id + accessory_spk
             try:
                 ios_device_lptk.verify(bytes(ios_device_sig), bytes(ios_device_info))
             except ed25519.BadSignatureError:
-                self.send_error_reply(TLV.M4, TLV.kTLVError_Authentication)
+                self.send_error_reply(States.M4, Errors.Authentication)
                 self.log_error('error in step #4: signature %s %s', d_res, self.server.sessions)
                 return
 
@@ -769,11 +771,11 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             self.server.sessions[self.session_id]['accessory_to_controller_key'] = accessory_to_controller_key
             self.server.sessions[self.session_id]['accessory_to_controller_count'] = 0
 
-            d_res.append((TLV.kTLVType_State, TLV.M4,))
+            d_res.append(tlv8.Entry(TlvTypes.State, States.M4))
 
             self._send_response_tlv(d_res)
             if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
-                self.log_message('after step #4\n%s', TLV.to_string(d_res))
+                self.log_message('after step #4\n%s', tlv8.format_string(d_res))
             return
 
         self.send_error(HttpStatusCodes.METHOD_NOT_ALLOWED)
@@ -786,32 +788,26 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         self.send_error(HttpStatusCodes.NOT_FOUND)
 
     def _post_pairings(self):
-        d_req = TLV.decode_bytes(self.body)
+        d_req = tlv8.decode(self.body, {
+            TlvTypes.State: tlv8.DataType.INTEGER,
+            TlvTypes.Method: tlv8.DataType.INTEGER,
+            TlvTypes.Identifier: tlv8.DataType.BYTES,
+            TlvTypes.PublicKey: tlv8.DataType.BYTES,
+            TlvTypes.Permissions: tlv8.DataType.BYTES,
+        })
 
-        # Order is not consistent, so force things in to order specified in spec
-        d_req = TLV.reorder(d_req, [
-            TLV.kTLVType_State,
-            TLV.kTLVType_Method,
-
-            # AddPairing/RemovePairing, M1
-            TLV.kTLVType_Identifier,
-
-            # AddPairing, M1
-            TLV.kTLVType_PublicKey,
-            TLV.kTLVType_Permissions,
-        ])
-
-        self.log_message('POST /pairings request body:\n%s', TLV.to_string(d_req))
+        self.log_message('POST /pairings request body:\n%s', tlv8.format_string(d_req))
 
         session = self.server.sessions[self.session_id]
         server_data = self.server.data
 
         d_res = []
 
-        if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M1 \
-                and d_req[1][0] == TLV.kTLVType_Method and d_req[1][1] == TLV.AddPairing:
+        state = d_req.first_by_id(TlvTypes.State).data
+        method = d_req.first_by_id(TlvTypes.Method).data
+        if state == States.M1 and method == Methods.AddPairing:
             self.log_message('Step #2 /pairings add pairing')
-            d_res.append((TLV.kTLVType_State, TLV.M2,))
+            d_res.append((TlvTypes.State, States.M2,))
 
             # see page 51
             # 1)
@@ -819,13 +815,13 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             # 2) verify admin bit is set
             ios_device_pairing_id = session['ios_device_pairing_id']
             if not server_data.is_peer_admin(ios_device_pairing_id):
-                self.send_error_reply(TLV.M2, TLV.kTLVError_Authentication)
+                self.send_error_reply(States.M2, Errors.Authentication)
                 self.log_error('error in step #2: admin bit')
                 return
 
-            additional_controller_pairing_identifier = d_req[2][1]
-            additional_controller_LTPK = d_req[3][1]
-            additional_controller_permissions = d_req[4][1]
+            additional_controller_pairing_identifier = d_req.first_by_id(TlvTypes.Identifier).data
+            additional_controller_LTPK = d_req.first_by_id(TlvTypes.PublicKey).data
+            additional_controller_permissions = d_req.first_by_id(TlvTypes.Permissions).data
             is_admin = additional_controller_permissions == b'\x01'
 
             # 3) pairing exists?
@@ -836,7 +832,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 if registered_controller_LTPK != additional_controller_LTPK:
                     self.log_message('with different key')
                     # 3.a)
-                    self.send_error_reply(TLV.M2, TLV.kTLVError_Unknown)
+                    self.send_error_reply(States.M2, Errors.Unknown)
                     return
 
                 self.log_message('with different permissions')
@@ -847,16 +843,15 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
                 # 4) no pairing exists
                 # 4.a) no limit applied to number of pairings
-                # 4.b) add pairing (could raise kTLVError_Unknown)
+                # 4.b) add pairing (could raise Errors.Unknown)
                 server_data.add_peer(additional_controller_pairing_identifier, additional_controller_LTPK, is_admin)
 
             self._send_response_tlv(d_res)
-            self.log_message('after step #2\n%s', TLV.to_string(d_res))
+            self.log_message('after step #2\n%s', tlv8.format_string(d_res))
 
             return
 
-        if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M1 \
-                and d_req[1][0] == TLV.kTLVType_Method and d_req[1][1] == TLV.RemovePairing:
+        if state == States.M1 and method == Methods.RemovePairing:
             # step #2 Accessory -> iOS Device remove pairing response
             self.log_message('Step #2 /pairings remove pairings')
 
@@ -865,31 +860,30 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             # 2) verify set admin bit
             ios_device_pairing_id = session['ios_device_pairing_id']
             if not server_data.is_peer_admin(ios_device_pairing_id):
-                self.send_error_reply(TLV.M2, TLV.kTLVError_Authentication)
+                self.send_error_reply(States.M2, Errors.Authentication)
                 self.log_error('error in step #2: admin bit not set for controller %s', ios_device_pairing_id.decode())
                 return
 
             # 3) remove pairing and republish device
-            server_data.remove_peer(d_req[2][1])
+            server_data.remove_peer(d_req.first_by_id(TlvTypes.Identifier).data)
             self.server.publish_device()
 
-            d_res.append((TLV.kTLVType_State, TLV.M2,))
+            d_res.append(tlv8.Entry(TlvTypes.State, States.M2))
             self._send_response_tlv(d_res)
-            self.log_message('after step #2\n%s', TLV.to_string(d_res))
+            self.log_message('after step #2\n%s', tlv8.format_string(d_res))
 
             # 6) + 7) invalidate HAP session and close connections
             # TODO implement this in more details
             # for session_id in self.server.sessions:
             #    session = self.server.sessions[session_id]
-            #    if session['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
+            #    if session['ios_device_pairing_id'] == d_req[TlvTypes.Identifier]:
             #        session['handler'].close_connection = True
             #
-            # if self.server.sessions[self.session_id]['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
+            # if self.server.sessions[self.session_id]['ios_device_pairing_id'] == d_req[TlvTypes.Identifier]:
             #    self.close_connection = True
             return
 
-        if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M1 \
-                and d_req[1][0] == TLV.kTLVType_Method and d_req[1][1] == TLV.ListPairings:
+        if state == States.M1 and method == Methods.ListPairings:
             # step #2 Accessory -> iOS Device list pairing response
             self.log_message('Step #2 /pairings list pairings')
 
@@ -898,22 +892,20 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             # 2) verify set admin bit
             ios_device_pairing_id = session['ios_device_pairing_id']
             if not server_data.is_peer_admin(ios_device_pairing_id):
-                self.send_error_reply(TLV.M2, TLV.kTLVError_Authentication)
+                self.send_error_reply(States.M2, Errors.Authentication)
                 self.log_error('error in step #2: admin bit')
                 return
 
             # 3) construct response TLV
-            tmp = [(TLV.kTLVType_State, TLV.M2)]
+            tmp = [tlv8.Entry(TlvTypes.State, States.M2)]
             for index, pairing_id in enumerate(server_data.peers):
-                tmp.append((TLV.kTLVType_Identifier, pairing_id.encode()))
-                tmp.append((TLV.kTLVType_PublicKey, server_data.get_peer_key(pairing_id.encode())))
-                user = TLV.kTLVType_Permission_RegularUser
+                tmp.append(tlv8.Entry(TlvTypes.Identifier, pairing_id.encode()))
+                tmp.append(tlv8.Entry(TlvTypes.PublicKey, server_data.get_peer_key(pairing_id.encode())))
+                user = TlvTypes.Permission_RegularUser
                 if server_data.is_peer_admin(pairing_id.encode()):
-                    user = TLV.kTLVType_Permission_AdminUser
-                tmp.append((TLV.kTLVType_Permissions, user))
-                if index + 1 < len(server_data.peers):
-                    tmp.append((TLV.kTLVType_Separator, bytes(0)))
-            result_bytes = TLV.encode_list(tmp)
+                    user = TlvTypes.Permission_AdminUser
+                tmp.append(tlv8.Entry(TlvTypes.Permissions, user))
+            result_bytes = tlv8.encode(tmp)
 
             # 4) send response
             self.send_response(HttpStatusCodes.OK)
@@ -931,15 +923,15 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
     def send_error_reply(self, state, error):
         """
         Send an error reply encoded as TLV.
-        :param state: The state as in TLV.M1, TLV.M2, ...
-        :param error: The error code as in TLV.kTLVError_*
+        :param state: The state as in States.M1, States.M2, ...
+        :param error: The error code as in Errors.*
         :return: None
         """
         d_res = [
-            (TLV.kTLVType_State, state),
-            (TLV.kTLVType_Error, error)
+            tlv8.Entry(TlvTypes.State, state),
+            tlv8.Entry(TlvTypes.Error, error)
         ]
-        result_bytes = TLV.encode_list(d_res)
+        result_bytes = tlv8.encode(d_res)
 
         self.send_response(HttpStatusCodes.METHOD_NOT_ALLOWED)
         # Send headers
@@ -950,41 +942,37 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(result_bytes)
 
     def _post_pair_setup(self):
-        d_req = TLV.decode_bytes(self.body)
-
-        # Order is not consistent, so force things in to order specified in spec
-        d_req = TLV.reorder(d_req, [
-            TLV.kTLVType_State,
-            TLV.kTLVType_Method,
-            # For M3
-            TLV.kTLVType_PublicKey,
-            TLV.kTLVType_Proof,
-            # For M5
-            TLV.kTLVType_EncryptedData,
-        ])
-
-        self.log_message('POST /pair-setup request body:\n%s', TLV.to_string(d_req))
+        d_req = tlv8.decode(self.body, {
+            TlvTypes.State: tlv8.DataType.INTEGER,
+            TlvTypes.PublicKey: tlv8.DataType.BYTES,
+            TlvTypes.Proof: tlv8.DataType.BYTES,
+            TlvTypes.EncryptedData: tlv8.DataType.BYTES,
+            TlvTypes.Identifier: tlv8.DataType.BYTES,
+            TlvTypes.Signature: tlv8.DataType.BYTES,
+        })
+        self.log_message('POST /pair-setup request body:\n%s', tlv8.format_string(d_req))
 
         d_res = []
 
-        if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M1:
+        state = d_req.first_by_id(TlvTypes.State).data
+        if state == States.M1:
             # step #2 Accessory -> iOS Device SRP Start Response
             self.log_message('Step #2 /pair-setup')
 
             # 1) Check if paired
             if self.server.data.is_paired:
-                self.send_error_reply(TLV.M2, TLV.kTLVError_Unavailable)
+                self.send_error_reply(States.M2, Errors.Unavailable)
                 return
 
             # 2) Check if over 100 attempts
             if self.server.data.unsuccessful_tries > 100:
                 self.log_error('to many failed attempts')
-                self.send_error_reply(TLV.M2, TLV.kTLVError_MaxTries)
+                self.send_error_reply(States.M2, Errors.MaxTries)
                 return
 
             # 3) Check if already in pairing
             if False:
-                self.send_error_reply(TLV.M2, TLV.kTLVError_Busy)
+                self.send_error_reply(States.M2, Errors.Busy)
                 return
 
             # 4) 5) 7) Create in SRP Session, set username and password
@@ -1002,22 +990,22 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             public_key = server.get_public_key()
 
             # 10) create response tlv and send response
-            d_res.append((TLV.kTLVType_State, TLV.M2,))
-            d_res.append((TLV.kTLVType_PublicKey, SrpServer.to_byte_array(public_key),))
-            d_res.append((TLV.kTLVType_Salt, SrpServer.to_byte_array(salt),))
+            d_res.append(tlv8.Entry(TlvTypes.State, States.M2))
+            d_res.append(tlv8.Entry(TlvTypes.PublicKey, SrpServer.to_byte_array(public_key)))
+            d_res.append(tlv8.Entry(TlvTypes.Salt, SrpServer.to_byte_array(salt)))
             self._send_response_tlv(d_res)
 
             # store session
             self.server.sessions[self.session_id]['srp'] = server
-            self.log_message('after step #2:\n%s', TLV.to_string(d_res))
+            self.log_message('after step #2:\n%s', tlv8.format_string(d_res))
             return
 
-        if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M3:
+        if state == States.M3:
             # step #4 Accessory -> iOS Device SRP Verify Response
             self.log_message('Step #4 /pair-setup')
 
             # 1) use ios pub key to compute shared secret key
-            ios_pub_key = int.from_bytes(d_req[1][1], "big")
+            ios_pub_key = int.from_bytes(d_req.first_by_id(TlvTypes.PublicKey).data, "big")
             server = self.server.sessions[self.session_id]['srp']
             server.set_client_public_key(ios_pub_key)
 
@@ -1027,10 +1015,10 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             self.server.sessions[self.session_id]['session_key'] = session_key
 
             # 2) verify ios proof
-            ios_proof = int.from_bytes(d_req[2][1], "big")
+            ios_proof = int.from_bytes(d_req.first_by_id(TlvTypes.Proof).data, "big")
             if not server.verify_clients_proof(ios_proof):
-                d_res.append((TLV.kTLVType_State, TLV.M4,))
-                d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Authentication,))
+                d_res.append(tlv8.Entry(TlvTypes.State, States.M4))
+                d_res.append(tlv8.Entry(TlvTypes.Error, Errors.Authentication))
 
                 self._send_response_tlv(d_res)
                 self.log_error('error in step #4 %s %s', d_res, self.server.sessions)
@@ -1042,16 +1030,16 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             accessory_proof = server.get_proof(ios_proof)
 
             # 4) create response tlv
-            d_res.append((TLV.kTLVType_State, TLV.M4,))
-            d_res.append((TLV.kTLVType_Proof, SrpServer.to_byte_array(accessory_proof),))
+            d_res.append(tlv8.Entry(TlvTypes.State, States.M4))
+            d_res.append(tlv8.Entry(TlvTypes.Proof, SrpServer.to_byte_array(accessory_proof)))
 
             # 5) send response tlv
             self._send_response_tlv(d_res)
 
-            self.log_message('after step #4:\n%s', TLV.to_string(d_res))
+            self.log_message('after step #4:\n%s', tlv8.format_string(d_res))
             return
 
-        if d_req[0][0] == TLV.kTLVType_State and d_req[0][1] == TLV.M5:
+        if state == States.M5:
             # step #6 Accessory -> iOS Device Exchange Response
             self.log_message('Step #6 /pair-setup')
 
@@ -1059,19 +1047,23 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             # done by chacha20_aead_decrypt
 
             # 2) decrypt and test
-            encrypted_data = d_req[1][1]
+            encrypted_data = d_req.first_by_id(TlvTypes.EncryptedData).data
             decrypted_data = chacha20_aead_decrypt(bytes(), self.server.sessions[self.session_id]['session_key'],
                                                    'PS-Msg05'.encode(), bytes([0, 0, 0, 0]),
                                                    encrypted_data)
             if decrypted_data is False:
-                d_res.append((TLV.kTLVType_State, TLV.M6,))
-                d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Authentication,))
+                d_res.append(tlv8.Entry(TlvTypes.State, States.M6))
+                d_res.append(tlv8.Entry(TlvTypes.Error, Errors.Authentication))
 
-                self.send_error_reply(TLV.M6, TLV.kTLVError_Authentication)
+                self.send_error_reply(States.M6, Errors.Authentication)
                 self.log_error('error in step #6 %s %s', d_res, self.server.sessions)
                 return
 
-            d_req_2 = TLV.decode_bytearray(decrypted_data)
+            d_req_2 = tlv8.decode(decrypted_data, {
+                TlvTypes.Identifier: tlv8.DataType.BYTES,
+                TlvTypes.PublicKey: tlv8.DataType.BYTES,
+                TlvTypes.Signature: tlv8.DataType.BYTES
+            })
 
             # 3) Derive ios_device_x
             shared_secret = self.server.sessions[self.session_id]['srp'].get_session_key()
@@ -1080,18 +1072,18 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             ios_device_x = hkdf_inst.expand('Pair-Setup-Controller-Sign-Info'.encode(), 32)
 
             # 4) construct ios_device_info
-            ios_device_pairing_id = d_req_2[0][1]  # should be TLV.kTLVType_Identifier
-            ios_device_ltpk = d_req_2[1][1]  # should be TLV.kTLVType_PublicKey
+            ios_device_pairing_id = d_req_2.first_by_id(TlvTypes.Identifier).data
+            ios_device_ltpk = d_req_2.first_by_id(TlvTypes.PublicKey).data
             ios_device_info = ios_device_x + ios_device_pairing_id + ios_device_ltpk
 
             # 5) verify signature
-            ios_device_sig = d_req_2[2][1]  # should be [TLV.kTLVType_Signature
+            ios_device_sig = d_req_2.first_by_id(TlvTypes.Signature).data
 
             verify_key = ed25519.VerifyingKey(bytes(ios_device_ltpk))
             try:
                 verify_key.verify(bytes(ios_device_sig), bytes(ios_device_info))
             except ed25519.BadSignatureError:
-                self.send_error_reply(TLV.M6, TLV.kTLVError_Authentication)
+                self.send_error_reply(States.M6, Errors.Authentication)
                 self.log_error('error in step #6 %s %s', d_res, self.server.sessions)
                 return
 
@@ -1125,11 +1117,11 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
             # 5) construct sub_tlv
             sub_tlv = [
-                (TLV.kTLVType_Identifier, self.server.data.accessory_pairing_id_bytes),
-                (TLV.kTLVType_PublicKey, accessory_ltpk.to_bytes()),
-                (TLV.kTLVType_Signature, accessory_signature)
+                tlv8.Entry(TlvTypes.Identifier, self.server.data.accessory_pairing_id_bytes),
+                tlv8.Entry(TlvTypes.PublicKey, accessory_ltpk.to_bytes()),
+                tlv8.Entry(TlvTypes.Signature, accessory_signature)
             ]
-            sub_tlv_b = TLV.encode_list(sub_tlv)
+            sub_tlv_b = tlv8.encode(sub_tlv)
 
             # 6) encrypt sub_tlv
             encrypted_data_with_auth_tag = chacha20_aead_encrypt(bytes(),
@@ -1143,18 +1135,18 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             # 7) send response
             self.server.publish_device()
             d_res = [
-                (TLV.kTLVType_State, TLV.M6,),
-                (TLV.kTLVType_EncryptedData, tmp,)
+                tlv8.Entry(TlvTypes.State, States.M6),
+                tlv8.Entry(TlvTypes.EncryptedData, tmp)
             ]
 
             self._send_response_tlv(d_res)
-            self.log_message('after step #6:\n%s', TLV.to_string(d_res))
+            self.log_message('after step #6:\n%s', tlv8.format_string(d_res))
             return
 
         self.send_error(HttpStatusCodes.METHOD_NOT_ALLOWED)
 
     def _send_response_tlv(self, d_res, close=False, status=HttpStatusCodes.OK):
-        result_bytes = TLV.encode_list(d_res)
+        result_bytes = tlv8.encode(d_res)
 
         self.send_response(status)
         # Send headers

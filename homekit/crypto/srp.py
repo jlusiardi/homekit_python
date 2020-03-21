@@ -126,7 +126,7 @@ class SrpClient(Srp):
         self.B = None
 
     def set_salt(self, salt):
-        if isinstance(salt, bytearray):
+        if isinstance(salt, bytearray) or isinstance(salt, bytes):
             self.salt = int.from_bytes(salt, "big")
         else:
             self.salt = salt
@@ -135,7 +135,7 @@ class SrpClient(Srp):
         return pow(self.g, self.a, self.n)
 
     def set_server_public_key(self, B):
-        if isinstance(B, bytearray):
+        if isinstance(B, bytearray) or isinstance(B, bytes):
             self.B = int.from_bytes(B, "big")
         else:
             self.B = B
@@ -182,7 +182,7 @@ class SrpClient(Srp):
         return int.from_bytes(hash_instance.digest(), "big")
 
     def verify_servers_proof(self, M):
-        if isinstance(M, bytearray):
+        if isinstance(M, bytearray) or isinstance(M, bytes):
             tmp = int.from_bytes(M, "big")
         else:
             tmp = M

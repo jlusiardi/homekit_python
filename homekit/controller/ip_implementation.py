@@ -18,6 +18,7 @@ import json
 from json.decoder import JSONDecodeError
 import time
 import logging
+import tlv8
 
 from homekit.controller.tools import AbstractPairing, check_convert_value
 from homekit.protocol.statuscodes import HapStatusCodes
@@ -26,7 +27,7 @@ from homekit.exceptions import AccessoryNotFoundError, UnknownError, UnpairedErr
 from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, create_ip_pair_verify_write
-from homekit.protocol.tlv import TLV
+from homekit.protocol import States, Methods, Errors, TlvTypes
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.zeroconf_impl import find_device_ip_and_port
 from homekit.model.services import ServicesTypes
@@ -115,9 +116,9 @@ class IpPairing(AbstractPairing):
         """
         if not self.session:
             self.session = IpSession(self.pairing_data)
-        request_tlv = TLV.encode_list([
-            (TLV.kTLVType_State, TLV.M1),
-            (TLV.kTLVType_Method, TLV.ListPairings)
+        request_tlv = tlv8.encode([
+            tlv8.Entry(TlvTypes.State, States.M1),
+            tlv8.Entry(TlvTypes.Method, Methods.ListPairings)
         ])
         try:
             response = self.session.sec_http.post('/pairings', request_tlv)
@@ -126,28 +127,36 @@ class IpPairing(AbstractPairing):
             self.session.close()
             self.session = None
             raise
-        data = TLV.decode_bytes(data)
+        data = tlv8.decode(data, {
+            TlvTypes.State: tlv8.DataType.INTEGER,
+            TlvTypes.Error: tlv8.DataType.INTEGER,
+            TlvTypes.Identifier: tlv8.DataType.BYTES,
+            TlvTypes.PublicKey: tlv8.DataType.BYTES,
+            TlvTypes.Permissions: tlv8.DataType.BYTES
+        })
 
-        if not (data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2):
-            raise UnknownError('unexpected data received: ' + str(data))
-        elif data[1][0] == TLV.kTLVType_Error and data[1][1] == TLV.kTLVError_Authentication:
+        error = data.first_by_id(TlvTypes.Error)
+        if not (data.first_by_id(TlvTypes.State).data == States.M2):
+            raise UnknownError('unexpected data received: ' + tlv8.format_string(data))
+        elif error and error.data == Errors.Authentication:
             raise UnpairedError('Must be paired')
         else:
             tmp = []
             r = {}
             for d in data[1:]:
-                if d[0] == TLV.kTLVType_Identifier:
+                if d.type_id == TlvTypes.Identifier:
                     r = {}
                     tmp.append(r)
-                    r['pairingId'] = d[1].decode()
-                if d[0] == TLV.kTLVType_PublicKey:
-                    r['publicKey'] = d[1].hex()
-                if d[0] == TLV.kTLVType_Permissions:
+                    r['pairingId'] = d.data.decode()
+                if d.type_id == TlvTypes.PublicKey:
+                    r['publicKey'] = d.data.hex()
+                if d.type_id == TlvTypes.Permissions:
                     controller_type = 'regular'
-                    if d[1] == b'\x01':
+                    if d.data == b'\x01':
                         controller_type = 'admin'
-                    r['permissions'] = int.from_bytes(d[1], byteorder='little')
+                    r['permissions'] = int.from_bytes(d.data, byteorder='little')
                     r['controllerType'] = controller_type
+            tmp.sort(key=lambda x: x['pairingId'])
             return tmp
 
     def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,
@@ -409,23 +418,26 @@ class IpPairing(AbstractPairing):
         if not self.session:
             self.session = IpSession(self.pairing_data)
         if permissions == 'User':
-            permissions = TLV.kTLVType_Permission_RegularUser
+            permissions = TlvTypes.Permission_RegularUser
         elif permissions == 'Admin':
-            permissions = TLV.kTLVType_Permission_AdminUser
+            permissions = TlvTypes.Permission_AdminUser
         else:
             print('UNKNOWN')
 
-        request_tlv = TLV.encode_list([
-            (TLV.kTLVType_State, TLV.M1),
-            (TLV.kTLVType_Method, TLV.AddPairing),
-            (TLV.kTLVType_Identifier, additional_controller_pairing_identifier.encode()),
-            (TLV.kTLVType_PublicKey, bytes.fromhex(ios_device_ltpk)),
-            (TLV.kTLVType_Permissions, permissions)
+        request_tlv = tlv8.encode([
+            tlv8.Entry(TlvTypes.State, States.M1),
+            tlv8.Entry(TlvTypes.Method, Methods.AddPairing),
+            tlv8.Entry(TlvTypes.Identifier, additional_controller_pairing_identifier.encode()),
+            tlv8.Entry(TlvTypes.PublicKey, bytes.fromhex(ios_device_ltpk)),
+            tlv8.Entry(TlvTypes.Permissions, permissions)
         ])
 
         response = self.session.sec_http.post('/pairings', request_tlv)
         data = response.read()
-        data = TLV.decode_bytes(data)
+        data = tlv8.decode(data, {
+            TlvTypes.State: tlv8.DataType.INTEGER,
+            TlvTypes.Error: tlv8.DataType.BYTES,
+        })
         # TODO handle the response properly
         self.session.close()
 

@@ -58,7 +58,7 @@ class TestHTTPPairing(unittest.TestCase):
         with mock.patch.object(connection, 'response_class') as resp:
             resp.return_value.read.return_value = b'\x00\x01\x01\x06\x01\x01'
             with mock.patch.object(connection, 'send') as send:
-                write_fun(b'', [])
+                write_fun([], [])
                 assert b'accept-encoding' not in send.call_args[0][0].lower()
 
     def test_pair_verify_doesnt_add_extra_headers(self):
@@ -75,7 +75,7 @@ class TestHTTPPairing(unittest.TestCase):
         with mock.patch.object(connection, 'response_class') as resp:
             resp.return_value.read.return_value = b'\x00\x01\x01\x06\x01\x01'
             with mock.patch.object(connection, 'send') as send:
-                write_fun(b'', [])
+                write_fun([], [])
                 assert b'accept-encoding' not in send.call_args[0][0].lower()
 
 

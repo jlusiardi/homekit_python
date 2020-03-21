@@ -156,6 +156,7 @@ class IpPairing(AbstractPairing):
                         controller_type = 'admin'
                     r['permissions'] = int.from_bytes(d.data, byteorder='little')
                     r['controllerType'] = controller_type
+            tmp.sort(key=lambda x: x['pairingId'])
             return tmp
 
     def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,

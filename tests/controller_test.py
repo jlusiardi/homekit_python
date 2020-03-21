@@ -356,17 +356,21 @@ class TestControllerIpPaired(unittest.TestCase):
         """Gets the listing of registered controllers of the device. Count must be 1."""
         self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
-        result = pairing.list_pairings()
-        self.assertEqual(2, len(result))
-        result = result[0]
+        results = pairing.list_pairings()
+        self.assertEqual(2, len(results))
+        result = results[0]
         self.assertIn('pairingId', result)
         self.assertEqual('ABCDEFfa3-de3e-41c9-adba-ef7409821bfc', result['pairingId'])
         self.assertIn('controllerType', result)
-        self.assertEqual(result['controllerType'], 'admin')
+        self.assertEqual(result['controllerType'], 'regular')
         self.assertIn('publicKey', result)
         self.assertIn('permissions', result)
-        self.assertEqual(result['permissions'], 1)
+        self.assertEqual(result['permissions'], 0)
         self.assertIn('pairingId', result)
+        result = results[1]
+        self.assertEqual('decc6fa3-de3e-41c9-adba-ef7409821bfc', result['pairingId'])
+        self.assertEqual(result['controllerType'], 'admin')
+        self.assertEqual(result['permissions'], 1)
 
     def test_07_paired_identify(self):
         """Tests the paired variant of the identify method."""

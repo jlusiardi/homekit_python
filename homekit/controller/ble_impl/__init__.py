@@ -120,6 +120,7 @@ class BlePairing(AbstractPairing):
                     controller_type = 'admin'
                 r['permissions'] = int.from_bytes(d.data, byteorder='little')
                 r['controllerType'] = controller_type
+        tmp.sort(key=lambda x: x['pairingId'])
         return tmp
 
     def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):

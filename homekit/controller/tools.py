@@ -63,7 +63,7 @@ class AbstractPairing(abc.ABC):
          * permissions: bit value for the permissions
          * controllerType: either admin or regular
 
-        :return: a list of dicts
+        :return: a list of dicts sorted by the elements pairingIds
         :raises: UnknownError: if it receives unexpected data
         :raises: UnpairedError: if the polled accessory is not paired
         """

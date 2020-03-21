@@ -359,6 +359,8 @@ class TestControllerIpPaired(unittest.TestCase):
         result = pairing.list_pairings()
         self.assertEqual(2, len(result))
         result = result[0]
+        self.assertIn('pairingId', result)
+        self.assertEqual('ABCDEFfa3-de3e-41c9-adba-ef7409821bfc', result['pairingId'])
         self.assertIn('controllerType', result)
         self.assertEqual(result['controllerType'], 'admin')
         self.assertIn('publicKey', result)

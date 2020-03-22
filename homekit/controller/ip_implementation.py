@@ -19,6 +19,7 @@ from json.decoder import JSONDecodeError
 import time
 import logging
 import tlv8
+from collections import namedtuple
 
 from homekit.controller.tools import AbstractPairing, check_convert_value
 from homekit.protocol.statuscodes import HapStatusCodes
@@ -218,11 +219,11 @@ class IpPairing(AbstractPairing):
 
     def get_resource(self, resource_request):
         """
-        This method performs a request to read the /resource endpoint of an accessory. What it does is dependend on the
+        This method performs a request to read the /resource endpoint of an accessory. What it does is dependent on the
         accessory being queried. For example this could be a IP based camera to return a snapshot image (see spec R2,
         chapter 11.5 page 242).
         :param resource_request: a dict of values to be sent to the accessory as a json dump
-        :return: the content of the response body as bytes
+        :return: a named tuple containing fields `type` and `content`
         """
         if not self.session:
             self.session = IpSession(self.pairing_data)
@@ -235,7 +236,8 @@ class IpPairing(AbstractPairing):
             for header in response.headers:
                 if header[0] == 'Content-Type':
                     content_type = header[1]
-            return (content_type, response.read())
+            Response = namedtuple('Response', 'type content')
+            return Response(content_type, response.read())
         except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
             self.session = None

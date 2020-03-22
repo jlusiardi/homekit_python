@@ -10,3 +10,4 @@ coverage
 flake8>=0.9.0
 pytest
 tlv8
+bitstruct

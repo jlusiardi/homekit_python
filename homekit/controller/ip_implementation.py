@@ -329,7 +329,17 @@ class IpPairing(AbstractPairing):
             iid = characteristic[1]
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
             data.append({'aid': aid, 'iid': iid, 'ev': True})
-        data = json.dumps({'characteristics': data})
+
+        # Taking iPhone requests as source of truth about the format of json payloads
+        # there should be no whitespace after comma (or anywhere that would be just spacing).
+        # Some devices (like Tado Internet Bridge) are really fussy about that, and sending
+        # json payload in Python's standard formatting will cause it to return error.
+        # I.e. sending perfectly valid json:
+        # {"characteristics":[{"iid":15, "aid":2, "ev":true}]}
+        # will not work, while:
+        # {"characteristics":[{"iid":15,"aid":2,"ev":true}]}
+        # is accepted.
+        data = json.dumps({'characteristics': data}, separators=(',', ':'))
 
         try:
             response = self.session.put('/characteristics', data)

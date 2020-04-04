@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+from functools import partial
 import json
 from json.decoder import JSONDecodeError
 import time
@@ -31,6 +32,19 @@ from homekit.protocol import States, Methods, Errors, TlvTypes
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.zeroconf_impl import find_device_ip_and_port
 from homekit.model.services import ServicesTypes
+
+
+# Taking iPhone requests as source of truth about the format of json payloads
+# there should be no whitespace after comma (or anywhere that would be just spacing).
+# Some devices (like Tado Internet Bridge) are really fussy about that, and sending
+# json payload in Python's standard formatting will cause it to return error.
+# I.e. sending perfectly valid json:
+#   {"characteristics":[{"iid":15, "aid":2, "ev":true}]}
+# will not work, while:
+#   {"characteristics":[{"iid":15,"aid":2,"ev":true}]}
+# is accepted.
+# See https://github.com/jlusiardi/homekit_python/issues/181
+_dump_json = partial(json.dumps, separators=(',', ':'))
 
 
 class IpPairing(AbstractPairing):
@@ -227,7 +241,7 @@ class IpPairing(AbstractPairing):
         if not self.session:
             self.session = IpSession(self.pairing_data)
         url = '/resource'
-        body = json.dumps(resource_request).encode()
+        body = _dump_json(resource_request).encode()
 
         try:
             response = self.session.post(url, body)
@@ -276,7 +290,7 @@ class IpPairing(AbstractPairing):
                 value = check_convert_value(value, c_format)
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
             data.append({'aid': aid, 'iid': iid, 'value': value})
-        data = json.dumps({'characteristics': data})
+        data = _dump_json({'characteristics': data})
 
         try:
             response = self.session.put('/characteristics', data)
@@ -329,7 +343,7 @@ class IpPairing(AbstractPairing):
             iid = characteristic[1]
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
             data.append({'aid': aid, 'iid': iid, 'ev': True})
-        data = json.dumps({'characteristics': data})
+        data = _dump_json({'characteristics': data})
 
         try:
             response = self.session.put('/characteristics', data)

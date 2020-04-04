@@ -341,8 +341,7 @@ class IpPairing(AbstractPairing):
             aid = characteristic[0]
             iid = characteristic[1]
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
-            #'aid': aid, data.append({'aid': aid, 'iid': iid, 'ev': True})
-            data.append({'iid': iid, 'aid': aid, 'ev': True})
+            data.append({'aid': aid, 'iid': iid, 'ev': True})
         data = _dump_json({'characteristics': data})
 
         try:

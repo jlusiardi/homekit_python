@@ -27,16 +27,17 @@ possible we aim to do what an iOS device would do.
 """
 
 import unittest
+import json
 from unittest import mock
 
 from homekit.controller.ip_implementation import IpPairing
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import create_ip_pair_setup_write, create_ip_pair_verify_write
+from homekit.http_impl.response import HttpResponse
 
 
 class TestHTTPPairing(unittest.TestCase):
-
     """
     Communication failures in the pairing stage.
 
@@ -80,7 +81,6 @@ class TestHTTPPairing(unittest.TestCase):
 
 
 class TestSecureSession(unittest.TestCase):
-
     """
     Communication failures of HTTP secure session layer.
 
@@ -106,7 +106,6 @@ class TestSecureSession(unittest.TestCase):
 
         with mock.patch.object(secure_http, '_handle_request') as handle_req:
             secure_http.get('/characteristics')
-            print(handle_req.call_args[0][0])
             assert '\r\nHost: 192.168.1.2:8080\r\n' in handle_req.call_args[0][0].decode()
 
             secure_http.post('/characteristics', b'')
@@ -135,3 +134,81 @@ class TestSecureSession(unittest.TestCase):
 
             pairing.get_characteristics([(1, 2)], include_meta=True)
             assert session.get.call_args[0][0] == '/characteristics?id=1.2&meta=1'
+
+
+class TestMinimalisticJson(unittest.TestCase):
+    @staticmethod
+    def function_for_put_testing(url, body):
+        assert ' ' not in body, 'Regression of https://github.com/jlusiardi/homekit_python/issues/181'
+        response = HttpResponse()
+        response.body = json.dumps({'characteristics': []}).encode()
+        return response
+
+    @staticmethod
+    def prepare_mock_function():
+        session = mock.Mock()
+        session.pairing_data = {
+            'AccessoryIP': '192.168.1.2',
+            'AccessoryPort': 8080,
+            'accessories': [
+                {
+                    "aid": 1,
+                    "services": [
+                        {
+                            "iid": 1,
+                            "type": "0000003E-0000-1000-8000-0026BB765291",
+                            "primary": False,
+                            "hidden": False,
+                            "linked": [],
+                            "characteristics": [
+                                {
+                                    "iid": 2,
+                                    "type": "00000014-0000-1000-8000-0026BB765291",
+                                    "format": "bool",
+                                    "perms": [
+                                        "pw"
+                                    ],
+                                    "description": "Identify"
+                                },
+                            ]
+                        },
+                    ]
+                }
+            ]
+        }
+        session.put = __class__.function_for_put_testing
+        return session
+
+    def test_get_events_sends_minimal_json(self):
+        """
+        The tado internet bridge will fail if a there are spaces in the json data transmitted to it.
+
+        An iPhone client sends minimalistic json with the whitespace stripped out:
+            b'{"characteristics":[{"aid":2,"iid":12,"ev":true},...,{"aid":2,"iid":17,"ev":true}]}'
+
+        https://github.com/jlusiardi/homekit_python/issues/181
+        https://github.com/jlusiardi/homekit_python/pull/182
+        """
+        session = __class__.prepare_mock_function()
+
+        pairing = IpPairing(session.pairing_data)
+        pairing.session = session
+
+        pairing.get_events([(1, 2)], lambda *args: None)
+
+    def test_put_characteristics_sends_minimal_json(self):
+        """
+        The tado internet bridge will fail if a there are spaces in the json data transmitted to it.
+
+        An iPhone client sends minimalistic json with the whitespace stripped out:
+            b'{"characteristics":[{"aid":2,"iid":12,"ev":true},...,{"aid":2,"iid":17,"ev":true}]}'
+
+        https://github.com/jlusiardi/homekit_python/issues/181
+        https://github.com/jlusiardi/homekit_python/pull/182
+        """
+        session = __class__.prepare_mock_function()
+
+        pairing = IpPairing(session.pairing_data)
+        pairing.session = session
+
+        pairing.put_characteristics([(1, 2, 3)])

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 import tlv8
 from enum import IntEnum
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
@@ -95,7 +94,5 @@ def decoder(bytes_data):
                 AudioCodecParametersKeys.RTP_TIME: RtpTimeValues
             }
         },
-        SupportedAudioStreamConfigurationKeys.COMFORT_NOISE_SUPPORT: {
-
-        }
+        SupportedAudioStreamConfigurationKeys.COMFORT_NOISE_SUPPORT: tlv8.DataType.UNSIGNED_INTEGER
     })

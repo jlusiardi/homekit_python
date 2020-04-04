@@ -139,13 +139,12 @@ class TestSecureSession(unittest.TestCase):
 class TestMinimalisticJson(unittest.TestCase):
     @staticmethod
     def function_for_put_testing(url, body):
-        assert ' ' not in body, 'Regression of https://github.com/jlusiardi/homekit_python/issues/181'
         response = HttpResponse()
         response.body = json.dumps({'characteristics': []}).encode()
         return response
 
-    @staticmethod
-    def prepare_mock_function():
+    @classmethod
+    def prepare_mock_function(cls):
         session = mock.Mock()
         session.pairing_data = {
             'AccessoryIP': '192.168.1.2',
@@ -176,7 +175,8 @@ class TestMinimalisticJson(unittest.TestCase):
                 }
             ]
         }
-        session.put = __class__.function_for_put_testing
+        session.put = mock.Mock(side_effect=cls.function_for_put_testing)
+        session.post = mock.Mock(side_effect=cls.function_for_put_testing)
         return session
 
     def test_get_events_sends_minimal_json(self):
@@ -194,7 +194,32 @@ class TestMinimalisticJson(unittest.TestCase):
         pairing = IpPairing(session.pairing_data)
         pairing.session = session
 
-        pairing.get_events([(1, 2)], lambda *args: None)
+        pairing.get_events([(1, 2)], lambda *_: None)
+
+        assert session.put.call_args[0][0] == '/characteristics'
+        payload = session.put.call_args[0][1]
+        assert ' ' not in payload, 'Regression of https://github.com/jlusiardi/homekit_python/issues/181'
+
+    def test_get_resource_sends_minimal_json(self):
+        """
+        The tado internet bridge will fail if a there are spaces in the json data transmitted to it.
+
+        An iPhone client sends minimalistic json with the whitespace stripped out:
+            b'{"characteristics":[{"aid":2,"iid":12,"ev":true},...,{"aid":2,"iid":17,"ev":true}]}'
+
+        https://github.com/jlusiardi/homekit_python/issues/181
+        https://github.com/jlusiardi/homekit_python/pull/182
+        """
+        session = __class__.prepare_mock_function()
+
+        pairing = IpPairing(session.pairing_data)
+        pairing.session = session
+
+        pairing.get_resource({'my': 'test', 'for_some': 'resource'})
+
+        assert session.post.call_args[0][0] == '/resource'
+        payload = session.post.call_args[0][1]
+        assert b' ' not in payload, (payload, 'Regression of https://github.com/jlusiardi/homekit_python/issues/181')
 
     def test_put_characteristics_sends_minimal_json(self):
         """
@@ -212,3 +237,7 @@ class TestMinimalisticJson(unittest.TestCase):
         pairing.session = session
 
         pairing.put_characteristics([(1, 2, 3)])
+
+        assert session.put.call_args[0][0] == '/characteristics'
+        payload = session.put.call_args[0][1]
+        assert ' ' not in payload, 'Regression of https://github.com/jlusiardi/homekit_python/issues/181'

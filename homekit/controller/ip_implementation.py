@@ -46,6 +46,7 @@ from homekit.model.services import ServicesTypes
 # See https://github.com/jlusiardi/homekit_python/issues/181
 _dump_json = partial(json.dumps, separators=(',', ':'))
 
+
 class IpPairing(AbstractPairing):
     """
     This represents a paired HomeKit IP accessory.

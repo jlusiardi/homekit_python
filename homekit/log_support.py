@@ -31,10 +31,11 @@ def setup_logging(level):
         logging.getLogger().setLevel(numeric_level)
 
 
-def add_log_arguments(parser):
+def add_log_arguments(parser, level=None):
     """
     Adds command line arguments to control logging behaviour.
 
     :param parser: The argparse.ArgumentParser object to add to.
+    :param level: the default log level if not given as command line parameter. defaults to None which means no logging
     """
-    parser.add_argument('--log', action='store', dest='loglevel')
+    parser.add_argument('--log', action='store', dest='loglevel', default=level)

@@ -32,6 +32,7 @@ from homekit.model.services import AbstractService, ServicesTypes
 from homekit.model.characteristics import AbstractCharacteristic, CharacteristicFormats, CharacteristicsTypes
 from homekit.http_impl import HttpStatusCodes
 from homekit.controller.tools import AbstractPairing
+from homekit.log_support import setup_logging, add_log_arguments
 
 
 def setup_args_parser():
@@ -41,22 +42,15 @@ def setup_args_parser():
     parser.add_argument('-a', '--alias', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-s', '--server-data', action='store', required=True, dest='server_data',
                         default='./server.json')
+    add_log_arguments(parser, 'INFO')
     return parser.parse_args()
-
-
-def setup_logging():
-    global logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    ch = logging.StreamHandler()
-    ch.setFormatter(logging.Formatter('%(asctime)s %(filename)s:%(lineno)04d %(levelname)s %(message)s'))
-    logger.addHandler(ch)
 
 
 class ProxyService(AbstractService):
     """
     Implementation of `AbstractService` to act as a proxy.
     """
+
     def __init__(self, iid: int, service_type: str):
         AbstractService.__init__(self, service_type, iid)
 
@@ -65,6 +59,7 @@ class ProxyCharacteristic(AbstractCharacteristic):
     """
     Implementation of `AbstractCharacteristic` to act as a proxy.
     """
+
     def __init__(self, iid: int, characteristic_type: str, characteristic_format: str):
         AbstractCharacteristic.__init__(self, iid, characteristic_type, characteristic_format)
 
@@ -91,16 +86,16 @@ class CharacteristicsDecoderLoader:
         mod_name = characteristic_name.replace('-', '_')
         if char_type not in self.decoders:
             try:
-                logger.info('loading module %s for type %s', mod_name, char_type)
+                logging.info('loading module %s for type %s', mod_name, char_type)
                 module = importlib.import_module('homekit.model.characteristics.' + mod_name)
                 decoder = getattr(module, 'decoder')
                 self.decoders[char_type] = decoder
                 return decoder
             except Exception as e:
-                logger.error('Error loading decoder: %s for type %s', e, char_type)
+                logging.error('Error loading decoder: %s for type %s', e, char_type)
                 return None
         else:
-            logger.info('got decoder for %s from cache', char_type)
+            logging.info('got decoder for %s from cache', char_type)
             return self.decoders[char_type]
 
 
@@ -127,7 +122,7 @@ def log_transferred_value(text: str, aid: int, characteristic: AbstractCharacter
             debug_value = tlv8.format_string(decoder(bytes_value))
         else:
             debug_value = tlv8.format_string(tlv8.deep_decode(bytes_value))
-    logger.info(
+    logging.info(
         '%s %s.%s (type %s / %s): \n%s' % (
             text, aid, iid, characteristic.type, characteristic_name, debug_value))
 
@@ -201,7 +196,7 @@ def generate_proxy_accessory_request_handler(pairing: AbstractPairing):
                 self.end_headers()
                 self.wfile.write(result_body)
             except Exception as e:
-                logger.error('post resource with {v} results in exception {r}'.format(v=request_body, r=e))
+                logging.error('post resource with {v} results in exception {r}'.format(v=request_body, r=e))
                 self.send_error(HttpStatusCodes.INTERNAL_SERVER_ERROR)
 
     return ProxyAccessoryRequestHandler
@@ -219,12 +214,12 @@ def create_proxy(accessories_and_characteristics):
     characteristics.
     """
     accessories = []
-    logger.info('%<------ creating proxy ------')
+    logging.info('%<------ creating proxy ------')
     for accessory in accessories_and_characteristics:
         proxy_accessory = Accessory('', '', '', '', '', )
         aid = accessory['aid']
         proxy_accessory.aid = aid
-        logger.info('accessory with aid=%s', aid)
+        logging.info('accessory with aid=%s', aid)
         proxy_accessory.services = []
         accessories.append(proxy_accessory)
 
@@ -232,7 +227,7 @@ def create_proxy(accessories_and_characteristics):
             service_iid = service['iid']
             service_type = service['type']
             short_type = ServicesTypes.get_short(service_type)
-            logger.info('  %i.%i: >%s< (%s)', aid, service_iid, short_type, service_type)
+            logging.info('  %i.%i: >%s< (%s)', aid, service_iid, short_type, service_type)
 
             proxy_service = ProxyService(service_iid, service_type)
             proxy_accessory.add_service(proxy_service)
@@ -244,8 +239,8 @@ def create_proxy(accessories_and_characteristics):
                 characteristic_format = characteristic['format']
                 characteristic_value = characteristic.get('value')
                 characteristic_perms = characteristic['perms']
-                logger.info('    %i.%i: %s >%s< (%s) [%s] %s', aid, characteristic_iid, characteristic_value,
-                            short_type, characteristic_type, ','.join(characteristic_perms), characteristic_format)
+                logging.info('    %i.%i: %s >%s< (%s) [%s] %s', aid, characteristic_iid, characteristic_value,
+                             short_type, characteristic_type, ','.join(characteristic_perms), characteristic_format)
 
                 proxy_characteristic = ProxyCharacteristic(characteristic_iid, characteristic_type,
                                                            characteristic_format)
@@ -258,14 +253,14 @@ def create_proxy(accessories_and_characteristics):
                     generate_set_value_callback(accessory['aid'], proxy_characteristic))
                 proxy_characteristic.set_get_value_callback(
                     generate_get_value_callback(accessory['aid'], proxy_characteristic))
-    logger.info('%<------ finished creating proxy ------')
+    logging.info('%<------ finished creating proxy ------')
     return accessories
 
 
 if __name__ == '__main__':
     args = setup_args_parser()
 
-    setup_logging()
+    setup_logging(args.loglevel)
 
     client_config_file = os.path.expanduser(args.client_data)
     server_config_file = os.path.expanduser(args.server_data)
@@ -274,36 +269,36 @@ if __name__ == '__main__':
     try:
         controller.load_data(client_config_file)
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logging.error(e, exc_info=True)
         sys.exit(-1)
 
     if args.alias not in controller.get_pairings():
-        logger.error('"%s" is no known alias', args.alias)
+        logging.error('"%s" is no known alias', args.alias)
         sys.exit(-1)
 
     try:
         pairing = controller.get_pairings()[args.alias]
         data = pairing.list_accessories_and_characteristics()
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logging.error(e, exc_info=True)
         sys.exit(-1)
 
     proxy_accessories = create_proxy(data)
 
     # create a server and an accessory an run it unless ctrl+c was hit
     try:
-        httpd = AccessoryServer(server_config_file, logger,
+        httpd = AccessoryServer(server_config_file, logging.getLogger(),
                                 request_handler_class=generate_proxy_accessory_request_handler(pairing))
         for proxy_accessory in proxy_accessories:
             httpd.add_accessory(proxy_accessory)
 
         httpd.publish_device()
-        logger.info('published device and start serving')
+        logging.info('published device and start serving')
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
 
     # unpublish the device and shut down
-    logger.info('unpublish device')
+    logging.info('unpublish device')
     httpd.unpublish_device()
     httpd.shutdown()

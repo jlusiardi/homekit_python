@@ -20,7 +20,7 @@ from homekit.model.characteristics.supported_video_stream_configuration import V
     VideoCodecParametersKeys, ProfileIdValues, VideoCodecTypeValues, LevelValues, CVOEnabledValue, \
     PacketizationModeValues
 from homekit.model.characteristics.supported_audio_configuration import AudioCodecParametersKeys, \
-    BitRateValues, SampleRateValues, RtpTimeValues
+    BitRateValues, SampleRateValues, RtpTimeValues, AudioCodecTypeValues
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 
 CHARACTERISTIC_ID = CharacteristicsTypes.get_uuid(CharacteristicsTypes.SELECTED_RTP_STREAM_CONFIGURATION)
@@ -72,16 +72,6 @@ class SelectedVideoParametersKeys(IntEnum):
     SELECTED_VIDEO_CODEC_PARAMETERS = 2
     SELECTED_VIDEO_ATTRIBUTES = 3
     SELECTED_VIDEO_RTP_PARAMETERS = 4
-
-
-class AudioCodecTypeValues(IntEnum):
-    """
-    Page 207 / Table 9-11 Values for key 'Selected Audio Codec type'
-    """
-    AAC_ELD = 2
-    OPUS = 3
-    AMR = 5
-    AMR_WB = 6
 
 
 class VideoRTPParametersKeys(IntEnum):

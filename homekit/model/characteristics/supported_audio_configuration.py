@@ -40,8 +40,11 @@ class AudioCodecTypeValues(IntEnum):
     """
     Page 207 / Table 9-11 Values for key 'Selected Audio Codec type'
     """
+    PCMU = 0  # contained in page 196 / table 8-18 spec r1
+    PCMA = 1  # contained in page 196 / table 8-18 spec r1
     AAC_ELD = 2
     OPUS = 3
+    MSBC = 4  # contained in page 196 / table 8-18 spec r1
     AMR = 5
     AMR_WB = 6
 

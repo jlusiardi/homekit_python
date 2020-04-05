@@ -54,17 +54,24 @@ def setup_args_parser():
     parser.add_argument('-W', action='store', default=640, type=int, dest='width', help='Width of the loaded image')
     parser.add_argument('-H', action='store', default=480, type=int, dest='height', help='Height of the loaded image')
     parser.add_argument('-i', action='store', required=True, dest='ip', help='')
+    parser.add_argument('-t', action='store', default=1, type=int, dest='time', help='')
+    parser.add_argument('-ap', action='store', type=int, dest='audioport', help='')
+    parser.add_argument('-vp', action='store', type=int, dest='videoport', help='')
     add_log_arguments(parser)
     return parser.parse_args()
 
 
-def get_random_port():
+def get_random_port(default_port=None):
     import socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     while True:
         try:
-            port = random.randrange(50000, 60000)
-            sock.bind(('0.0.0.0', port))
+            if not default_port:
+                port = random.randrange(50000, 60000)
+                sock.bind(('0.0.0.0', port))
+            else:
+                port = default_port
+                sock = None
             break
         except Exception:
             pass
@@ -72,11 +79,12 @@ def get_random_port():
 
 
 class ReadSocket(threading.Thread):
-    def __init__(self, sock, m):
+    def __init__(self, sock, name):
         threading.Thread.__init__(self)
         self.sock = sock
         self.active = True
-        self.m = m
+        self.name = name
+        self.received_bytes = 0
 
     def run(self):
         self.sock.setblocking(0)
@@ -86,8 +94,18 @@ class ReadSocket(threading.Thread):
             if ready[0]:
                 data, addr = self.sock.recvfrom(4096)
                 # if unencrypted, this looks like rtp headers
-                parsed = bitstruct.unpack('u2u1u1u4u1u7u16u32u32', data[0:12])
-                print(self.m, addr, len(data), parsed)
+                print()
+
+                parsed_rtcp = bitstruct.unpack('u2u1u5u8u16u32', data[0:8])
+                if parsed_rtcp[3] in [200, 201, 202, 203, 204]:
+                    print(self.name, 'control', len(data), parsed_rtcp)
+                else:
+                    parsed_rtp = bitstruct.unpack('u2u1u1u4u1u7u16u32u32', data[0:12])
+                    print(self.name, 'data', 'v', parsed_rtp[0], 'p', parsed_rtp[1], 'x', parsed_rtp[2], 'CC',
+                          parsed_rtp[3], 'm', parsed_rtp[4], 'pt', parsed_rtp[5], 'sn', parsed_rtp[6], 'ts',
+                          parsed_rtp[7], 'ssrc', parsed_rtp[8], data[12:])
+                    self.received_bytes += len(data[12:])
+                    print(8 * self.received_bytes)
 
 
 if __name__ == '__main__':
@@ -125,13 +143,19 @@ if __name__ == '__main__':
 
     session_id = uuid.uuid4().bytes
 
-    video_port, video_sock = get_random_port()
-    video_thread = ReadSocket(video_sock, 'video')
-    video_thread.start()
+    video_port, video_sock = get_random_port(args.videoport)
+    if video_sock:
+        video_thread = ReadSocket(video_sock, 'video')
+        video_thread.start()
+    else:
+        video_thread = None
 
-    audio_port, audio_sock = get_random_port()
-    audio_thread = ReadSocket(audio_sock, 'audio')
-    # audio_thread.start()
+    audio_port, audio_sock = get_random_port(args.audioport)
+    if audio_sock:
+        audio_thread = ReadSocket(audio_sock, 'audio')
+        audio_thread.start()
+    else:
+        audio_thread = None
 
     video_master_key = secrets.token_bytes(16)
     video_master_salt = secrets.token_bytes(14)
@@ -267,7 +291,7 @@ if __name__ == '__main__':
 
     # ==================================================================================================================
     # stream in progress
-    time.sleep(1)
+    time.sleep(args.time)
 
     # ==================================================================================================================
     # write selected stream configuration
@@ -282,5 +306,7 @@ if __name__ == '__main__':
     r = pairing.put_characteristics(p)
     print('\nSelectedRtpStreamConfiguration write result\n', r)
 
-    audio_thread.active = False
-    video_thread.active = False
+    if audio_thread:
+        audio_thread.active = False
+    if video_thread:
+        video_thread.active = False

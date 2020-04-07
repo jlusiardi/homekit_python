@@ -147,6 +147,44 @@ class AbstractPairing(abc.ABC):
         pass
 
 
+class DummyPairing(AbstractPairing):
+    def __init__(self, pairing_data, connection_type):
+        self.pairing_data = pairing_data
+        self.connection_type = connection_type
+
+    def close(self):
+        pass
+
+    def list_accessories_and_characteristics(self):
+        raise NotImplementedError(
+            'Connection type "{}" is not supported in this setup!'.format(self.connection_type))
+
+    def list_pairings(self):
+        raise NotImplementedError(
+            'Connection type "{}" is not supported in this setup!'.format(self.connection_type))
+
+    def get_characteristics(self, characteristics, include_meta=False, include_perms=False, include_type=False,
+                            include_events=False):
+        raise NotImplementedError(
+            'Connection type "{}" is not supported in this setup!'.format(self.connection_type))
+
+    def put_characteristics(self, characteristics, do_conversion=False):
+        raise NotImplementedError(
+            'Connection type "{}" is not supported in this setup!'.format(self.connection_type))
+
+    def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
+        raise NotImplementedError(
+            'Connection type "{}" is not supported in this setup!'.format(self.connection_type))
+
+    def identify(self):
+        raise NotImplementedError(
+            'Connection type "{}" is not supported in this setup!'.format(self.connection_type))
+
+    def add_pairing(self, additional_controller_pairing_identifier, ios_device_ltpk, permissions):
+        raise NotImplementedError(
+            'Connection type "{}" is not supported in this setup!'.format(self.connection_type))
+
+
 def check_convert_value(val, target_type):
     """
     Checks if the given value is of the given type or is convertible into the type. If the value is not convertible, a

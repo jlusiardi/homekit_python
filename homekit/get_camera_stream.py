@@ -24,17 +24,15 @@ import tlv8
 import time
 import base64
 import random
-import threading
-import select
 import secrets
-import bitstruct
+import tempfile
+import subprocess
 
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.characteristics.setup_endpoints import SetupEndpointsKeys, ControllerAddressKeys, IPVersionValues, \
     SrtpParameterKeys, CameraSRTPCryptoSuiteValues
-from homekit.model.characteristics.streaming_status import decoder as streaming_status_decoder
 from homekit.model.characteristics.setup_endpoints import decoder as setup_endpoints_decoder
 from homekit.model.characteristics.selected_rtp_stream_configuration import SelectedRtpStreamConfigurationKeys, \
     SessionControlKeys, CommandValues, SelectedVideoParametersKeys, ProfileIdValues, LevelValues, \
@@ -45,6 +43,42 @@ from homekit.model.characteristics.selected_rtp_stream_configuration import Sele
 SETUP_ENDPOINTS_CHARACTERISTIC = CharacteristicsTypes.get_uuid(CharacteristicsTypes.SETUP_ENDPOINTS)
 
 
+def write_sdp_file(accessory_ip, video_port, audio_port):
+    content = \
+        'c=IN IP4 {a_ip}\n' \
+        'm=video {v_port} RTP/AVP 99\n' \
+        'a=rtpmap:99 H264/90000\n' \
+        'm=audio {a_port} RTP/AVP 110\n' \
+        'a=rtpmap:110 Opus/16000/1\n' \
+        'a=ptime:20\n' \
+        'a=maxptime:20\n'.format(a_ip=accessory_ip, v_port=video_port, a_port=audio_port)
+    f = tempfile.NamedTemporaryFile(delete=False)
+    f.write(content.encode())
+    return f.name
+
+
+def start_ffplay(sdp_file):
+    command = ['ffplay', '-f', 'sdp', sdp_file, '-protocol_whitelist', 'file,udp,rtp']
+    print(' '.join(command))
+    proc = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT)
+    return proc
+
+
+def start_ffmpeg(sdp_file, target):
+    # '-s:v', '1280x720', '-r', '30',
+    #  '-v', 'debug',
+    command = ['ffmpeg', '-protocol_whitelist', 'file,udp,rtp', '-i', sdp_file, '-c', 'copy', '-shortest', '-y', target]
+    print(' '.join(command))
+    proc = subprocess.Popen(
+        command,
+        stdout=sys.stdout,
+        stderr=subprocess.STDOUT)
+    return proc
+
+
 def setup_args_parser():
     parser = argparse.ArgumentParser(description='HomeKit get_resource - retrieve value of snapshot '
                                                  'resource  from paired HomeKit accessories.')
@@ -52,13 +86,20 @@ def setup_args_parser():
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-A', action='store', dest='accessory_id', help='Accessory id for the camera (optional)')
     parser.add_argument('-W', action='store', default=640, type=int, dest='width', help='Width of the loaded image')
-    parser.add_argument('-H', action='store', default=480, type=int, dest='height', help='Height of the loaded image')
+    parser.add_argument('-H', action='store', default=480, type=int, dest='height',
+                        help='Height of the loaded image')
     parser.add_argument('-i', action='store', required=True, dest='ip', help='')
     parser.add_argument('-t', action='store', default=1, type=int, dest='time', help='')
-    parser.add_argument('-ap', action='store', type=int, dest='audioport', help='')
-    parser.add_argument('-vp', action='store', type=int, dest='videoport', help='')
+    parser.add_argument('-m', action='store', dest='mode', choices=['view', 'save'], default='view')
+    parser.add_argument('-o', action='store', dest='output')
     add_log_arguments(parser)
-    return parser.parse_args()
+    args = parser.parse_args()
+    print('output', args.output)
+    if args.mode == 'save' and not args.output:
+        print('mode save requires output via -o')
+        exit()
+
+    return args
 
 
 def get_random_port(default_port=None):
@@ -69,43 +110,13 @@ def get_random_port(default_port=None):
             if not default_port:
                 port = random.randrange(50000, 60000)
                 sock.bind(('0.0.0.0', port))
+                sock.close()
             else:
                 port = default_port
-                sock = None
             break
         except Exception:
             pass
-    return port, sock
-
-
-class ReadSocket(threading.Thread):
-    def __init__(self, sock, name):
-        threading.Thread.__init__(self)
-        self.sock = sock
-        self.active = True
-        self.name = name
-        self.received_bytes = 0
-
-    def run(self):
-        self.sock.setblocking(0)
-
-        while self.active:
-            ready = select.select([self.sock], [], [], 1)
-            if ready[0]:
-                data, addr = self.sock.recvfrom(4096)
-                # if unencrypted, this looks like rtp headers
-                print()
-
-                parsed_rtcp = bitstruct.unpack('u2u1u5u8u16u32', data[0:8])
-                if parsed_rtcp[3] in [200, 201, 202, 203, 204]:
-                    print(self.name, 'control', len(data), parsed_rtcp)
-                else:
-                    parsed_rtp = bitstruct.unpack('u2u1u1u4u1u7u16u32u32', data[0:12])
-                    print(self.name, 'data', 'v', parsed_rtp[0], 'p', parsed_rtp[1], 'x', parsed_rtp[2], 'CC',
-                          parsed_rtp[3], 'm', parsed_rtp[4], 'pt', parsed_rtp[5], 'sn', parsed_rtp[6], 'ts',
-                          parsed_rtp[7], 'ssrc', parsed_rtp[8], data[12:])
-                    self.received_bytes += len(data[12:])
-                    print(8 * self.received_bytes)
+    return port
 
 
 if __name__ == '__main__':
@@ -122,7 +133,6 @@ if __name__ == '__main__':
     pairing = controller.get_pairings()[args.alias]
 
     try:
-        pairing = controller.get_pairings()[args.alias]
         data = pairing.list_accessories_and_characteristics()
         controller.save_data(args.file)
     except Exception as e:
@@ -143,30 +153,24 @@ if __name__ == '__main__':
 
     session_id = uuid.uuid4().bytes
 
-    video_port, video_sock = get_random_port(args.videoport)
-    if video_sock:
-        video_thread = ReadSocket(video_sock, 'video')
-        video_thread.start()
-    else:
-        video_thread = None
-
-    audio_port, audio_sock = get_random_port(args.audioport)
-    if audio_sock:
-        audio_thread = ReadSocket(audio_sock, 'audio')
-        audio_thread.start()
-    else:
-        audio_thread = None
+    video_port = get_random_port()
+    audio_port = get_random_port()
 
     video_master_key = secrets.token_bytes(16)
     video_master_salt = secrets.token_bytes(14)
 
     audio_master_key = secrets.token_bytes(16)
     audio_master_salt = secrets.token_bytes(14)
+
+    sdp_file = write_sdp_file(pairing._get_pairing_data()['AccessoryIP'], video_port, audio_port)
+    if args.mode == 'view':
+        proc = start_ffplay(sdp_file)
+    elif args.mode == 'save':
+        proc = start_ffmpeg(sdp_file, args.output)
     # ==================================================================================================================
     # read status
     p = [(aid, streaming_status_iid)]
     r = base64.b64decode(pairing.get_characteristics(p)[p[0]]['value'])
-    print(tlv8.format_string(streaming_status_decoder(r)))
 
     # ==================================================================================================================
     # write setup endpoint
@@ -204,19 +208,15 @@ if __name__ == '__main__':
     p = [(aid, setup_endpoints_iid, val)]
     # print(p)
     r = pairing.put_characteristics(p)
-    print('\nSetupEndpoints write result\n', r)
 
     # ==================================================================================================================
     # read setup endpoint
     p = [(aid, setup_endpoints_iid)]
     r = pairing.get_characteristics(p)
-    print('\nSetupEndpoints read result\n', r)
     val = base64.b64decode(r[(aid, setup_endpoints_iid)]['value'])
     el = setup_endpoints_decoder(val)
-    print(tlv8.format_string(el))
     video_ssrc = el.first_by_id(SetupEndpointsKeys.VIDEO_RTP_SSRC).data
     audio_ssrc = el.first_by_id(SetupEndpointsKeys.AUDIO_RTP_SSRC).data
-    print(video_ssrc, audio_ssrc)
 
     # ==================================================================================================================
     # write selected stream configuration
@@ -232,7 +232,8 @@ if __name__ == '__main__':
         tlv8.Entry(SelectedVideoParametersKeys.SELECTED_VIDEO_CODEC_TYPE, VideoCodecTypeValues.H264))
 
     selected_video_codec_params = tlv8.EntryList()
-    selected_video_codec_params.append(tlv8.Entry(VideoCodecParametersKeys.PROFILE_ID, ProfileIdValues.MAIN_PROFILE))
+    selected_video_codec_params.append(
+        tlv8.Entry(VideoCodecParametersKeys.PROFILE_ID, ProfileIdValues.MAIN_PROFILE))
     selected_video_codec_params.append(tlv8.Entry(VideoCodecParametersKeys.LEVEL, LevelValues.L_4))
     selected_video_codec_params.append(
         tlv8.Entry(VideoCodecParametersKeys.PACKETIZATION_MODE, PacketizationModeValues.NON_INTERLEAVED))
@@ -240,15 +241,16 @@ if __name__ == '__main__':
         tlv8.Entry(SelectedVideoParametersKeys.SELECTED_VIDEO_CODEC_PARAMETERS, selected_video_codec_params))
 
     video_parameters = tlv8.EntryList()
-    video_parameters.append(tlv8.Entry(VideoAttributesKeys.IMAGE_WIDTH, 1280))
-    video_parameters.append(tlv8.Entry(VideoAttributesKeys.IMAGE_HEIGHT, 720))
+    video_parameters.append(tlv8.Entry(VideoAttributesKeys.IMAGE_WIDTH, args.width))
+    video_parameters.append(tlv8.Entry(VideoAttributesKeys.IMAGE_HEIGHT, args.height))
     video_parameters.append(tlv8.Entry(VideoAttributesKeys.FRAME_RATE, 30))
-    selected_video_params.append(tlv8.Entry(SelectedVideoParametersKeys.SELECTED_VIDEO_ATTRIBUTES, video_parameters))
+    selected_video_params.append(
+        tlv8.Entry(SelectedVideoParametersKeys.SELECTED_VIDEO_ATTRIBUTES, video_parameters))
 
     selected_video_rtp_parameters = tlv8.EntryList()
     selected_video_rtp_parameters.append(tlv8.Entry(VideoRTPParametersKeys.PAYLOAD_TYPE, 99))
     selected_video_rtp_parameters.append(tlv8.Entry(VideoRTPParametersKeys.SSRC_FOR_VIDEO, video_ssrc))
-    selected_video_rtp_parameters.append(tlv8.Entry(VideoRTPParametersKeys.MAX_BITRATE, 299))
+    selected_video_rtp_parameters.append(tlv8.Entry(VideoRTPParametersKeys.MAX_BITRATE, 599))
     selected_video_rtp_parameters.append(tlv8.Entry(VideoRTPParametersKeys.MIN_RTCP, 0.5))
     selected_video_params.append(
         tlv8.Entry(SelectedVideoParametersKeys.SELECTED_VIDEO_RTP_PARAMETERS, selected_video_rtp_parameters))
@@ -281,22 +283,24 @@ if __name__ == '__main__':
 
     el.append(tlv8.Entry(SelectedRtpStreamConfigurationKeys.SELECTED_AUDIO_PARAMS, selected_audio_params))
 
-    # print('\nSelectedRtpStreamConfiguration write\n', tlv8.format_string(el))
-    # print('\nSelectedRtpStreamConfiguration write\n', tlv8.format_string(tlv8.deep_decode(el.encode())))
-
     val = base64.b64encode(el.encode()).decode('ascii')
     p = [(aid, select_rtp_iid, val)]
     r = pairing.put_characteristics(p)
-    print('\nSelectedRtpStreamConfiguration write result\n', r)
+    print('sent start command', r)
 
     # ==================================================================================================================
     # stream in progress
-    time.sleep(args.time)
+    time_done = 0
+    while time_done < args.time:
+        try:
+            time.sleep(1)
+            time_done += 1
+        except KeyboardInterrupt:
+            break
 
     # ==================================================================================================================
     # write selected stream configuration
     el = tlv8.EntryList()
-
     session_control = tlv8.EntryList()
     session_control.append(tlv8.Entry(SessionControlKeys.COMMAND, CommandValues.END))
     session_control.append(tlv8.Entry(SessionControlKeys.SESSION_IDENTIFIER, session_id))
@@ -304,9 +308,5 @@ if __name__ == '__main__':
     val = base64.b64encode(el.encode()).decode('ascii')
     p = [(aid, select_rtp_iid, val)]
     r = pairing.put_characteristics(p)
-    print('\nSelectedRtpStreamConfiguration write result\n', r)
 
-    if audio_thread:
-        audio_thread.active = False
-    if video_thread:
-        video_thread.active = False
+    proc.terminate()

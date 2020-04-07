@@ -57,20 +57,28 @@ def write_sdp_file(accessory_ip, video_port, audio_port):
     return f.name
 
 
-def start_ffplay(sdp_file):
-    command = ['ffplay', '-f', 'sdp', sdp_file, '-protocol_whitelist', 'file,udp,rtp']
+def start_ffplay(sdp_file, master_key, master_salt):
+    print(master_key)
+    print(master_salt)
+    blob = base64.b64encode(master_key + master_salt).decode()
+    command = ['ffplay', '-f', 'sdp', sdp_file, '-protocol_whitelist',
+               'file,udp,rtp', '-srtp_in_suite',
+               'AES_CM_128_HMAC_SHA1_80', '-srtp_in_params', blob]
     print(' '.join(command))
     proc = subprocess.Popen(
         command,
-        stdout=subprocess.PIPE,
+        stdout=sys.stdout,
         stderr=subprocess.STDOUT)
     return proc
 
 
-def start_ffmpeg(sdp_file, target):
+def start_ffmpeg(sdp_file, target, master_key, master_salt):
     # '-s:v', '1280x720', '-r', '30',
     #  '-v', 'debug',
-    command = ['ffmpeg', '-protocol_whitelist', 'file,udp,rtp', '-i', sdp_file, '-c', 'copy', '-shortest', '-y', target]
+    blob = base64.b64encode(master_key + master_salt).decode('ascii')
+    command = ['ffmpeg', '-v', 'debug', '-protocol_whitelist', 'file,udp,rtp', '-i',
+               sdp_file, '-srtp_in_suite',
+               'AES_CM_128_HMAC_SHA1_80', '-srtp_in_params', blob, '-c', 'copy', '-shortest', '-y', target]
     print(' '.join(command))
     proc = subprocess.Popen(
         command,
@@ -159,14 +167,14 @@ if __name__ == '__main__':
     video_master_key = secrets.token_bytes(16)
     video_master_salt = secrets.token_bytes(14)
 
-    audio_master_key = secrets.token_bytes(16)
-    audio_master_salt = secrets.token_bytes(14)
+    audio_master_key = video_master_key
+    audio_master_salt = video_master_salt
 
     sdp_file = write_sdp_file(pairing._get_pairing_data()['AccessoryIP'], video_port, audio_port)
     if args.mode == 'view':
-        proc = start_ffplay(sdp_file)
+        proc = start_ffplay(sdp_file, video_master_key, video_master_salt)
     elif args.mode == 'save':
-        proc = start_ffmpeg(sdp_file, args.output)
+        proc = start_ffmpeg(sdp_file, args.output, video_master_key, video_master_salt)
     # ==================================================================================================================
     # read status
     p = [(aid, streaming_status_iid)]
@@ -188,16 +196,16 @@ if __name__ == '__main__':
 
     # SRTP Parameters for Video
     srtp_video = tlv8.EntryList()
-    # srtp_video.append(tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_KEY, video_master_key))
-    # srtp_video.append(tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_SALT, video_master_salt))
+    srtp_video.append(tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_KEY, video_master_key))
+    srtp_video.append(tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_SALT, video_master_salt))
     srtp_video.append(
         tlv8.Entry(SrtpParameterKeys.SRTP_CRYPTO_SUITE, CameraSRTPCryptoSuiteValues.DISABLED))
     el.append(tlv8.Entry(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO, srtp_video))
 
     # SRTP Parameters for Audio
     srtp_audio = tlv8.EntryList()
-    # srtp_audio.append(tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_KEY, audio_master_key))
-    # srtp_audio.append(tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_SALT, audio_master_salt))
+    srtp_audio.append(tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_KEY, audio_master_key))
+    srtp_audio.append(tlv8.Entry(SrtpParameterKeys.SRTP_MASTER_SALT, audio_master_salt))
     srtp_audio.append(
         tlv8.Entry(SrtpParameterKeys.SRTP_CRYPTO_SUITE, CameraSRTPCryptoSuiteValues.DISABLED))
     el.append(tlv8.Entry(SetupEndpointsKeys.SRTP_PARAMETERS_FOR_AUDIO, srtp_audio))

@@ -148,6 +148,10 @@ class AbstractPairing(abc.ABC):
 
 
 class DummyPairing(AbstractPairing):
+    """
+    Dummy implementation of a AbstractPairing handle Pairings in a configuration that might currently not be supported.
+    """
+
     def __init__(self, pairing_data, connection_type):
         self.pairing_data = pairing_data
         self.connection_type = connection_type

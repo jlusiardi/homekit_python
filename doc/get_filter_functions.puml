@@ -1,0 +1,14 @@
+@startuml
+
+controller -> debug_proxy : get_value()
+
+debug_proxy -> accessory: get_value()
+
+accessory --> debug_proxy: val
+
+debug_proxy -> debug_proxy: val = get_filter(val)
+
+debug_proxy --> controller: valu
+
+
+@enduml

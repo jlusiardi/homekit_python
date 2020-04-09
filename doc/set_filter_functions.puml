@@ -1,0 +1,10 @@
+@startuml
+
+controller -> debug_proxy : set_value(val)
+
+debug_proxy -> debug_proxy: val = set_filter(val)
+
+debug_proxy -> accessory: set_value(val)
+
+
+@enduml

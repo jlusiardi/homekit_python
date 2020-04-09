@@ -4,6 +4,27 @@ The `debug_proxy` command can be used to sit between an IP Accessory and a
 controller (e.g. iPhone). The accessory must be paired already so we cannot 
 debug issues with pairing at the moment.
 
+## cli parameter
+
+```text
+usage: debug_proxy.py [-h] -c CLIENT_DATA -a ALIAS -s SERVER_DATA [-C CODE]
+                      [--log {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+
+HomeKit debug proxy
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CLIENT_DATA, --client-data CLIENT_DATA
+                        JSON file with the pairing data for the accessory
+  -a ALIAS, --alias ALIAS
+                        alias for the pairing
+  -s SERVER_DATA, --server-data SERVER_DATA
+                        JSON file with the accessory data to the controller
+  -C CODE, --code CODE  Reference to a python module with filter functions
+  --log {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                        Set the log level of the script
+```
+
 ## basic functionality
 
 For basic usage of the `debug_proxy`, proceed as follows:
@@ -105,4 +126,51 @@ For basic usage of the `debug_proxy`, proceed as follows:
 ```
 
 ## filter functions
+
+The `debug_proxy` can be started with the parameter `--code`. This offers the ability to change
+the value that are to be written do the accessory behind the proxy or the value that was read and
+is to be returned to the controller.
+
+Sequence diagram for a `set_filter`:
+![Set filter functions](./set_filter_functions.png)
+
+Sequence diagram for a `get_filter`:
+![Get filter functions](./get_filter_functions.png)
+
+### How to define a filter function
+
+First of all, important the 2 decorators and data structures and clean them:
+```python
+from homekit.debug_proxy import set_filters, set_filter, get_filters, get_filter
+
+set_filters.clear()
+get_filters.clear()
+```
+
+Consider this as a header for every module defining a filter. Now, define filter functions by
+using the decorators `@set_filter(accessory_id, characteristic_id)` and
+`@get_filter(accessory_id, characteristic_id)`. After that, each write/read operation to a
+filtered characteristic will trigger the filter function.
+
+### Example for a file defining filter functions:
+
+ * `rename`: a get filter function to rename the camera from the example above to `mitm`
+ * `mic_mute`: prevents the microphone from being unmuted
+ 
+```python
+from homekit.debug_proxy import set_filters, set_filter, get_filters, get_filter
+
+set_filters.clear()
+get_filters.clear()
+
+
+@get_filter(1, 5)
+def rename(val):
+    return 'mitm'
+
+
+@set_filter(1, 35)
+def mic_mute(val):
+    return True
+```
 

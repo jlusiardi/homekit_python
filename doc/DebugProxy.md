@@ -34,95 +34,66 @@ For basic usage of the `debug_proxy`, proceed as follows:
      **Important**: the `category` here must match the category of the proxied accessory
   3) run the `debug_proxy` like `python3 -m homekit.debug_proxy --client-data pairingdata.json --alias target --server-data server.json`
   4) inspect the log and analyse the data. Right to the beginning, the list of proxied 
-     characteristics is logged and the get and set value calls come later:
+     characteristics is logged and the get and set value calls come later.
+
+This example shows the output of a proxied [Koogeek P1EU](./tested_devices/Koogeek P1EU.md).
 ```text
-2020-03-15 18:34:09,725 debug_proxy.py:0199 INFO %<------ creating proxy ------
-2020-03-15 18:34:09,725 debug_proxy.py:0204 INFO accessory with aid=1
-2020-03-15 18:34:09,725 debug_proxy.py:0212 INFO   1.1: >accessory-information< (0000003E-0000-1000-8000-0026BB765291)
-2020-03-15 18:34:09,725 debug_proxy.py:0225 INFO     1.5: Logi Circle >name< (00000023-0000-1000-8000-0026BB765291) [pr] string
-2020-03-15 18:34:09,725 debug_proxy.py:0225 INFO     1.2: None >identify< (00000014-0000-1000-8000-0026BB765291) [pw] bool
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.3: Logitech >manufacturer< (00000020-0000-1000-8000-0026BB765291) [pr] string
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.4: V-R0008 >model< (00000021-0000-1000-8000-0026BB765291) [pr] string
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.6: 1933CDC04478 >serial-number< (00000030-0000-1000-8000-0026BB765291) [pr] string
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.7: 5.6.49 >firmware.revision< (00000052-0000-1000-8000-0026BB765291) [pr] string
-2020-03-15 18:34:09,726 debug_proxy.py:0212 INFO   1.9: >camera-rtp-stream-management< (00000110-0000-1000-8000-0026BB765291)
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.10: AQEC >streaming-status< (00000120-0000-1000-8000-0026BB765291) [pr,ev] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.11: AREBAQACDAEBAQIBAgMBAAQBAA== >supported-video-stream-configuration< (00000114-0000-1000-8000-0026BB765291) [pr] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.12: AQ8BAgMAAgkBAQECAQADAQECAQA= >supported-audio-configuration< (00000115-0000-1000-8000-0026BB765291) [pr] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.13: AgEA >supported-rtp-configuration< (00000116-0000-1000-8000-0026BB765291) [pr] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.14:  >setup-endpoints< (00000118-0000-1000-8000-0026BB765291) [pr,pw] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.15:  >selected-rtp-stream-configuration< (00000117-0000-1000-8000-0026BB765291) [pr,pw] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0212 INFO   1.16: >camera-rtp-stream-management< (00000110-0000-1000-8000-0026BB765291)
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.17: AQEA >streaming-status< (00000120-0000-1000-8000-0026BB765291) [pr,ev] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.18: AVoBAQACDAEBAQIBAgMBAAQBAAMLAQIABQIC0AIDAR7/AAMLAQKAAgICaAEDAR7/AAMLAQIABAICAAMDAR7/AAMLAQKAAgIC4AEDAR7/AAMLAQJAAQIC8AADAR4= >supported-video-stream-configuration< (00000114-0000-1000-8000-0026BB765291) [pr] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.19: AQ8BAgMAAgkBAQECAQADAQECAQA= >supported-audio-configuration< (00000115-0000-1000-8000-0026BB765291) [pr] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.20: AgEA >supported-rtp-configuration< (00000116-0000-1000-8000-0026BB765291) [pr] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.21: ARA+sNO7kUtMIYyHgEWPvo4KAgEAAxwBAQACDzE5Mi4xNjguMTc4LjIxMgMCKfcEAq7iBCUBAQACEB1niC5AAAcwwBb7IO4e7oYDDmQylh7GJdhOjZ5Yrq67BSUBAQACEBcDMU3e6vrRmHl0Ze2NrrADDuPZEzuug4WjLKreG4PUBgQEV+ZuBwQzoa0p >setup-endpoints< (00000118-0000-1000-8000-0026BB765291) [pr,pw] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.22:  >selected-rtp-stream-configuration< (00000117-0000-1000-8000-0026BB765291) [pr,pw] tlv8
-2020-03-15 18:34:09,726 debug_proxy.py:0212 INFO   1.34: >microphone< (00000112-0000-1000-8000-0026BB765291)
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.35: False >mute< (0000011A-0000-1000-8000-0026BB765291) [pr,pw,ev] bool
-2020-03-15 18:34:09,726 debug_proxy.py:0212 INFO   1.37: >speaker< (00000113-0000-1000-8000-0026BB765291)
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.38: False >mute< (0000011A-0000-1000-8000-0026BB765291) [pr,pw,ev] bool
-2020-03-15 18:34:09,726 debug_proxy.py:0212 INFO   1.40: >motion< (00000085-0000-1000-8000-0026BB765291)
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.41: False >motion-detected< (00000022-0000-1000-8000-0026BB765291) [pr,ev] bool
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.42: Logi Circle Motion Detector >name< (00000023-0000-1000-8000-0026BB765291) [pr] string
-2020-03-15 18:34:09,726 debug_proxy.py:0212 INFO   1.400: >Unknown Service: 5C20E6E7-0B8B-43C4-9C5F-CA0DE8A7BCD2< (5C20E6E7-0B8B-43C4-9C5F-CA0DE8A7BCD2)
-2020-03-15 18:34:09,726 debug_proxy.py:0225 INFO     1.401: AQECAgEA >Unknown Characteristic 30B32518-5C01-4470-9C9F-7AEB89E93419< (30B32518-5C01-4470-9C9F-7AEB89E93419) [pr,ev] tlv8
-2020-03-15 18:34:09,727 debug_proxy.py:0225 INFO     1.402: EQYAAAAAAAA= >Unknown Characteristic F1E5CE1A-2185-4798-BDF4-86A6557CBA54< (F1E5CE1A-2185-4798-BDF4-86A6557CBA54) [pr] tlv8
-2020-03-15 18:34:09,727 debug_proxy.py:0225 INFO     1.403: None >Unknown Characteristic B45787D2-EE61-471B-9213-AEDBFC67186D< (B45787D2-EE61-471B-9213-AEDBFC67186D) [pw] tlv8
-2020-03-15 18:34:09,727 debug_proxy.py:0238 INFO %<------ finished creating proxy ------
+2020-04-10 07:17:23,581 debug_proxy.py:0282 INFO %<------ creating proxy ------
+2020-04-10 07:17:23,582 debug_proxy.py:0287 INFO accessory with aid=1
+2020-04-10 07:17:23,582 debug_proxy.py:0295 INFO   1.1: >accessory-information< (0000003E-0000-1000-8000-0026BB765291)
+2020-04-10 07:17:23,582 debug_proxy.py:0308 INFO     1.2: Koogeek-P1-770D90 >name< (00000023-0000-1000-8000-0026BB765291) [pr] string
+2020-04-10 07:17:23,582 debug_proxy.py:0308 INFO     1.3: Koogeek >manufacturer< (00000020-0000-1000-8000-0026BB765291) [pr] string
+2020-04-10 07:17:23,582 debug_proxy.py:0308 INFO     1.4: P1EU >model< (00000021-0000-1000-8000-0026BB765291) [pr] string
+2020-04-10 07:17:23,582 debug_proxy.py:0308 INFO     1.5: EUCP031715001435 >serial-number< (00000030-0000-1000-8000-0026BB765291) [pr] string
+2020-04-10 07:17:23,582 debug_proxy.py:0308 INFO     1.6: None >identify< (00000014-0000-1000-8000-0026BB765291) [pw] bool
+2020-04-10 07:17:23,582 debug_proxy.py:0308 INFO     1.37: 2.3.7 >firmware.revision< (00000052-0000-1000-8000-0026BB765291) [pr] string
+2020-04-10 07:17:23,582 debug_proxy.py:0295 INFO   1.7: >outlet< (00000047-0000-1000-8000-0026BB765291)
+2020-04-10 07:17:23,582 debug_proxy.py:0308 INFO     1.8: False >on< (00000025-0000-1000-8000-0026BB765291) [pr,pw,ev] bool
+2020-04-10 07:17:23,582 debug_proxy.py:0308 INFO     1.9: True >outlet-in-use< (00000026-0000-1000-8000-0026BB765291) [pr,ev] bool
+2020-04-10 07:17:23,582 debug_proxy.py:0308 INFO     1.10: outlet >name< (00000023-0000-1000-8000-0026BB765291) [pr] string
+2020-04-10 07:17:23,583 debug_proxy.py:0295 INFO   1.11: >Unknown Service: 4AAAF940-0DEC-11E5-B939-0800200C9A66< (4AAAF940-0DEC-11E5-B939-0800200C9A66)
+2020-04-10 07:17:23,583 debug_proxy.py:0308 INFO     1.12: AHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA >Unknown Characteristic 4AAAF942-0DEC-11E5-B939-0800200C9A66< (4AAAF942-0DEC-11E5-B939-0800200C9A66) [pr,pw] tlv8
+2020-04-10 07:17:23,583 debug_proxy.py:0295 INFO   1.13: >Unknown Service: 151909D0-3802-11E4-916C-0800200C9A66< (151909D0-3802-11E4-916C-0800200C9A66)
+2020-04-10 07:17:23,583 debug_proxy.py:0308 INFO     1.14: url,data >Unknown Characteristic 151909D2-3802-11E4-916C-0800200C9A66< (151909D2-3802-11E4-916C-0800200C9A66) [pr,hd] string
+2020-04-10 07:17:23,583 debug_proxy.py:0308 INFO     1.15: None >Unknown Characteristic 151909D1-3802-11E4-916C-0800200C9A66< (151909D1-3802-11E4-916C-0800200C9A66) [pw,hd] string
+2020-04-10 07:17:23,583 debug_proxy.py:0308 INFO     1.16: 0 >Unknown Characteristic 151909D6-3802-11E4-916C-0800200C9A66< (151909D6-3802-11E4-916C-0800200C9A66) [pr,ev,hd] int
+2020-04-10 07:17:23,583 debug_proxy.py:0308 INFO     1.17: None >Unknown Characteristic 151909D7-3802-11E4-916C-0800200C9A66< (151909D7-3802-11E4-916C-0800200C9A66) [pw,hd] data
+2020-04-10 07:17:23,583 debug_proxy.py:0295 INFO   1.18: >Unknown Service: 151909D3-3802-11E4-916C-0800200C9A66< (151909D3-3802-11E4-916C-0800200C9A66)
+2020-04-10 07:17:23,583 debug_proxy.py:0308 INFO     1.19: 3600 >Unknown Characteristic 151909D5-3802-11E4-916C-0800200C9A66< (151909D5-3802-11E4-916C-0800200C9A66) [pr,pw] int
+2020-04-10 07:17:23,583 debug_proxy.py:0308 INFO     1.20: 1586495842 >Unknown Characteristic 151909D4-3802-11E4-916C-0800200C9A66< (151909D4-3802-11E4-916C-0800200C9A66) [pr,pw] int
+2020-04-10 07:17:23,583 debug_proxy.py:0295 INFO   1.21: >Unknown Service: 4AAAF930-0DEC-11E5-B939-0800200C9A66< (4AAAF930-0DEC-11E5-B939-0800200C9A66)
+2020-04-10 07:17:23,583 debug_proxy.py:0308 INFO     1.22: 0.0 >Unknown Characteristic 4AAAF931-0DEC-11E5-B939-0800200C9A66< (4AAAF931-0DEC-11E5-B939-0800200C9A66) [pr,ev] float
+2020-04-10 07:17:23,583 debug_proxy.py:0308 INFO     1.23: 0.0 >Unknown Characteristic 4AAAF932-0DEC-11E5-B939-0800200C9A66< (4AAAF932-0DEC-11E5-B939-0800200C9A66) [pr,ev] float
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.24: AGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= >Unknown Characteristic 4AAAF933-0DEC-11E5-B939-0800200C9A66< (4AAAF933-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.25: AGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= >Unknown Characteristic 4AAAF934-0DEC-11E5-B939-0800200C9A66< (4AAAF934-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.26: AGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABhCzY7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= >Unknown Characteristic 4AAAF935-0DEC-11E5-B939-0800200C9A66< (4AAAF935-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.27: AGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= >Unknown Characteristic 4AAAF936-0DEC-11E5-B939-0800200C9A66< (4AAAF936-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.28: AGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= >Unknown Characteristic 4AAAF937-0DEC-11E5-B939-0800200C9A66< (4AAAF937-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.29: AGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= >Unknown Characteristic 4AAAF938-0DEC-11E5-B939-0800200C9A66< (4AAAF938-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.30: AGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= >Unknown Characteristic 4AAAF939-0DEC-11E5-B939-0800200C9A66< (4AAAF939-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.31: AGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= >Unknown Characteristic 4AAAF93A-0DEC-11E5-B939-0800200C9A66< (4AAAF93A-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.32: AHzAcTxAchzHPQAAAABhCzY7AAAAAM7zCUP1SZ88AAAAAKVP+jyJiIg8AAAAAAAAAACQmWlAAAAAAAAAAACamZk9YQu2OxYzmEEMEXFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYQs2OwAAAAAAAAAAAAAAAAAAAAAAAAAA >Unknown Characteristic 4AAAF93B-0DEC-11E5-B939-0800200C9A66< (4AAAF93B-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.33: AHwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA >Unknown Characteristic 4AAAF93C-0DEC-11E5-B939-0800200C9A66< (4AAAF93C-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.34: ADBdZm5AmGC2QfYQDUMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= >Unknown Characteristic 4AAAF93D-0DEC-11E5-B939-0800200C9A66< (4AAAF93D-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,584 debug_proxy.py:0308 INFO     1.35: ADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= >Unknown Characteristic 4AAAF93E-0DEC-11E5-B939-0800200C9A66< (4AAAF93E-0DEC-11E5-B939-0800200C9A66) [pr] tlv8
+2020-04-10 07:17:23,585 debug_proxy.py:0308 INFO     1.36: 0 >Unknown Characteristic 4AAAF93F-0DEC-11E5-B939-0800200C9A66< (4AAAF93F-0DEC-11E5-B939-0800200C9A66) [pr,ev] int
+2020-04-10 07:17:23,585 debug_proxy.py:0295 INFO   1.38: >service< (000000A2-0000-1000-8000-0026BB765291)
+2020-04-10 07:17:23,585 debug_proxy.py:0308 INFO     1.39: 1.1.0 >version< (00000037-0000-1000-8000-0026BB765291) [pr] string
+2020-04-10 07:17:23,585 debug_proxy.py:0321 INFO %<------ finished creating proxy ------
 
 ...
 
-020-03-15 18:37:04,292 accessoryserver.py:1227 INFO "GET /characteristics?id=1.20,1.18,1.19 HTTP/1.1" 207 -
-2020-03-15 18:37:04,437 debug_proxy.py:0088 INFO loading module setup_endpoints for type 00000118-0000-1000-8000-0026BB765291
-2020-03-15 18:37:04,440 debug_proxy.py:0117 INFO write value to 1.21 (type 00000118-0000-1000-8000-0026BB765291 / setup-endpoints): 
-[
-  <SetupEndpointsKeys.SESSION_ID, b'n\x17\x8dh\xed\x90M8\x9d\xb7\\\x9b\x19`\x0bt'>,
-  <SetupEndpointsKeys.ADDRESS, [
-    <ControllerAddressKeys.IP_ADDRESS_VERSION, IPVersionValues.IPV4>,
-    <ControllerAddressKeys.IP_ADDRESS, 192.168.178.222>,
-    <ControllerAddressKeys.VIDEO_RTP_PORT, 58833>,
-    <ControllerAddressKeys.AUDIO_RTP_PORT, 54612>,
-  ]>,
-  <SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO, [
-    <SrtpParameterKeys.SRTP_MASTER_KEY, b'\x88\x81\xa6\xdd=\xe0\xd4,\x11\x89\x96\x89\xd06\xd1\xf7'>,
-    <SrtpParameterKeys.SRTP_MASTER_SALT, b's\xd4\x17\xbeJ\xee\xcf\xde\x170\xcd\x98qk'>,
-    <SrtpParameterKeys.SRTP_CRYPTO_SUITE, CameraSRTPCryptoSuiteValues.AES_CM_128_HMAC_SHA1_80>,
-  ]>,
-  <SetupEndpointsKeys.SRTP_PARAMETERS_FOR_AUDIO, [
-    <SrtpParameterKeys.SRTP_MASTER_KEY, b"I\x8c\xb5\xf5up'w\xa8\x0b\x9b\xe8\th|8">,
-    <SrtpParameterKeys.SRTP_MASTER_SALT, b'Yg\x85z\xaa&\x809\xc2\x9d\x05`\xe6\xaf'>,
-    <SrtpParameterKeys.SRTP_CRYPTO_SUITE, CameraSRTPCryptoSuiteValues.AES_CM_128_HMAC_SHA1_80>,
-  ]>,
-]
-2020-03-15 18:37:04,441 accessoryserver.py:1227 INFO "PUT /characteristics HTTP/1.1" 204 -
-2020-03-15 18:37:04,485 debug_proxy.py:0097 INFO got decoder for 00000118-0000-1000-8000-0026BB765291 from cache
-2020-03-15 18:37:04,485 debug_proxy.py:0117 INFO get value from 1.21 (type 00000118-0000-1000-8000-0026BB765291 / setup-endpoints): 
-[
-  <SetupEndpointsKeys.SESSION_ID, b'n\x17\x8dh\xed\x90M8\x9d\xb7\\\x9b\x19`\x0bt'>,
-  <SetupEndpointsKeys.STATUS, EndpointStatusValues.SUCCESS>,
-  <SetupEndpointsKeys.ADDRESS, [
-    <ControllerAddressKeys.IP_ADDRESS_VERSION, IPVersionValues.IPV4>,
-    <ControllerAddressKeys.IP_ADDRESS, 192.168.178.212>,
-    <ControllerAddressKeys.VIDEO_RTP_PORT, 58833>,
-    <ControllerAddressKeys.AUDIO_RTP_PORT, 54612>,
-  ]>,
-  <SetupEndpointsKeys.SRTP_PARAMETERS_FOR_VIDEO, [
-    <SrtpParameterKeys.SRTP_CRYPTO_SUITE, CameraSRTPCryptoSuiteValues.AES_CM_128_HMAC_SHA1_80>,
-    <SrtpParameterKeys.SRTP_MASTER_KEY, b'\x14\xfc\xa9\x12\x03\x89\x19\xfdcMC\xd4hI\xd6T'>,
-    <SrtpParameterKeys.SRTP_MASTER_SALT, b'\x97\x95\xd9\xc2#\x84\xfd\xa6\x83\xba\xf2I\xcf\xed'>,
-  ]>,
-  <SetupEndpointsKeys.SRTP_PARAMETERS_FOR_AUDIO, [
-    <SrtpParameterKeys.SRTP_CRYPTO_SUITE, CameraSRTPCryptoSuiteValues.AES_CM_128_HMAC_SHA1_80>,
-    <SrtpParameterKeys.SRTP_MASTER_KEY, b'h\xc7\xf6\x8f\x8d\xb9\xc1[~\xdc\x88\x18X\xd78]'>,
-    <SrtpParameterKeys.SRTP_MASTER_SALT, b'\xb0\x8f\xbd\x95)\x9b\xdd\x97\xc0\xe1\x14JX4'>,
-  ]>,
-  <SetupEndpointsKeys.VIDEO_RTP_SSRC, b'&M\xd0w'>,
-  <SetupEndpointsKeys.AUDIO_RTP_SSRC, b'\xa7ik\x07'>,
-]
-2020-03-15 18:37:04,485 accessoryserver.py:1227 INFO "GET /characteristics?id=1.21 HTTP/1.1" 200 -
-2020-03-15 18:37:06,118 debug_proxy.py:0088 INFO loading module selected_rtp_stream_configuration for type 00000117-0000-1000-8000-0026BB765291
+2020-04-10 07:21:54,166 debug_proxy.py:0188 INFO get value from 1.8 (type 00000025-0000-1000-8000-0026BB765291 / on):
+	original value: False
+	filtered value: False
+2020-04-10 07:21:54,167 accessoryserver.py:1219 INFO "GET /characteristics?id=1.8 HTTP/1.1" 200 -
+2020-04-10 07:21:59,355 debug_proxy.py:0188 INFO write value to 1.8 (type 00000025-0000-1000-8000-0026BB765291 / on):
+	original value: 1
+	filtered value: 1
+2020-04-10 07:21:59,390 accessoryserver.py:1219 INFO "PUT /characteristics HTTP/1.1" 204 -
+2020-04-10 07:22:01,442 debug_proxy.py:0188 INFO write value to 1.8 (type 00000025-0000-1000-8000-0026BB765291 / on):
+	original value: 0
+	filtered value: 0
 ```
 
 ## filter functions
@@ -154,9 +125,12 @@ filtered characteristic will trigger the filter function.
 
 ### Example for a file defining filter functions:
 
- * `rename`: a get filter function to rename the camera from the example above to `mitm`
- * `mic_mute`: prevents the microphone from being unmuted
- 
+These are two examples for the power outlet from above. The hardware is a
+[Koogeek P1EU](./tested_devices/Koogeek P1EU.md).
+
+ * `get_filter_outlet_in_use`: a get filter function that make the outlet seem unused permanently
+ * `set_filter_outlet_on`: inverts the written power state
+
 ```python
 from homekit.debug_proxy import set_filters, set_filter, get_filters, get_filter
 
@@ -164,13 +138,49 @@ set_filters.clear()
 get_filters.clear()
 
 
-@get_filter(1, 5)
-def rename(val):
-    return 'mitm'
+@get_filter(1, 9)
+def get_filter_outlet_in_use(val):
+    print('this outlet is not in use')
+    return False
 
 
-@set_filter(1, 35)
-def mic_mute(val):
-    return True
+@set_filter(1, 8)
+def set_filter_outlet_on(val):
+    print('Invert power state', val, 1 - val)
+    return 1 - val
+```
+
+The output of the `debug_proxy` will change slightly:
+
+```text
+2020-04-10 07:41:48,360 debug_proxy.py:0335 INFO loading filters from "mitm_plug"
+2020-04-10 07:41:48,362 debug_proxy.py:0344 INFO loaded 1 set filter
+2020-04-10 07:41:48,362 debug_proxy.py:0345 INFO loaded 1 get filter
+2020-04-10 07:41:48,631 debug_proxy.py:0283 INFO %<------ creating proxy ------
+
+...
+
+this outlet is not in use
+2020-04-10 07:42:52,589 debug_proxy.py:0188 INFO get value from 1.9 (type 00000026-0000-1000-8000-0026BB765291 / outlet-in-use):
+	original value: True
+	filtered value: False
+2020-04-10 07:42:52,590 accessoryserver.py:1219 INFO "GET /characteristics?id=1.9 HTTP/1.1" 200 -
+
+...
+
+2020-04-10 07:45:11,307 mitm_plug.py:0016 INFO Invert power state 0 1
+2020-04-10 07:45:11,307 debug_proxy.py:0188 INFO write value to 1.8 (type 00000025-0000-1000-8000-0026BB765291 / on):
+	original value: 0
+	filtered value: 1
+2020-04-10 07:45:11,740 accessoryserver.py:1219 INFO "PUT /characteristics HTTP/1.1" 204 -
+
+...
+
+2020-04-10 07:45:58,946 mitm_plug.py:0010 INFO this outlet is not in use
+2020-04-10 07:45:58,947 debug_proxy.py:0188 INFO get value from 1.9 (type 00000026-0000-1000-8000-0026BB765291 / outlet-in-use):
+	original value: True
+	filtered value: False
+2020-04-10 07:45:58,947 accessoryserver.py:1219 INFO "GET /characteristics?id=1.9 HTTP/1.1" 200 -
+
 ```
 

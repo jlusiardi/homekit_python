@@ -36,7 +36,7 @@ For basic usage of the `debug_proxy`, proceed as follows:
   4) inspect the log and analyse the data. Right to the beginning, the list of proxied 
      characteristics is logged and the get and set value calls come later.
 
-This example shows the output of a proxied [Koogeek P1EU](./tested_devices/Koogeek P1EU.md).
+This example shows the output of a proxied [Koogeek P1EU](./tested_devices/Koogeek%20P1EU.md).
 ```text
 2020-04-10 07:17:23,581 debug_proxy.py:0282 INFO %<------ creating proxy ------
 2020-04-10 07:17:23,582 debug_proxy.py:0287 INFO accessory with aid=1
@@ -126,7 +126,7 @@ filtered characteristic will trigger the filter function.
 ### Example for a file defining filter functions:
 
 These are two examples for the power outlet from above. The hardware is a
-[Koogeek P1EU](./tested_devices/Koogeek P1EU.md).
+[Koogeek P1EU](./tested_devices/Koogeek%20P1EU.md).
 
  * `get_filter_outlet_in_use`: a get filter function that make the outlet seem unused permanently
  * `set_filter_outlet_on`: inverts the written power state

@@ -38,4 +38,5 @@ def add_log_arguments(parser, level=None):
     :param parser: The argparse.ArgumentParser object to add to.
     :param level: the default log level if not given as command line parameter. defaults to None which means no logging
     """
-    parser.add_argument('--log', action='store', dest='loglevel', default=level)
+    parser.add_argument('--log', action='store', dest='loglevel', default=level, help='Set the log level of the script',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])

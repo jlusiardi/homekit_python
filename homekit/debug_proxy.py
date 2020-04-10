@@ -24,6 +24,7 @@ import json
 import tlv8
 import base64
 import importlib
+import functools
 
 from homekit import AccessoryServer, Controller
 from homekit.accessoryserver import AccessoryRequestHandler
@@ -34,14 +35,99 @@ from homekit.http_impl import HttpStatusCodes
 from homekit.controller.tools import AbstractPairing
 from homekit.log_support import setup_logging, add_log_arguments
 
+# global containers for the filter functions
+get_filters = {}
+set_filters = {}
+
+
+def log_loaded_filter_count():
+    """
+    logs the numbers of loaded filters.
+    """
+
+    def count_filters(filters):
+        count = 0
+        for accessory_data in filters.items():
+            count += len(accessory_data[1].items())
+        return count
+
+    logging.info('loaded %i set_filter functions', count_filters(set_filters))
+    logging.info('loaded %i get_filter functions', count_filters(get_filters))
+
+
+def get_filter(aid, cid):
+    """
+    The get_filter decorator. This adds the decorated function to the global list of get_filters for later usage. The
+    original function is also surrounded to return a value in any case. If the decorated function returns None, the
+    original value is returned instead.
+
+    :param aid: the accessory's id
+    :param cid: the characteristic's id
+    :return: a function decorating the filter function
+    """
+
+    def decorator_getter(func):
+        @functools.wraps(func)
+        def decorated(val):
+            new_val = func(val)
+            if new_val is None:
+                return val
+            else:
+                return new_val
+
+        if aid not in get_filters:
+            get_filters[aid] = {}
+        if cid in get_filters[aid]:
+            raise Exception()
+        else:
+            get_filters[aid][cid] = func
+
+        return decorated
+
+    return decorator_getter
+
+
+def set_filter(aid, cid):
+    """
+    The set_filter decorator. This adds the decorated function to the global list of set_filters for later usage. The
+    original function is also surrounded to return a value in any case. If the decorated function returns None, the
+    original value is returned instead.
+
+    :param aid: the accessory's id
+    :param cid: the characteristic's id
+    :return: a function decorating the filter function
+    """
+
+    def decorator_setter(func):
+        @functools.wraps(func)
+        def decorated(val):
+            new_val = func(val)
+            if new_val is None:
+                return val
+            else:
+                return new_val
+
+        if aid not in set_filters:
+            set_filters[aid] = {}
+        if cid in set_filters[aid]:
+            raise Exception()
+        else:
+            set_filters[aid][cid] = decorated
+
+        return decorated
+
+    return decorator_setter
+
 
 def setup_args_parser():
-    parser = argparse.ArgumentParser(description='HomeKit debug mitm')
+    parser = argparse.ArgumentParser(description='HomeKit debug proxy')
     parser.add_argument('-c', '--client-data', action='store', required=True, dest='client_data',
-                        default='./client.json')
+                        default='./client.json', help='JSON file with the pairing data for the accessory')
     parser.add_argument('-a', '--alias', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-s', '--server-data', action='store', required=True, dest='server_data',
-                        default='./server.json')
+                        default='./server.json', help='JSON file with the accessory data to the controller')
+    parser.add_argument('-C', '--code', action='store', required=False, dest='code',
+                        help='Reference to a python module with filter functions')
     add_log_arguments(parser, 'INFO')
     return parser.parse_args()
 
@@ -102,7 +188,7 @@ class CharacteristicsDecoderLoader:
 decoder_loader = CharacteristicsDecoderLoader()
 
 
-def log_transferred_value(text: str, aid: int, characteristic: AbstractCharacteristic, value):
+def log_transferred_value(text: str, aid: int, characteristic: AbstractCharacteristic, value, filtered_value):
     """
     Logs the transfer of a value between controller and acccessory or vice versa. For characteristics
     of type TLV8, a decoder is used if available else a deep decode is done.
@@ -114,20 +200,24 @@ def log_transferred_value(text: str, aid: int, characteristic: AbstractCharacter
     """
     iid = int(characteristic.iid)
     debug_value = value
+    filtered_debug_value = filtered_value
     characteristic_name = CharacteristicsTypes.get_short(characteristic.type)
     if characteristic.format == CharacteristicFormats.tlv8:
         bytes_value = base64.b64decode(value)
+        filtered_bytes_value = base64.b64decode(filtered_value)
         decoder = decoder_loader.load(characteristic.type)
         if decoder:
             debug_value = tlv8.format_string(decoder(bytes_value))
+            filtered_debug_value = tlv8.format_string(decoder(filtered_bytes_value))
         else:
             debug_value = tlv8.format_string(tlv8.deep_decode(bytes_value))
+            filtered_debug_value = tlv8.format_string(tlv8.deep_decode(filtered_bytes_value))
     logging.info(
-        '%s %s.%s (type %s / %s): \n%s' % (
-            text, aid, iid, characteristic.type, characteristic_name, debug_value))
+        '%s %s.%s (type %s / %s): \n\toriginal value: %s\n\tfiltered value: %s' % (
+            text, aid, iid, characteristic.type, characteristic_name, debug_value, filtered_debug_value))
 
 
-def generate_set_value_callback(aid: int, characteristic: AbstractCharacteristic):
+def generate_set_value_callback(aid: int, characteristic: AbstractCharacteristic, set_filters):
     """
     generate a call back function for the set value use case. This also logs the transferred value.
 
@@ -139,17 +229,20 @@ def generate_set_value_callback(aid: int, characteristic: AbstractCharacteristic
     def callback(value):
         iid = int(characteristic.iid)
 
-        # set the value on the proxied device
-        characteristics = [(aid, iid, value)]
-        pairing.put_characteristics(characteristics)
+        # put value through possible filter
+        filtered_value = set_filters.get(aid, {}).get(iid, lambda x: x)(value)
 
         # now log the value
-        log_transferred_value('write value to', aid, characteristic, value)
+        log_transferred_value('write value to', aid, characteristic, value, filtered_value)
+
+        # set the value on the proxied device
+        characteristics = [(aid, iid, filtered_value)]
+        pairing.put_characteristics(characteristics)
 
     return callback
 
 
-def generate_get_value_callback(aid: int, characteristic: AbstractCharacteristic):
+def generate_get_value_callback(aid: int, characteristic: AbstractCharacteristic, get_filters):
     """
     generate a call back function for the get value use case. This also logs the transferred value.
 
@@ -163,11 +256,14 @@ def generate_get_value_callback(aid: int, characteristic: AbstractCharacteristic
         characteristics = [(aid, iid)]
         value = pairing.get_characteristics(characteristics)[(int(aid), int(iid))]['value']
 
+        # put value through possible filter
+        filtered_value = get_filters.get(aid, {}).get(iid, lambda x: x)(value)
+
         # now log the value
-        log_transferred_value('get value from', aid, characteristic, value)
+        log_transferred_value('get value from', aid, characteristic, value, filtered_value)
 
         # return the value from the proxied device
-        return value
+        return filtered_value
 
     return callback
 
@@ -250,9 +346,9 @@ def create_proxy(accessories_and_characteristics):
                 proxy_characteristic.perms = characteristic_perms
 
                 proxy_characteristic.set_set_value_callback(
-                    generate_set_value_callback(accessory['aid'], proxy_characteristic))
+                    generate_set_value_callback(accessory['aid'], proxy_characteristic, set_filters))
                 proxy_characteristic.set_get_value_callback(
-                    generate_get_value_callback(accessory['aid'], proxy_characteristic))
+                    generate_get_value_callback(accessory['aid'], proxy_characteristic, get_filters))
     logging.info('%<------ finished creating proxy ------')
     return accessories
 
@@ -264,6 +360,18 @@ if __name__ == '__main__':
 
     client_config_file = os.path.expanduser(args.client_data)
     server_config_file = os.path.expanduser(args.server_data)
+
+    if args.code:
+        logging.info('loading filters from "%s"', args.code)
+        try:
+            module = importlib.import_module(args.code)
+            set_filters = getattr(module, 'set_filters')
+            get_filters = getattr(module, 'get_filters')
+        except Exception as e:
+            url = 'https://github.com/jlusiardi/homekit_python/tree/master#filter-functions'
+            logging.error('error loading from "%s": %s (see %s for more information)', args.code, e, url)
+            sys.exit(-1)
+        log_loaded_filter_count()
 
     controller = Controller()
     try:

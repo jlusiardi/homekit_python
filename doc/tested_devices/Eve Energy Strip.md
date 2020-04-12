@@ -1,5 +1,5 @@
 
-# Device Name: **Eve Home Light Strip**
+# Device Name: **Eve Energy Strip**
 
 Important Information:
  * device manufacturer : **Eve Home**

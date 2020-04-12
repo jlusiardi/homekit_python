@@ -48,11 +48,12 @@ def write_sdp_file(accessory_ip, video_port, audio_port):
         'c=IN IP4 {a_ip}\n' \
         'm=video {v_port} RTP/AVP 99\n' \
         'a=rtpmap:99 H264/90000\n' \
+        'a=recvonly\n' \
         'm=audio {a_port} RTP/AVP 110\n' \
         'a=rtpmap:110 Opus/16000/1\n' \
         'a=ptime:20\n' \
         'a=maxptime:20\n'.format(a_ip=accessory_ip, v_port=video_port, a_port=audio_port)
-    f = tempfile.NamedTemporaryFile(delete=False)
+    f = tempfile.NamedTemporaryFile(delete=False, suffix='.sdp')
     f.write(content.encode())
     return f.name
 
@@ -60,10 +61,10 @@ def write_sdp_file(accessory_ip, video_port, audio_port):
 def start_ffplay(sdp_file, master_key, master_salt):
     print(master_key)
     print(master_salt)
-    blob = base64.b64encode(master_key + master_salt).decode()
-    command = ['ffplay', '-f', 'sdp', sdp_file, '-protocol_whitelist',
-               'file,udp,rtp', '-srtp_in_suite',
-               'AES_CM_128_HMAC_SHA1_80', '-srtp_in_params', blob]
+    # blob = base64.b64encode(master_key + master_salt).decode()
+    command = ['ffplay', '-v', 'debug', '-sdp_flags', 'rtcp_to_source', sdp_file, '-protocol_whitelist',
+               'file,crypto,udp,rtp']
+    # command = ['cvlc', sdp_file, '--sout-rtp-rtcp-mux']
     print(' '.join(command))
     proc = subprocess.Popen(
         command,
@@ -75,10 +76,9 @@ def start_ffplay(sdp_file, master_key, master_salt):
 def start_ffmpeg(sdp_file, target, master_key, master_salt):
     # '-s:v', '1280x720', '-r', '30',
     #  '-v', 'debug',
-    blob = base64.b64encode(master_key + master_salt).decode('ascii')
+    # blob = base64.b64encode(master_key + master_salt).decode('ascii')
     command = ['ffmpeg', '-v', 'debug', '-protocol_whitelist', 'file,udp,rtp', '-i',
-               sdp_file, '-srtp_in_suite',
-               'AES_CM_128_HMAC_SHA1_80', '-srtp_in_params', blob, '-c', 'copy', '-shortest', '-y', target]
+               sdp_file, '-c', 'copy', '-shortest', '-y', target]
     print(' '.join(command))
     proc = subprocess.Popen(
         command,
@@ -303,6 +303,7 @@ if __name__ == '__main__':
         try:
             time.sleep(1)
             time_done += 1
+            print('time done:', time_done)
         except KeyboardInterrupt:
             break
 

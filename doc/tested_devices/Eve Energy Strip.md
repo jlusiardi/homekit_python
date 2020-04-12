@@ -9,6 +9,8 @@ Important Information:
  * communication channel : **IP**
  * version of *homekit* library: **0.14.0.**
 
+[Product Page](https://www.evehome.com/en/eve-energy-strip)
+
 # Step 1 - discovery
 
 ## used command

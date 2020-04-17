@@ -20,9 +20,14 @@ import json
 import argparse
 import sys
 import logging
+import tlv8
+import base64
 
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
+from homekit.model.characteristics import CharacteristicsDecoderLoader
+from homekit.controller.tools import AbstractPairing
+from homekit.model.characteristics.characteristic_formats import CharacteristicFormats
 
 
 def setup_args_parser():
@@ -40,10 +45,40 @@ def setup_args_parser():
                         help='read out the types for the characteristics as well')
     parser.add_argument('-e', action='store_true', required=False, dest='events',
                         help='read out the events for the characteristics as well')
+    parser.add_argument('-d', action='store_true', required=False, dest='decode',
+                        help='If set, try to find a decoder for each characteristic and show the decoded value')
     parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
                         help='the bluetooth adapter to be used (defaults to hci0)')
     add_log_arguments(parser)
     return parser.parse_args()
+
+
+def get_characteristic_decoders(pairing: AbstractPairing) -> dict:
+    """
+    This function filters characteristics of an accessory for decodable types (currently only TLV characteristics) and
+    tries to load the decoder functions for said characteristic's uuid.
+
+    :param pairing: an implementation of `AbstractPairing` (either for IP or BLE)
+    :return: a dict of aid/cid to decoder functions
+    """
+    loaded_decoders = {}
+    loader = CharacteristicsDecoderLoader()
+    for a in pairing.list_accessories_and_characteristics():
+        aid = a['aid']
+        for s in a['services']:
+            for c in s['characteristics']:
+                c_format = c['format']
+                # TODO what about CharacteristicFormats.data?
+                if c_format not in [CharacteristicFormats.tlv8]:
+                    continue
+                c_id = c['iid']
+                key = '{}.{}'.format(aid, c_id)
+                c_type = c['type']
+                decoder = loader.load(c_type)
+                if decoder is not None:
+                    loaded_decoders[key] = decoder
+
+    return loaded_decoders
 
 
 if __name__ == '__main__':
@@ -71,10 +106,23 @@ if __name__ == '__main__':
         logging.debug(e, exc_info=True)
         sys.exit(-1)
 
+    if args.decode:
+        decoders = get_characteristic_decoders(pairing)
+    else:
+        decoders = {}
+
     # print the data
     tmp = {}
     for k in data:
         nk = str(k[0]) + '.' + str(k[1])
-        tmp[nk] = data[k]
+        value = data[k]
 
-    print(json.dumps(tmp, indent=4))
+        if decoders.get(nk):
+            try:
+                value['value'] = decoders.get(nk)(base64.b64decode(value['value']))
+            except Exception as e:
+                logging.ERROR('could not decode', e)
+
+        tmp[nk] = value
+
+    print(json.dumps(tmp, indent=4, cls=tlv8.JsonEncoder))

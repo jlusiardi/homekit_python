@@ -30,7 +30,8 @@ from homekit import AccessoryServer, Controller
 from homekit.accessoryserver import AccessoryRequestHandler
 from homekit.model import Accessory
 from homekit.model.services import AbstractService, ServicesTypes
-from homekit.model.characteristics import AbstractCharacteristic, CharacteristicFormats, CharacteristicsTypes
+from homekit.model.characteristics import AbstractCharacteristic, CharacteristicFormats, CharacteristicsTypes, \
+    CharacteristicsDecoderLoader
 from homekit.http_impl import HttpStatusCodes
 from homekit.controller.tools import AbstractPairing
 from homekit.log_support import setup_logging, add_log_arguments
@@ -150,41 +151,6 @@ class ProxyCharacteristic(AbstractCharacteristic):
         AbstractCharacteristic.__init__(self, iid, characteristic_type, characteristic_format)
 
 
-class CharacteristicsDecoderLoader:
-    """
-    class to dynamically load decoders for tlv8 characteristics.
-    """
-
-    def __init__(self):
-        self.decoders = {}
-
-    def load(self, char_type: str):
-        """
-        This function loads a decoder for the specified characteristics:
-         - get the name of the characteristic via the given uuid (via `CharacteristicsTypes.get_short()`)
-         - load a module from `homekit.model.characteristics` plus the name of the characteristic
-         - the module must contain a function `decoder`
-
-        :param char_type: the uuid of the characteristic
-        :return: a function that decodes the value of the characteristic into a `tlv8.EntryList`
-        """
-        characteristic_name = CharacteristicsTypes.get_short(char_type)
-        mod_name = characteristic_name.replace('-', '_')
-        if char_type not in self.decoders:
-            try:
-                logging.info('loading module %s for type %s', mod_name, char_type)
-                module = importlib.import_module('homekit.model.characteristics.' + mod_name)
-                decoder = getattr(module, 'decoder')
-                self.decoders[char_type] = decoder
-                return decoder
-            except Exception as e:
-                logging.error('Error loading decoder: %s for type %s', e, char_type)
-                return None
-        else:
-            logging.info('got decoder for %s from cache', char_type)
-            return self.decoders[char_type]
-
-
 decoder_loader = CharacteristicsDecoderLoader()
 
 
@@ -207,8 +173,11 @@ def log_transferred_value(text: str, aid: int, characteristic: AbstractCharacter
         filtered_bytes_value = base64.b64decode(filtered_value)
         decoder = decoder_loader.load(characteristic.type)
         if decoder:
-            debug_value = tlv8.format_string(decoder(bytes_value))
-            filtered_debug_value = tlv8.format_string(decoder(filtered_bytes_value))
+            try:
+                debug_value = tlv8.format_string(decoder(bytes_value))
+                filtered_debug_value = tlv8.format_string(decoder(filtered_bytes_value))
+            except Exception as e:
+                logging.error('problem decoding', e)
         else:
             debug_value = tlv8.format_string(tlv8.deep_decode(bytes_value))
             filtered_debug_value = tlv8.format_string(tlv8.deep_decode(filtered_bytes_value))

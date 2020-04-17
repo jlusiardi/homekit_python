@@ -26,8 +26,12 @@ __all__ = [
     'SaturationCharacteristicMixin', 'SerialNumberCharacteristic', 'TargetHeatingCoolingStateCharacteristic',
     'TargetHeatingCoolingStateCharacteristicMixin', 'TargetTemperatureCharacteristic',
     'TargetTemperatureCharacteristicMixin', 'TemperatureDisplayUnitCharacteristic', 'TemperatureDisplayUnitsMixin',
-    'VolumeCharacteristic', 'VolumeCharacteristicMixin'
+    'VolumeCharacteristic', 'VolumeCharacteristicMixin', 'CharacteristicsDecoderLoader'
 ]
+
+import importlib
+import logging
+import pkgutil
 
 from homekit.model.characteristics.characteristic_permissions import CharacteristicPermissions
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
@@ -59,3 +63,58 @@ from homekit.model.characteristics.target_temperature import TargetTemperatureCh
 from homekit.model.characteristics.temperature_display_unit import TemperatureDisplayUnitsMixin, \
     TemperatureDisplayUnitCharacteristic
 from homekit.model.characteristics.volume import VolumeCharacteristic, VolumeCharacteristicMixin
+
+
+class CharacteristicsDecoderLoader:
+    """
+    class to dynamically load decoders for tlv8 characteristics.
+    """
+
+    def __init__(self):
+        self.decoders = {}
+
+    def load(self, char_type: str):
+        """
+        This function loads a decoder for the specified characteristics:
+         - get the name of the characteristic via the given uuid (via `CharacteristicsTypes.get_short()`)
+         - load a module from `homekit.model.characteristics` plus the name of the characteristic
+         - the module must contain a function `decoder`
+
+        :param char_type: the uuid of the characteristic
+        :return: a function that decodes the value of the characteristic into a `tlv8.EntryList`
+        """
+        characteristic_name = CharacteristicsTypes.get_short(char_type)
+        if characteristic_name.startswith('Unknown'):
+            mod_name = 'uuid_{}'.format(char_type.replace('-', '_'))
+            logging.info('modname %s', mod_name)
+        else:
+            mod_name = characteristic_name.replace('-', '_')
+        if char_type not in self.decoders:
+
+            # try to dynamically load from the standard characteristics by name
+            try:
+                logging.info('loading module "%s" for type "%s"', mod_name, char_type)
+                module = importlib.import_module('homekit.model.characteristics.' + mod_name)
+                decoder = getattr(module, 'decoder')
+                self.decoders[char_type] = decoder
+                return decoder
+            except Exception as e:
+                logging.info('Error loading decoder: "%s" for type "%s"', e, char_type)
+
+            # try to load from all plugins, it may be a non-standard characteristic with vendor specific data
+            try:
+                for _, plugin_name, _ in pkgutil.iter_modules():
+                    if not plugin_name.startswith('homekit_'):
+                        continue
+                    logging.info('loading module "%s" for type "%s" from plugin "%s"', mod_name, char_type, plugin_name)
+                    module = importlib.import_module('.model.characteristics.' + mod_name, plugin_name)
+                    decoder = getattr(module, 'decoder')
+                    self.decoders[char_type] = decoder
+                    return decoder
+            except Exception as e:
+                logging.info('Error loading decoder: "%s" for type "%s"', e, char_type)
+
+            return None
+        else:
+            logging.info('got decoder for %s from cache', char_type)
+            return self.decoders[char_type]

@@ -24,9 +24,9 @@ matrix:
 before_install:
     - ./.travis/install.sh
 script:
-    - ${FLAKE8} homekit
+    - /c/Python38/Scripts/flake8.exe homekit
     - ${FLAKE8} tests
     - ${FLAKE8} *.py
-    - ${COVERAGE} run -m pytest tests/
+    - /c/Python38/Scripts/coverage.exe run -m pytest tests/
 after_success:
-    - ${COVERALLS}
+    - /c/Python38/Scripts/coveralls.exe

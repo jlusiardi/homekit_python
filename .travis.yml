@@ -1,9 +1,13 @@
 language: python
 matrix:
     include:
-#        - os: linux
-#          dist: xenial
-#          python: 3.5
+        - os: linux
+          dist: xenial
+          python: 3.5
+          env:
+            FLAKE8=flake8
+            COVERAGE=coverage
+            COVERALLS=coveralls
 #        - os: linux
 #          dist: xenial
 #          python: 3.6

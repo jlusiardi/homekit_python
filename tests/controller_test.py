@@ -200,7 +200,7 @@ class TestControllerIpPaired(unittest.TestCase):
         t = T(cls.httpd)
         t.start()
         time.sleep(5)
-        cls.controller_file = tempfile.NamedTemporaryFile()
+        cls.controller_file = tempfile.NamedTemporaryFile(delete=False)
         cls.controller_file.write("""{
             "alias": {
                 "Connection": "IP",
@@ -213,7 +213,7 @@ class TestControllerIpPaired(unittest.TestCase):
                 "iOSDeviceLTSK": "fa45f082ef87efc6c8c8d043d74084a3ea923a2253e323a7eb9917b4090c2fcc"
             }
         }""".encode())
-        cls.controller_file.flush()
+        cls.controller_file.close()
 
     def __init__(self, methodName='runTest'):
         unittest.TestCase.__init__(self, methodName)
@@ -224,6 +224,7 @@ class TestControllerIpPaired(unittest.TestCase):
         cls.httpd.shutdown()
         # manually remove temp file
         os.unlink(cls.config_file.name)
+        os.unlink(cls.controller_file.name)
 
     def setUp(self):
         self.controller = Controller()
@@ -465,16 +466,16 @@ class TestController(unittest.TestCase):
         controller_file.close()
 
     def test_load_pairings_unknown_type(self):
-        controller_file = tempfile.NamedTemporaryFile()
+        controller_file = tempfile.NamedTemporaryFile(delete=False)
         controller_file.write("""{
              "alias_unknown": {
                  "Connection": "UNKNOWN"
              }
          }""".encode())
-        controller_file.flush()
+        controller_file.close()
         self.controller.load_data(controller_file.name)
         self.assertEqual(0, len(self.controller.get_pairings()))
-        controller_file.close()
+        os.unlink(controller_file.name)
 
     def test_load_pairings_invalid_json(self):
         controller_file = tempfile.NamedTemporaryFile()

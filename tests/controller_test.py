@@ -96,11 +96,13 @@ class TestControllerIpUnpaired(unittest.TestCase):
         t = T(cls.httpd)
         t.start()
         time.sleep(10)
-        cls.controller_file = tempfile.NamedTemporaryFile()
+        cls.controller_file = tempfile.NamedTemporaryFile(delete=False)
+        cls.controller_file.close()
 
     def __init__(self, methodName='runTest'):
         unittest.TestCase.__init__(self, methodName)
-        self.controller_file = tempfile.NamedTemporaryFile()
+        self.controller_file = tempfile.NamedTemporaryFile(delete=False)
+        self.controller_file.close()
 
     @classmethod
     def tearDownClass(cls):
@@ -109,6 +111,7 @@ class TestControllerIpUnpaired(unittest.TestCase):
         cls.config_file.close()
         # manually remove temp file
         os.unlink(cls.config_file.name)
+        os.unlink(cls.controller_file.name)
 
     def setUp(self):
         self.controller = Controller()
@@ -184,7 +187,7 @@ class TestControllerIpPaired(unittest.TestCase):
             },
             "unsuccessful_tries": 0
         }""".encode())
-        cls.config_file.flush()
+        cls.config_file.close()
 
         # Make sure get_id() numbers are stable between tests
         model_mixin.id_counter = 0

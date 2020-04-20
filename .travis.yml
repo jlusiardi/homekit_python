@@ -8,15 +8,27 @@ matrix:
             FLAKE8=flake8
             COVERAGE=coverage
             COVERALLS=coveralls
-#        - os: linux
-#          dist: xenial
-#          python: 3.6
-#        - os: linux
-#          dist: xenial
-#          python: 3.7
-#        - os: osx
-#          language: generic
-#          env: PYTHON=3.5.6
+        - os: linux
+          dist: xenial
+          python: 3.6
+          env:
+            FLAKE8=flake8
+            COVERAGE=coverage
+            COVERALLS=coveralls
+        - os: linux
+          dist: xenial
+          python: 3.7
+          env:
+            FLAKE8=flake8
+            COVERAGE=coverage
+            COVERALLS=coveralls
+        - os: osx
+          language: generic
+          env:
+            PYTHON=3.5.6
+            FLAKE8=flake8
+            COVERAGE=coverage
+            COVERALLS=coveralls
         - os: windows
           language: sh
           env:

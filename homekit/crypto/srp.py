@@ -20,9 +20,9 @@
 Implements the Secure Remote Password (SRP) algorithm. More information can be found on
 https://tools.ietf.org/html/rfc5054. See HomeKit spec page 36 for adjustments imposed by Apple.
 """
-import crypt
 import math
 import hashlib
+import os
 
 
 class Srp:
@@ -60,8 +60,7 @@ E0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF''', 16)
 
         :return: the key as an integer
         """
-        private_key = crypt.mksalt(crypt.METHOD_SHA512)[3:].encode()
-        return int.from_bytes(private_key, "big")
+        return int.from_bytes(os.urandom(16), byteorder="big")
 
     def _calculate_k(self) -> int:
         # calculate k (see https://tools.ietf.org/html/rfc5054#section-2.5.3)
@@ -212,10 +211,7 @@ class SrpServer(Srp):
     @staticmethod
     def _create_salt() -> int:
         # generate random salt
-        salt = crypt.mksalt(crypt.METHOD_SHA512)[3:]
-        assert len(salt) == 16
-        salt_b = salt.encode()
-        return int.from_bytes(salt_b, "big")
+        return int.from_bytes(os.urandom(16), byteorder="big")
 
     def _get_verifier(self) -> int:
         hash_value = self._calculate_x()

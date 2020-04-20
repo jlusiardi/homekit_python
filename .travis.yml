@@ -1,18 +1,21 @@
 language: python
 matrix:
     include:
-        - os: linux
-          dist: xenial
-          python: 3.5
-        - os: linux
-          dist: xenial
-          python: 3.6
-        - os: linux
-          dist: xenial
-          python: 3.7
-        - os: osx
-          language: generic
-          env: PYTHON=3.5.6
+#        - os: linux
+#          dist: xenial
+#          python: 3.5
+#        - os: linux
+#          dist: xenial
+#          python: 3.6
+#        - os: linux
+#          dist: xenial
+#          python: 3.7
+#        - os: osx
+#          language: generic
+#          env: PYTHON=3.5.6
+        - os: windows
+          language: sh
+          env: PY=py
 
 before_install:
     - ./.travis/install.sh

@@ -32,3 +32,11 @@ if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     pip3 install -r requirements_osx.txt
     pip3 install coveralls
 fi
+
+if [ "$TRAVIS_OS_NAME" == "windows" ]; then
+    choco install python3 --params "/Python38:C:\Python38"
+    export PATH="/c/Python38:/c/Python38/Scripts:$PATH"
+    py --version
+    pip3 --version
+    pip3 install -r requirements.txt
+fi

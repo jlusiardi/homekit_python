@@ -27,6 +27,6 @@ script:
     - ${FLAKE8} homekit
     - ${FLAKE8} tests
     - ${FLAKE8} *.py
-    - ${COVERAGE} run -m pytest tests/
+    - ${COVERAGE} run -m pytest -s tests/
 after_success:
     - ${COVERALLS}

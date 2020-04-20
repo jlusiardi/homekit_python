@@ -79,6 +79,7 @@ class TestControllerIpUnpaired(unittest.TestCase):
               "unsuccessful_tries": 0
             }""".encode())
         cls.config_file.flush()
+        print('name', cls.config_file.name)
 
         # Make sure get_id() numbers are stable between tests
         model_mixin.id_counter = 0

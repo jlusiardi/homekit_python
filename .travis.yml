@@ -17,16 +17,16 @@ matrix:
           language: sh
           env:
             PY=py
-            FLAKE8=flake8.exe
-            COVERAGE=coverage.exe
-            COVERALLS=coveralls.exe
+            FLAKE8=/c/Python38/Scripts/flake8.exe
+            COVERAGE=/c/Python38/Scripts/coverage.exe
+            COVERALLS=/c/Python38/Scripts/coveralls.exe
 
 before_install:
     - ./.travis/install.sh
 script:
-    - /c/Python38/Scripts/flake8.exe homekit
+    - ${FLAKE8} homekit
     - ${FLAKE8} tests
     - ${FLAKE8} *.py
-    - /c/Python38/Scripts/coverage.exe run -m pytest tests/
+    - ${COVERAGE} run -m pytest tests/
 after_success:
-    - /c/Python38/Scripts/coveralls.exe
+    - ${COVERALLS}

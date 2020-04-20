@@ -43,4 +43,5 @@ if [ "$TRAVIS_OS_NAME" == "windows" ]; then
     echo $PATH
     pwd
     ls -hal
+    ls -hal /c/Python38/Scripts
 fi

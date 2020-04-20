@@ -39,4 +39,5 @@ if [ "$TRAVIS_OS_NAME" == "windows" ]; then
     py --version
     pip3 --version
     pip3 install -r requirements_windows.txt
+    pip3 install coveralls flake8
 fi

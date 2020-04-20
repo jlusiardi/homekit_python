@@ -38,5 +38,5 @@ if [ "$TRAVIS_OS_NAME" == "windows" ]; then
     export PATH="/c/Python38:/c/Python38/Scripts:$PATH"
     py --version
     pip3 --version
-    pip3 install -r requirements.txt
+    pip3 install -r requirements_windows.txt
 fi

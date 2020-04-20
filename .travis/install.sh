@@ -40,4 +40,7 @@ if [ "$TRAVIS_OS_NAME" == "windows" ]; then
     pip3 --version
     pip3 install -r requirements_windows.txt
     pip3 install coveralls flake8
+    echo $PATH
+    pwd
+    ls -hal
 fi

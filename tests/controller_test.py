@@ -159,7 +159,9 @@ class TestControllerIpUnpaired(unittest.TestCase):
 class TestControllerIpPaired(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config_file = tempfile.NamedTemporaryFile()
+        # prepare config file for paired accessory server, delete false for Windows, so we can close the file and open
+        # it for reading after that
+        cls.config_file = tempfile.NamedTemporaryFile(delete=False)
         cls.config_file.write("""{
             "accessory_ltpk": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
             "accessory_ltsk": "3d99f3e959a1f93af4056966f858074b2a1fdec1c5fd84a51ea96f9fa004156a",
@@ -220,7 +222,8 @@ class TestControllerIpPaired(unittest.TestCase):
     def tearDownClass(cls):
         cls.httpd.unpublish_device()
         cls.httpd.shutdown()
-        cls.config_file.close()
+        # manually remove temp file
+        os.unlink(cls.config_file.name)
 
     def setUp(self):
         self.controller = Controller()

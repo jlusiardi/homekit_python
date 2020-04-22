@@ -60,6 +60,9 @@ E0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF''', 16)
 
         :return: the key as an integer
         """
+        # see
+        #  - https://github.com/jlusiardi/homekit_python/issues/185#issuecomment-616344895 and
+        #  - https://cryptography.io/en/latest/random-numbers/
         return int.from_bytes(os.urandom(16), byteorder="big")
 
     def _calculate_k(self) -> int:
@@ -115,6 +118,7 @@ class SrpClient(Srp):
     """
     Implements all functions that are required to simulate an iOS HomeKit controller
     """
+
     def __init__(self, username: str, password: str):
         Srp.__init__(self)
         self.username = username
@@ -196,6 +200,7 @@ class SrpServer(Srp):
     """
     Implements all functions that are required to simulate an iOS HomeKit accessory
     """
+
     def __init__(self, username, password):
         Srp.__init__(self)
         self.username = username
@@ -210,7 +215,9 @@ class SrpServer(Srp):
 
     @staticmethod
     def _create_salt() -> int:
-        # generate random salt
+        # see
+        #  - https://github.com/jlusiardi/homekit_python/issues/185#issuecomment-616344895 and
+        #  - https://cryptography.io/en/latest/random-numbers/
         return int.from_bytes(os.urandom(16), byteorder="big")
 
     def _get_verifier(self) -> int:

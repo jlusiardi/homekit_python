@@ -18,6 +18,7 @@ import unittest
 import tempfile
 import threading
 import time
+import os
 
 from homekit import Controller
 from homekit import AccessoryServer
@@ -62,8 +63,9 @@ def set_value(new_value):
 class TestControllerIpUnpaired(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # prepare config file for unpaired accessory server
-        cls.config_file = tempfile.NamedTemporaryFile()
+        # prepare config file for unpaired accessory server, delete false for Windows, so we can close the file and open
+        # it for reading after that
+        cls.config_file = tempfile.NamedTemporaryFile(delete=False)
         cls.config_file.write("""{
               "accessory_ltpk": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
               "accessory_ltsk": "3d99f3e959a1f93af4056966f858074b2a1fdec1c5fd84a51ea96f9fa004156a",
@@ -78,7 +80,7 @@ class TestControllerIpUnpaired(unittest.TestCase):
               },
               "unsuccessful_tries": 0
             }""".encode())
-        cls.config_file.flush()
+        cls.config_file.close()
 
         # Make sure get_id() numbers are stable between tests
         model_mixin.id_counter = 0
@@ -94,17 +96,22 @@ class TestControllerIpUnpaired(unittest.TestCase):
         t = T(cls.httpd)
         t.start()
         time.sleep(10)
-        cls.controller_file = tempfile.NamedTemporaryFile()
+        cls.controller_file = tempfile.NamedTemporaryFile(delete=False)
+        cls.controller_file.close()
 
     def __init__(self, methodName='runTest'):
         unittest.TestCase.__init__(self, methodName)
-        self.controller_file = tempfile.NamedTemporaryFile()
+        self.controller_file = tempfile.NamedTemporaryFile(delete=False)
+        self.controller_file.close()
 
     @classmethod
     def tearDownClass(cls):
         cls.httpd.unpublish_device()
         cls.httpd.shutdown()
         cls.config_file.close()
+        # manually remove temp file
+        os.unlink(cls.config_file.name)
+        os.unlink(cls.controller_file.name)
 
     def setUp(self):
         self.controller = Controller()
@@ -155,7 +162,9 @@ class TestControllerIpUnpaired(unittest.TestCase):
 class TestControllerIpPaired(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config_file = tempfile.NamedTemporaryFile()
+        # prepare config file for paired accessory server, delete false for Windows, so we can close the file and open
+        # it for reading after that
+        cls.config_file = tempfile.NamedTemporaryFile(delete=False)
         cls.config_file.write("""{
             "accessory_ltpk": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
             "accessory_ltsk": "3d99f3e959a1f93af4056966f858074b2a1fdec1c5fd84a51ea96f9fa004156a",
@@ -178,7 +187,7 @@ class TestControllerIpPaired(unittest.TestCase):
             },
             "unsuccessful_tries": 0
         }""".encode())
-        cls.config_file.flush()
+        cls.config_file.close()
 
         # Make sure get_id() numbers are stable between tests
         model_mixin.id_counter = 0
@@ -194,7 +203,7 @@ class TestControllerIpPaired(unittest.TestCase):
         t = T(cls.httpd)
         t.start()
         time.sleep(5)
-        cls.controller_file = tempfile.NamedTemporaryFile()
+        cls.controller_file = tempfile.NamedTemporaryFile(delete=False)
         cls.controller_file.write("""{
             "alias": {
                 "Connection": "IP",
@@ -207,7 +216,7 @@ class TestControllerIpPaired(unittest.TestCase):
                 "iOSDeviceLTSK": "fa45f082ef87efc6c8c8d043d74084a3ea923a2253e323a7eb9917b4090c2fcc"
             }
         }""".encode())
-        cls.controller_file.flush()
+        cls.controller_file.close()
 
     def __init__(self, methodName='runTest'):
         unittest.TestCase.__init__(self, methodName)
@@ -216,7 +225,9 @@ class TestControllerIpPaired(unittest.TestCase):
     def tearDownClass(cls):
         cls.httpd.unpublish_device()
         cls.httpd.shutdown()
-        cls.config_file.close()
+        # manually remove temp file
+        os.unlink(cls.config_file.name)
+        os.unlink(cls.controller_file.name)
 
     def setUp(self):
         self.controller = Controller()
@@ -458,16 +469,16 @@ class TestController(unittest.TestCase):
         controller_file.close()
 
     def test_load_pairings_unknown_type(self):
-        controller_file = tempfile.NamedTemporaryFile()
+        controller_file = tempfile.NamedTemporaryFile(delete=False)
         controller_file.write("""{
              "alias_unknown": {
                  "Connection": "UNKNOWN"
              }
          }""".encode())
-        controller_file.flush()
+        controller_file.close()
         self.controller.load_data(controller_file.name)
         self.assertEqual(0, len(self.controller.get_pairings()))
-        controller_file.close()
+        os.unlink(controller_file.name)
 
     def test_load_pairings_invalid_json(self):
         controller_file = tempfile.NamedTemporaryFile()

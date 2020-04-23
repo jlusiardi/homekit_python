@@ -59,11 +59,11 @@ class AccessoryServerData:
             with open(data_file, 'r') as input_file:
                 self.data = json.load(input_file)
         except PermissionError:
-            raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=input_file))
+            raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=data_file))
         except JSONDecodeError:
-            raise ConfigLoadingError('Cannot parse "{f}" as JSON file'.format(f=input_file))
+            raise ConfigLoadingError('Cannot parse "{f}" as JSON file'.format(f=data_file))
         except FileNotFoundError:
-            raise ConfigLoadingError('Could not open "{f}" because it does not exist'.format(f=input_file))
+            raise ConfigLoadingError('Could not open "{f}" because it does not exist'.format(f=data_file))
 
         self.check()
 

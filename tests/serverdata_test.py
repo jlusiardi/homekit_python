@@ -16,6 +16,7 @@
 
 import unittest
 import json
+import os
 
 from homekit.accessoryserver import AccessoryServerData
 import tempfile
@@ -24,7 +25,7 @@ import tempfile
 class TestServerData(unittest.TestCase):
 
     def test_example2_1_1(self):
-        fp = tempfile.NamedTemporaryFile(mode='w')
+        fp = tempfile.NamedTemporaryFile(mode='w', delete=False)
         data = {
             'host_ip': '12.34.56.78',
             'host_port': 4711,
@@ -36,7 +37,7 @@ class TestServerData(unittest.TestCase):
             'unsuccessful_tries': 0
         }
         json.dump(data, fp)
-        fp.flush()
+        fp.close()
 
         hksd = AccessoryServerData(fp.name)
         self.assertEqual(hksd.accessory_pairing_id_bytes, b'12:34:56:78:90:AB')
@@ -45,3 +46,5 @@ class TestServerData(unittest.TestCase):
         hksd.set_accessory_keys(pk, sk)
         self.assertEqual(hksd.accessory_ltpk, pk)
         self.assertEqual(hksd.accessory_ltsk, sk)
+
+        os.unlink(fp.name)

@@ -95,7 +95,5 @@ def decoder(bytes_data):
                 AudioCodecParametersKeys.RTP_TIME: RtpTimeValues
             }
         },
-        SupportedAudioStreamConfigurationKeys.COMFORT_NOISE_SUPPORT: {
-
-        }
+        SupportedAudioStreamConfigurationKeys.COMFORT_NOISE_SUPPORT: tlv8.DataType.UNSIGNED_INTEGER
     })

@@ -750,7 +750,7 @@ def read_characteristics(device):
         if s_data['iid']:
             a_data['services'].append(s_data)
 
-    logger.debug('data: %s', resolved_data)
+    logging.debug('data: %s', resolved_data)
 
     return resolved_data
 
@@ -776,7 +776,7 @@ def parse_sig_read_response(data, expected_tid):
     logger.debug('expected body length %d (got %d)', length, len(data[5:]))
 
     # parse tlvs and analyse information
-    tlv = tlv8.decode(data[5:])
+    tlv = tlv8.decode(bytes([int(a) for a in data[5:]]))
 
     description = ''
     characteristic_format = ''

@@ -634,7 +634,6 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def _get_accessories(self):
-
         result_bytes = self.server.accessories.to_accessory_and_service_list().encode()
         self.send_response(HttpStatusCodes.OK)
         self.send_header('Content-Type', 'application/hap+json')

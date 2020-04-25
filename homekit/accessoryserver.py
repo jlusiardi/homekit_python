@@ -545,6 +545,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         if AccessoryRequestHandler.DEBUG_PUT_CHARACTERISTICS:
             self.log_message('PUT /characteristics')
             self.log_message('body: %s', self.body)
+        # see Spec R2 page 68 Chapter 6.7.2.2
+        self._log_wrong_content_type('application/hap+json')
 
         data = json.loads(self.body.decode())
         characteristics_to_set = data['characteristics']
@@ -643,6 +645,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(result_bytes)
 
     def _post_pair_verify(self):
+        self._log_wrong_content_type('application/pairing+tlv8')
         d_req = tlv8.decode(self.body, {
             TlvTypes.State: tlv8.DataType.INTEGER,
             TlvTypes.PublicKey: tlv8.DataType.BYTES,
@@ -788,6 +791,11 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         self.send_error(HttpStatusCodes.NOT_FOUND)
 
     def _post_pairings(self):
+        """
+
+        :return:
+        """
+        self._log_wrong_content_type('application/pairing+tlv8')
         d_req = tlv8.decode(self.body, {
             TlvTypes.State: tlv8.DataType.INTEGER,
             TlvTypes.Method: tlv8.DataType.INTEGER,
@@ -941,7 +949,19 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
         self.wfile.write(result_bytes)
 
+    def _log_wrong_content_type(self, expected_content_type):
+        """
+        Issue a log entry if the content type from the headers does not match the expected content type.
+
+        :param expected_content_type: the expected content type as `str` e.g. 'application/pairing+tlv8'
+        :return: None
+        """
+        content_type = self.headers.get('Content-Type', None)
+        if content_type is not None and content_type != expected_content_type:
+            self.log_error('Wrong content type: was %s but %s was expected', content_type, expected_content_type)
+
     def _post_pair_setup(self):
+        self._log_wrong_content_type('application/pairing+tlv8')
         d_req = tlv8.decode(self.body, {
             TlvTypes.State: tlv8.DataType.INTEGER,
             TlvTypes.PublicKey: tlv8.DataType.BYTES,
@@ -1215,6 +1235,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             pass
         elif self.server.logger == sys.stderr:
             BaseHTTPRequestHandler.log_message(self, format, *args)
+        elif isinstance(self.server.logger, list):
+            self.server.logger.append("%s" % (format % args))
         else:
             self.server.logger.info("%s" % (format % args))
 
@@ -1223,6 +1245,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             pass
         elif self.server.logger == sys.stderr:
             BaseHTTPRequestHandler.log_message(self, format, *args)
+        elif isinstance(self.server.logger, list):
+            self.server.logger.append("%s" % (format % args))
         else:
             self.server.logger.debug("%s" % (format % args))
 
@@ -1231,6 +1255,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             pass
         elif self.server.logger == sys.stderr:
             BaseHTTPRequestHandler.log_error(self, format, *args)
+        elif isinstance(self.server.logger, list):
+            self.server.logger.append("%s" % (format % args))
         else:
             self.server.logger.error("%s" % (format % args))
 
@@ -1253,7 +1279,7 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         :raises ConfigurationError: if either the logger cannot be used or the request_handler_class is not a subclass
         of AccessoryRequestHandler
         """
-        if logger is None or logger == sys.stderr or isinstance(logger, logging.Logger):
+        if logger is None or logger == sys.stderr or isinstance(logger, logging.Logger) or isinstance(logger, list):
             self.logger = logger
         else:
             raise ConfigurationError('Invalid logger given.')

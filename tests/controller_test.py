@@ -192,7 +192,8 @@ class TestControllerIpPaired(unittest.TestCase):
         # Make sure get_id() numbers are stable between tests
         model_mixin.id_counter = 0
 
-        cls.httpd = AccessoryServer(cls.config_file.name, None)
+        cls.logger = list()
+        cls.httpd = AccessoryServer(cls.config_file.name, logger=cls.logger)
         cls.httpd.set_identify_callback(identify_callback)
         accessory = Accessory('Testlicht', 'lusiardi.de', 'Demoserver', '0001', '0.1')
         accessory.set_identify_callback(identify_callback)
@@ -231,6 +232,7 @@ class TestControllerIpPaired(unittest.TestCase):
 
     def setUp(self):
         self.controller = Controller()
+        self.__class__.logger.clear()
 
     def tearDown(self):
         self.controller.shutdown()
@@ -242,16 +244,19 @@ class TestControllerIpPaired(unittest.TestCase):
             if '12:34:56:00:01:0A' == device['id']:
                 found = device
         self.assertIsNotNone(found)
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_02_pair_alias_exists(self):
         """Try to pair the test accessory"""
         self.controller.load_data(self.controller_file.name)
         self.assertRaises(AlreadyPairedError, self.controller.perform_pairing, 'alias', '12:34:56:00:01:0B',
                           '010-22-020')
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_02_paired_identify_wrong_method(self):
         """Try to identify an already paired accessory via the controller's method for unpaired accessories."""
         self.assertRaises(AlreadyPairedError, self.controller.identify, '12:34:56:00:01:0A')
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_03_get_accessories(self):
         self.controller.load_data(self.controller_file.name)
@@ -265,6 +270,7 @@ class TestControllerIpPaired(unittest.TestCase):
         result = result[0]
         self.assertIn('aid', result)
         self.assertIn('services', result)
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_04_1_get_characteristic(self):
         self.controller.load_data(self.controller_file.name)
@@ -274,6 +280,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertIn('value', result[(1, 4)])
         self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
         self.assertEqual(['value'], list(result[(1, 4)].keys()))
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_04_2_get_characteristics(self):
         self.controller.load_data(self.controller_file.name)
@@ -285,6 +292,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertIn((1, 10), result)
         self.assertIn('value', result[(1, 10)])
         self.assertEqual(False, result[(1, 10)]['value'])
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_04_3_get_characteristic_with_events(self):
         """This tests the include_events flag on get_characteristics"""
@@ -295,6 +303,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertIn('value', result[(1, 4)])
         self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
         self.assertIn('ev', result[(1, 4)])
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_04_4_get_characteristic_with_type(self):
         """This tests the include_type flag on get_characteristics"""
@@ -306,6 +315,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
         self.assertIn('type', result[(1, 4)])
         self.assertEqual('20', result[(1, 4)]['type'])
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_04_5_get_characteristic_with_perms(self):
         """This tests the include_perms flag on get_characteristics"""
@@ -319,6 +329,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertEqual(['pr'], result[(1, 4)]['perms'])
         result = pairing.get_characteristics([(1, 3)], include_perms=True)
         self.assertEqual(['pw'], result[(1, 3)]['perms'])
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_04_4_get_characteristic_with_meta(self):
         """This tests the include_meta flag on get_characteristics"""
@@ -332,6 +343,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertEqual('string', result[(1, 4)]['format'])
         self.assertIn('maxLen', result[(1, 4)])
         self.assertEqual(64, result[(1, 4)]['maxLen'])
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_05_1_put_characteristic(self):
         """"""
@@ -344,6 +356,7 @@ class TestControllerIpPaired(unittest.TestCase):
         result = pairing.put_characteristics([(1, 10, 'Off')])
         self.assertEqual(result, {})
         self.assertEqual(0, value)
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_05_2_put_characteristic_do_conversion(self):
         """"""
@@ -356,12 +369,14 @@ class TestControllerIpPaired(unittest.TestCase):
         result = pairing.put_characteristics([(1, 10, 'Off')], do_conversion=True)
         self.assertEqual(result, {})
         self.assertEqual(0, value)
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_05_2_put_characteristic_do_conversion_wrong_value(self):
         """Tests that values that are not convertible to boolean cause a HomeKitTypeException"""
         self.controller.load_data(self.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         self.assertRaises(FormatError, pairing.put_characteristics, [(1, 10, 'Hallo Welt')], do_conversion=True)
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_06_list_pairings(self):
         """Gets the listing of registered controllers of the device. Count must be 1."""
@@ -382,6 +397,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertEqual('decc6fa3-de3e-41c9-adba-ef7409821bfc', result['pairingId'])
         self.assertEqual(result['controllerType'], 'admin')
         self.assertEqual(result['permissions'], 1)
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_07_paired_identify(self):
         """Tests the paired variant of the identify method."""
@@ -392,6 +408,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(1, identify)
         identify = 0
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
     def test_99_remove_pairing(self):
         """Tests that a removed pairing is not present in the list of pairings anymore."""
@@ -399,6 +416,7 @@ class TestControllerIpPaired(unittest.TestCase):
         self.controller.remove_pairing('alias')
         pairings = self.controller.get_pairings()
         self.assertNotIn('alias', pairings)
+        self.assertNotIn('Wrong content type', '\n'.join(self.__class__.logger))
 
 
 class TestController(unittest.TestCase):

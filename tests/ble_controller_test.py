@@ -358,6 +358,8 @@ class AccessoryRequestHandler(accessoryserver.AccessoryRequestHandler):
         self.data = char.service.device
         self.session_id = self.data.session_id
         self.sessions = self.data.sessions
+        # headers are not a BLE thing, but since we reuse the default accessory request handler here...
+        self.headers = {}
 
     def log_request(self, *args):
         pass

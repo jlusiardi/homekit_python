@@ -540,7 +540,7 @@ class Controller(object):
             if not IP_TRANSPORT_SUPPORTED:
                 raise TransportNotSupportedError('IP')
             session = IpSession(pairing_data)
-            response = session.post('/pairings', request_tlv)
+            response = session.post('/pairings', request_tlv, content_type='application/pairing+tlv8')
             session.close()
             data = response.read()
             data = tlv8.decode(data, {

@@ -20,7 +20,6 @@ from unittest import mock
 import uuid
 import logging
 import tlv8
-import dbus
 
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit import Controller
@@ -36,6 +35,7 @@ from homekit import exceptions
 from homekit.tools import BLE_TRANSPORT_SUPPORTED
 
 if BLE_TRANSPORT_SUPPORTED:
+    import dbus
     from homekit.controller.ble_impl import CharacteristicInstanceID, AdditionalParameterTypes
     from homekit.protocol.opcodes import HapBleOpCodes
     from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats

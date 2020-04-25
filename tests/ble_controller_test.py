@@ -35,6 +35,7 @@ from homekit import exceptions
 from homekit.tools import BLE_TRANSPORT_SUPPORTED
 
 if BLE_TRANSPORT_SUPPORTED:
+    import dbus
     from homekit.controller.ble_impl import CharacteristicInstanceID, AdditionalParameterTypes
     from homekit.protocol.opcodes import HapBleOpCodes
     from homekit.model.characteristics.characteristic_formats import BleCharacteristicFormats
@@ -314,10 +315,14 @@ class Characteristic:
         self.values.append(value)
 
     def read_value(self):
+        # real world objects return a dbus.Array object here, this array contains dbus.Byte values.
+        # dbus.Array([dbus.Byte(2), ..., dbus.Byte(1)], signature=dbus.Signature('y'))
         if not self.values:
-            return b''
+            return dbus.Array(b'')
 
-        return self.values.pop(0)
+        val = [dbus.Byte(x) for x in self.values.pop(0)]
+        ar = dbus.Array(val)
+        return ar
 
 
 class ServiceInstanceId(Characteristic):

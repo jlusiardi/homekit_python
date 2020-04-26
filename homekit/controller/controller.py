@@ -32,6 +32,7 @@ from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.protocol.opcodes import HapBleOpCodes
 from homekit.tools import IP_TRANSPORT_SUPPORTED, BLE_TRANSPORT_SUPPORTED
+from homekit.controller.tools import NotSupportedPairing
 from homekit.controller.additional_pairing import AdditionalPairing
 
 if BLE_TRANSPORT_SUPPORTED:
@@ -246,7 +247,9 @@ class Controller(object):
 
     def load_data(self, filename):
         """
-        Loads the pairing data of the controller from a file.
+        Loads the pairing data of the controller from a file. If the connection type of a pairing is currently not
+        supported by the python environment (e.g. because of missing modules for BLE), an instance of
+        `NotSupportedPairing` is used. By this no pairings are lost during a `load_data`/`save_data` cycle.
 
         :param filename: the file name of the pairing data
         :raises ConfigLoadingError: if the config could not be loaded. The reason is given in the message.
@@ -256,7 +259,6 @@ class Controller(object):
             with open(filename, 'r') as input_fp:
                 data = json.load(input_fp)
                 for pairing_id in data:
-
                     if 'Connection' not in data[pairing_id]:
                         # This is a pre BLE entry in the file with the pairing data, hence it is for an IP based
                         # accessory. So we set the connection type (in case save data is used everything will be fine)
@@ -267,12 +269,18 @@ class Controller(object):
 
                     if data[pairing_id]['Connection'] == 'IP':
                         if not IP_TRANSPORT_SUPPORTED:
-                            raise TransportNotSupportedError('IP')
-                        self.pairings[pairing_id] = IpPairing(data[pairing_id])
+                            self.logger.debug(
+                                'setting pairing "%s" to dummy implementation because IP is not supported', pairing_id)
+                            self.pairings[pairing_id] = NotSupportedPairing(data[pairing_id], 'IP')
+                        else:
+                            self.pairings[pairing_id] = IpPairing(data[pairing_id])
                     elif data[pairing_id]['Connection'] == 'BLE':
                         if not BLE_TRANSPORT_SUPPORTED:
-                            raise TransportNotSupportedError('BLE')
-                        self.pairings[pairing_id] = BlePairing(data[pairing_id], self.ble_adapter)
+                            self.logger.debug(
+                                'setting pairing "%s" to dummy implementation because BLE is not supported', pairing_id)
+                            self.pairings[pairing_id] = NotSupportedPairing(data[pairing_id], 'BLE')
+                        else:
+                            self.pairings[pairing_id] = BlePairing(data[pairing_id], self.ble_adapter)
                     elif data[pairing_id]['Connection'] == 'ADDITIONAL_PAIRING':
                         self.pairings[pairing_id] = AdditionalPairing(data[pairing_id])
                     else:

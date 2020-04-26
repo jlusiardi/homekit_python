@@ -147,9 +147,12 @@ class AbstractPairing(abc.ABC):
         pass
 
 
-class DummyPairing(AbstractPairing):
+class NotSupportedPairing(AbstractPairing):
     """
-    Dummy implementation of a AbstractPairing handle Pairings in a configuration that might currently not be supported.
+    Implementation of `AbstractPairing` with no implemented functions but only for handling connection type and pairing
+    data. This is used in `Controller.load_data` if the connection type of the pairing is not supported (e.g. exchanging
+    a file with pairing data between linux (IP and BLE) and OS X (IP only). Without using this `DummyPairing` the
+    pairings would be lost on saving of the file.
     """
 
     def __init__(self, pairing_data, connection_type):

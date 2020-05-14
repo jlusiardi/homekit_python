@@ -72,8 +72,7 @@ if __name__ == '__main__':
 
         text = 'Please add this to homekit.add_additional_pairing:\n' \
                '    -i {id} -k {pk}' \
-            .format(a=args.alias,
-                    id=additional_controller_pairing_identifier,
+            .format(id=additional_controller_pairing_identifier,
                     pk=public_key
                     )
         print(text)

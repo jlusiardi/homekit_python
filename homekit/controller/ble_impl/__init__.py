@@ -629,12 +629,17 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
             tlv8.Entry(AdditionalParameterTypes.Value, body)
         ])
         transaction_id = random.randrange(0, 255)
+        # construct a hap characteristic write request following chapter 7.3.4.4 page 94 spec R2
         data = bytearray([0x00, HapBleOpCodes.CHAR_WRITE, transaction_id])
         data.extend(characteristic_id.to_bytes(length=2, byteorder='little'))
         data.extend(len(request_tlv).to_bytes(length=2, byteorder='little'))
         data.extend(request_tlv)
         logger.debug('sent %s', bytes(data).hex())
+
+        # write the request to the characteristic
         characteristic.write_value(value=data)
+
+        # reading hap characteristic write response following chapter 7.3.4.5 page 95 spec R2
         data = []
         while len(data) == 0:
             time.sleep(1)

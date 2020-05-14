@@ -50,6 +50,8 @@ class _Categories(object):
     SHOWER_SYSTEM = 30
     TV = 31
     REMOTE = 32
+    # as proposed in https://github.com/jlusiardi/homekit_python/issues/195
+    WIFI_ROUTER = 33
 
     def __init__(self):
         self._categories = {
@@ -81,6 +83,8 @@ class _Categories(object):
             _Categories.SHOWER_SYSTEM: 'Shower System',
             _Categories.TV: 'TV',
             _Categories.REMOTE: 'Remote',
+            # as proposed in https://github.com/jlusiardi/homekit_python/issues/195
+            _Categories.WIFI_ROUTER: 'WiFi Router',
         }
 
         self._categories_rev = {self._categories[k]: k for k in self._categories.keys()}

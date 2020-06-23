@@ -30,7 +30,8 @@ def setup_args_parser():
     parser.add_argument('-f', action='store', required=True, dest='file', help='File with the pairing data')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-c', action='append', required=False, dest='characteristics', nargs=2,
-                        help='Use aid.iid value to change the value. Repeat to change multiple characteristics.')
+                        help='Use `aid.iid value` to change the value. Repeat to change multiple characteristics. '
+                             'If the value starts with `@` it is interpreted as a file')
     parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
                         help='the bluetooth adapter to be used (defaults to hci0)')
     add_log_arguments(parser)
@@ -40,6 +41,18 @@ def setup_args_parser():
         parser.print_help()
         sys.exit(-1)
     return args
+
+
+def handle_file_values(characteristics):
+    tmp = []
+    for characteristic in characteristics:
+        val = characteristic[2]
+        if isinstance(val, str) and val.startswith('@'):
+            filename = val[1:]
+            with open(filename, 'r') as input_file:
+                val = input_file.read()
+        tmp.append((characteristic[0], characteristic[1], val, ))
+    return tmp
 
 
 if __name__ == '__main__':
@@ -65,6 +78,7 @@ if __name__ == '__main__':
         characteristics = [(int(c[0].split('.')[0]),  # the first part is the aid, must be int
                             int(c[0].split('.')[1]),  # the second part is the iid, must be int
                             c[1]) for c in args.characteristics]
+        characteristics = handle_file_values(characteristics)
         results = pairing.put_characteristics(characteristics, do_conversion=True)
     except Exception as e:
         print(e)

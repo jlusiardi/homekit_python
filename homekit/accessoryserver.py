@@ -962,6 +962,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
     def _post_pair_setup(self):
         self._log_wrong_content_type('application/pairing+tlv8')
         d_req = tlv8.decode(self.body, {
+            TlvTypes.Method: tlv8.DataType.INTEGER,
             TlvTypes.State: tlv8.DataType.INTEGER,
             TlvTypes.PublicKey: tlv8.DataType.BYTES,
             TlvTypes.Proof: tlv8.DataType.BYTES,

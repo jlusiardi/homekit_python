@@ -308,10 +308,12 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 self.server.sessions[self.session_id]['accessory_to_controller_count'] += 1
                 out_data += len_bytes + ciper_and_mac[0] + ciper_and_mac[1]
 
+            # TODO what exceptions/Errors could be raised here?
             try:
                 self.orig_wfile.write(out_data)
                 self.orig_wfile.flush()
-            except ValueError:
+            except BaseException as e:
+                self.log_error(' %r', e)
                 raise DisconnectedControllerError()
 
     def handle_one_request(self):

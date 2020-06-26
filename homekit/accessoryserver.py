@@ -816,7 +816,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         method = d_req.first_by_id(TlvTypes.Method).data
         if state == States.M1 and method == Methods.AddPairing:
             self.log_message('Step #2 /pairings add pairing')
-            d_res.append((TlvTypes.State, States.M2,))
+            d_res.append(tlv8.Entry(TlvTypes.State, States.M2,))
 
             # see page 51
             # 1)

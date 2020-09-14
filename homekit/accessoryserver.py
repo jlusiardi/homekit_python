@@ -308,10 +308,12 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 self.server.sessions[self.session_id]['accessory_to_controller_count'] += 1
                 out_data += len_bytes + ciper_and_mac[0] + ciper_and_mac[1]
 
+            # TODO what exceptions/Errors could be raised here?
             try:
                 self.orig_wfile.write(out_data)
                 self.orig_wfile.flush()
-            except ValueError:
+            except BaseException as e:
+                self.log_error(' %r', e)
                 raise DisconnectedControllerError()
 
     def handle_one_request(self):
@@ -814,7 +816,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         method = d_req.first_by_id(TlvTypes.Method).data
         if state == States.M1 and method == Methods.AddPairing:
             self.log_message('Step #2 /pairings add pairing')
-            d_res.append((TlvTypes.State, States.M2,))
+            d_res.append(tlv8.Entry(TlvTypes.State, States.M2,))
 
             # see page 51
             # 1)
@@ -962,6 +964,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
     def _post_pair_setup(self):
         self._log_wrong_content_type('application/pairing+tlv8')
         d_req = tlv8.decode(self.body, {
+            TlvTypes.Method: tlv8.DataType.INTEGER,
             TlvTypes.State: tlv8.DataType.INTEGER,
             TlvTypes.PublicKey: tlv8.DataType.BYTES,
             TlvTypes.Proof: tlv8.DataType.BYTES,

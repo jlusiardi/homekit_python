@@ -508,7 +508,8 @@ The option `-f` specifies the file that contains the pairing data.
 The option `-a` specifies the alias for the device.
 
 The option `-c` specifies the characteristics to change. The format is `<aid>.<cid> <value>`. This option can be 
-repeated to change multiple characteristics with one call  (e.g. `-c 1.9 On -c 1.8 22.3`) . 
+repeated to change multiple characteristics with one call  (e.g. `-c 1.9 On -c 1.8 22.3`) . If the value is complex or
+some longer chunk of data, it can be read from a file e.g. `-c 1.9 @somefile` with the file containing the value.
  
 The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only 
 used if the paired device is using Bluetooth LE.

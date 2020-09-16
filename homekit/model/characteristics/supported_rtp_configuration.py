@@ -16,10 +16,13 @@
 
 import tlv8
 from enum import IntEnum
+from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
 from homekit.model.characteristics.setup_endpoints import CameraSRTPCryptoSuiteValues
 
+CHARACTERISTIC_ID = CharacteristicsTypes.get_uuid(CharacteristicsTypes.SUPPORTED_RTP_CONFIGURATION)
 
-class SupportedSrtpConfigurationKeys(IntEnum):
+
+class SupportedRtpConfigurationKeys(IntEnum):
     """
     Page 218 / Table 9-24
     """
@@ -28,5 +31,5 @@ class SupportedSrtpConfigurationKeys(IntEnum):
 
 def decoder(bytes_data):
     return tlv8.decode(bytes_data, {
-        SupportedSrtpConfigurationKeys.SRTP_CRYPTO_SUITE: CameraSRTPCryptoSuiteValues
+        SupportedRtpConfigurationKeys.SRTP_CRYPTO_SUITE: CameraSRTPCryptoSuiteValues
     })

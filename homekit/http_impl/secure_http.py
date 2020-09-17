@@ -30,7 +30,7 @@ class SecureHttp:
     the HAP specification.
     """
 
-    def __init__(self, session, timeout=10):
+    def __init__(self, session, timeout=1):
         """
         Initializes the secure HTTP class. The required keys can be obtained with get_session_keys
 
@@ -75,6 +75,7 @@ class SecureHttp:
             while len(data) > 0:
                 # split the data to max 1024 bytes (see page 71)
                 len_data = min(len(data), 1024)
+                logging.debug('write %s bytes', len_data)
                 tmp_data = data[:len_data]
                 data = data[len_data:]
                 len_bytes = len_data.to_bytes(2, byteorder='little')
@@ -110,21 +111,26 @@ class SecureHttp:
                 used_timeout = timeout
             else:
                 used_timeout = 0.01
+            logging.debug("before select with timeout: %s", used_timeout)
             data_ready = select.select([self.sock], [], [], used_timeout)[0]
+            logging.debug("after select")
 
             # check if there is anything more to do
             if not data_ready and no_data_remaining:
+                logging.debug("not data_ready and no_data_remaining: %s", not data_ready and no_data_remaining)
                 break
 
             self.sock.settimeout(0.1)
 
             if len(tmp) == 0:
                 data = self.sock.recv(2)
+                logging.debug('read %s bytes', len(data))
                 tmp += data
                 continue
 
             exp_len = int.from_bytes(tmp[0:2], 'little') - len(tmp) + 18
             data = self.sock.recv(exp_len)
+            logging.debug('read %s bytes vs %s bytes', len(data), exp_len)
 
             # ready but no data => continue
             if not data and no_data_remaining:

@@ -523,6 +523,114 @@ python3 -m homekit.put_characteristic -f koogeek.json -a koogeek -c 1.8 false
 
 No output is given on successful operation or a error message is displayed.
 
+## `get_camera_options`
+This tool is used to retrieve information about the capabilities of the camera.
+
+Usage:
+```bash
+python3 -m homekit.get_camera_options -f ${PAIRINGDATAFILE} -a ${ALIAS} \
+                                      [-A ${ACCESSORY_ID}] [--log ${LOGLEVEL}]
+```
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device.
+
+The option `-A` specifies the accessory id for the camera.
+
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
+
+For example, this command returns the options for a Logitech Circle 2:
+```
+python3 -m homekit.get_camera_options -f logitech.json -a circle2
+```
+
+This results in :
+```text
+Management Interface #1:
+        Streaming Status:
+                STATUS: UNAVAILABLE
+        Supported Video Stream Configuration:
+                VIDEO_CODEC_CONFIGURATION:
+                        VIDEO_CODEC_TYPE: H264
+                        VIDEO_CODEC_PARAMETERS:
+                                PROFILE_ID: MAIN_PROFILE
+                                LEVEL: L_4
+                                PACKETIZATION_MODE: NON_INTERLEAVED
+                                CVO_ENABLED: NON_INTERLEAVED
+        Supported Audio Stream Configuration:
+                AUDIO_CODEC_CONFIGURATION:
+                        CODEC_TYPE: OPUS
+                        AUDIO_CODEC_PARAMETERS:
+                                AUDIO_CHANNELS: 1
+                                BIT_RATE: VARIABLE
+                                SAMPLE_RATE: KHZ_16
+                COMFORT_NOISE_SUPPORT: 0
+        Supported RTP configuration:
+                SRTP_CRYPTO_SUITE: AES_CM_128_HMAC_SHA1_80
+Management Interface #2:
+        Streaming Status:
+                STATUS: AVAILABLE
+        Supported Video Stream Configuration:
+                VIDEO_CODEC_CONFIGURATION:
+                        VIDEO_CODEC_TYPE: H264
+                        VIDEO_CODEC_PARAMETERS:
+                                PROFILE_ID: MAIN_PROFILE
+                                LEVEL: L_4
+                                PACKETIZATION_MODE: NON_INTERLEAVED
+                                CVO_ENABLED: NON_INTERLEAVED
+                        VIDEO_ATTRIBUTES:
+                                IMAGE_WIDTH: 1280
+                                IMAGE_HEIGHT: 720
+                                FRAME_RATE: 30
+                        VIDEO_ATTRIBUTES:
+                                IMAGE_WIDTH: 640
+                                IMAGE_HEIGHT: 360
+                                FRAME_RATE: 30
+                        VIDEO_ATTRIBUTES:
+                                IMAGE_WIDTH: 1024
+                                IMAGE_HEIGHT: 768
+                                FRAME_RATE: 30
+                        VIDEO_ATTRIBUTES:
+                                IMAGE_WIDTH: 640
+                                IMAGE_HEIGHT: 480
+                                FRAME_RATE: 30
+                        VIDEO_ATTRIBUTES:
+                                IMAGE_WIDTH: 320
+                                IMAGE_HEIGHT: 240
+                                FRAME_RATE: 30
+        Supported Audio Stream Configuration:
+                AUDIO_CODEC_CONFIGURATION:
+                        CODEC_TYPE: OPUS
+                        AUDIO_CODEC_PARAMETERS:
+                                AUDIO_CHANNELS: 1
+                                BIT_RATE: VARIABLE
+                                SAMPLE_RATE: KHZ_16
+                COMFORT_NOISE_SUPPORT: 0
+        Supported RTP configuration:
+                SRTP_CRYPTO_SUITE: AES_CM_128_HMAC_SHA1_80
+```
+
+## `get_image_snapshot`
+This tool is used to retrieve information about the capabilities of the camera.
+
+Usage:
+```bash
+python3 -m homekit.get_image_snapshot -f ${PAIRINGDATAFILE} -a ${ALIAS} -o ${OUTPUT_FILE} -W ${WIDTH} -H ${HEIGHT} \
+                                      [-A ${ACCESSORY_ID}] [--log ${LOGLEVEL}]
+```
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device.
+
+The options `-W` and `-H` specify the dimension for the picture (see `get_image_snapshot` for `VIDEO_ATTRIBUTES`).
+
+The option `-A` specifies the accessory id for the camera.
+
+The option `--log` specifies the log level for the command. This is optional. Use `DEBUG` to get more output.
+
+For example, this command extracts a still image from a Logitech Circle 2:
+`python3 -m homekit.get_image_snapshot -f cameraclient.json -a circle2 -o output.png  -W 640 -H 360`
+
 ## `get_events`
 
 **!!Not yet implemented for Bluetooth LE Accessories!!**

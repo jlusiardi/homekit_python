@@ -30,7 +30,7 @@ class SecureHttp:
     the HAP specification.
     """
 
-    def __init__(self, session, timeout=1):
+    def __init__(self, session, timeout=10):
         """
         Initializes the secure HTTP class. The required keys can be obtained with get_session_keys
 

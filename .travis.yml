@@ -2,7 +2,7 @@ language: python
 matrix:
     include:
         - os: linux
-          dist: xenial
+          dist: bionic
           python: 3.5
           env:
             FLAKE8=flake8

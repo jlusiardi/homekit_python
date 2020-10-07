@@ -9,14 +9,14 @@ matrix:
             COVERAGE=coverage
             COVERALLS=coveralls
         - os: linux
-          dist: xenial
+          dist: bionic
           python: 3.6
           env:
             FLAKE8=flake8
             COVERAGE=coverage
             COVERALLS=coveralls
         - os: linux
-          dist: xenial
+          dist: bionic
           python: 3.7
           env:
             FLAKE8=flake8

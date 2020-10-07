@@ -82,15 +82,15 @@ Now let's spawn a simple light bulb accessory as demonstration:
 
 import os.path
 
-from homekit import HomeKitServer
+from homekit import AccessoryServer
 from homekit.model import Accessory, LightBulbService
 
 
 if __name__ == '__main__':
     try:
-        httpd = HomeKitServer(os.path.expanduser('~/.homekit/demoserver.json'))
+        httpd = AccessoryServer(os.path.expanduser('~/.homekit/demoserver.json'))
 
-        accessory = Accessory('Licht')
+        accessory = Accessory('test_light', 'homekit_python', 'Demoserver', '0001', '0.1')
         lightService = LightBulbService()
         accessory.services.append(lightService)
         httpd.accessories.add_accessory(accessory)

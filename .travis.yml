@@ -33,9 +33,9 @@ matrix:
           language: sh
           env:
             PY=py
-            FLAKE8=/c/Python38/Scripts/flake8.exe
-            COVERAGE=/c/Python38/Scripts/coverage.exe
-            COVERALLS=/c/Python38/Scripts/coveralls.exe
+            FLAKE8=/c/Python39/Scripts/flake8.exe
+            COVERAGE=/c/Python39/Scripts/coverage.exe
+            COVERALLS=/c/Python39/Scripts/coveralls.exe
 
 before_install:
     - ./.travis/install.sh

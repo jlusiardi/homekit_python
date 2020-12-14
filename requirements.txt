@@ -1,4 +1,4 @@
-zeroconf<=0.28.6
+zeroconf
 hkdf
 ed25519
 dbus-python

@@ -43,7 +43,7 @@ setuptools.setup(
         'tlv8>=0.9.0',
     ],
     extras_require={
-        'IP': ['zeroconf<=0.28.6'],
+        'IP': ['zeroconf'],
         'BLE': ['dbus-python', 'gatt', 'pygobject']
     },
     license='Apache License 2.0',

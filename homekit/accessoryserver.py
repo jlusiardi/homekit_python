@@ -27,7 +27,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
 import hkdf
-from zeroconf import Zeroconf, ServiceInfo
+from zeroconf import Zeroconf, ServiceInfo, NonUniqueNameException
 import socket
 import sys
 import logging
@@ -1343,7 +1343,10 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
 
         self.zeroconf_info = ServiceInfo(self.mdns_type, self.mdns_name, addresses=[socket.inet_aton(self.data.ip)],
                                          port=self.data.port, properties=desc)
-        self.zeroconf.unregister_service(self.zeroconf_info)
+        try:
+            self.zeroconf.check_service(self.zeroconf_info, allow_name_change=False)
+        except NonUniqueNameException:
+            self.zeroconf.unregister_service(self.zeroconf_info)
         self.zeroconf.register_service(self.zeroconf_info, allow_name_change=True)
 
     def unpublish_device(self):

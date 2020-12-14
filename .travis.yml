@@ -23,9 +23,10 @@ matrix:
             COVERAGE=coverage
             COVERALLS=coveralls
         - os: osx
+          os_image: xcode12.2
           language: generic
           env:
-            PYTHON=3.5.6
+            PYTHON=3.7.1
             FLAKE8=flake8
             COVERAGE=coverage
             COVERALLS=coveralls

@@ -22,6 +22,13 @@ matrix:
             FLAKE8=flake8
             COVERAGE=coverage
             COVERALLS=coveralls
+        - os: linux
+          dist: bionic
+          python: 3.8
+          env:
+            FLAKE8=flake8
+            COVERAGE=coverage
+            COVERALLS=coveralls
         - os: osx
           os_image: xcode12.2
           language: generic

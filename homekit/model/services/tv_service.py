@@ -16,8 +16,10 @@
 #
 
 from homekit.model import get_id
-from homekit.model.characteristics import ManufacturerCharacteristic, NameCharacteristic, ModelCharacteristic, SerialNumberCharacteristic, FirmwareRevisionCharacteristic, ActiveCharacteristic, ActiveIdentifierCharacteristic
-from homekit.model.services import ServicesTypes, AbstractService
+from homekit.model.characteristics import ManufacturerCharacteristic, NameCharacteristic, \
+    ModelCharacteristic, SerialNumberCharacteristic, FirmwareRevisionCharacteristic,\
+    ActiveCharacteristic, ActiveIdentifierCharacteristic
+from homekit.model.services import AbstractService
 
 
 class TVService(AbstractService):
@@ -36,4 +38,3 @@ class TVService(AbstractService):
             if isinstance(characteristic, NameCharacteristic):
                 return characteristic.value
         return None
-

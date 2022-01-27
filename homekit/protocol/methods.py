@@ -16,8 +16,9 @@ from enum import IntEnum
 
 
 class Methods(IntEnum):
-    # Methods (see table 4-4 page 60)
-    PairSetup = 1
+    # Methods (see open source HomeKit ADK, HAPPairingMethod (HAPPairing.h:56)
+    PairSetup = 0
+    PairSetupWithAuth = 1
     PairVerify = 2
     AddPairing = 3
     RemovePairing = 4

@@ -25,7 +25,8 @@ import tlv8
 from enum import IntEnum
 
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
-    AuthenticationError, ConfigSavingError, AlreadyPairedError, TransportNotSupportedError, MalformedPinError
+    AuthenticationError, ConfigSavingError, AlreadyPairedError, TransportNotSupportedError, \
+    MalformedPinError, PairingMethodError
 from homekit.protocol import States, Methods, Errors, TlvTypes
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.protocol.statuscodes import HapStatusCodes
@@ -466,26 +467,12 @@ class Controller(object):
             try:
                 finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter, with_hw_auth)
                 return finish_pairing(pin)
-            except AccessoryNotFoundError:
-                raise
-            except AlreadyPairedError:
-                raise
-            except UnavailableError:
-                raise
-            except MaxTriesError:
-                raise
-            except BusyError:
-                raise
-            except MaxPeersError:
-                raise
-            except UnavailableError:
-                raise
-            except:
-                if with_hw_auth and (Controller.PairingStrategy.Auto == strategy):
-                    with_hw_auth = False
-                    continue
-
-                raise
+            except PairingMethodError:
+                if Controller.PairingStrategy.Auto == strategy:
+                    if with_hw_auth:
+                        with_hw_auth = False
+                        continue
+                raise AuthenticationError('Pairing failed')
 
 
     def start_pairing_ble(self, alias, accessory_mac, adapter='hci0', with_hw_auth=True):
@@ -550,6 +537,10 @@ class Controller(object):
                 except StopIteration as result:
                     pairing = result.value
                     break
+                except:
+                    if tlv8.EntryList(request).first_by_id(TlvTypes.State).data == States.M3:
+                        raise PairingMethodError('state: M3 failed')
+                    raise
 
             pairing['AccessoryMAC'] = accessory_mac
             pairing['Connection'] = 'BLE'

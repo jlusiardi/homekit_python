@@ -15,6 +15,9 @@
 #
 
 
+from typing import Protocol
+
+
 class HomeKitException(Exception):
     """Generic HomeKit exception.
     Attributes:
@@ -62,6 +65,13 @@ class AuthenticationError(ProtocolError):
      * during add pair (M2 / page 52): if the controller is not admin
      * during remove pairing (M2 / page 54): if the controller is not admin
      * during list pairing (M2 / page 56): if the controller is not admin
+    """
+    pass
+
+class PairingMethodError(ProtocolError):
+    """
+    Raised in on pairing if the current pairing method is not supported.
+    TODO: Current implementation centers around an error in M3, but it would be better to have FF or checks at the verification
     """
     pass
 
@@ -132,7 +142,6 @@ class IncorrectPairingIdError(ProtocolError):
     Raised in Pair Verify Step 3.5 (Page 49) if the accessory responds with an unexpected pairing id.
     """
     pass
-
 
 class InvalidSignatureError(ProtocolError):
     """

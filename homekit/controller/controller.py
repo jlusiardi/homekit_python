@@ -69,7 +69,7 @@ class Controller(object):
         Auto: try pairing with hardware authentication , fall back to software authentication if necessary
         HwAuth: only try hardware authentication
         SwAuth: only try software authentication'''
-        Auto = 0
+        # Auto = 0
         HwAuth = 1
         SwAuth = 2
 
@@ -337,7 +337,7 @@ class Controller(object):
         if not re.match(r'^\d\d\d-\d\d-\d\d\d$', pin):
             raise MalformedPinError('The pin must be of the following XXX-XX-XXX where X is a digit between 0 and 9.')
 
-    def perform_pairing(self, alias, accessory_id, pin,strategy=PairingStrategy.Auto):
+    def perform_pairing(self, alias, accessory_id, pin,strategy=PairingStrategy.HwAuth):
         """
         This performs a pairing attempt with the IP accessory identified by its id.
 
@@ -368,16 +368,11 @@ class Controller(object):
         if Controller.PairingStrategy.SwAuth == strategy:
             with_hw_auth = False
 
-        while True:
-            try:
-                finish_pairing = self.start_pairing(alias, accessory_id, with_hw_auth)
-                return finish_pairing(pin)
-            except PairingMethodError:
-                if Controller.PairingStrategy.Auto == strategy:
-                    if with_hw_auth:
-                        with_hw_auth = False
-                        continue
-                raise AuthenticationError('Pairing failed')
+        try:
+            finish_pairing = self.start_pairing(alias, accessory_id, with_hw_auth)
+            return finish_pairing(pin)
+        except PairingMethodError:
+            raise AuthenticationError('Pairing failed')
 
 
     def start_pairing(self, alias, accessory_id, with_hw_auth=True):
@@ -463,7 +458,7 @@ class Controller(object):
 
         return finish_pairing
 
-    def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0', strategy=PairingStrategy.Auto):
+    def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0', strategy=PairingStrategy.HwAuth):
         """
         This performs a pairing attempt with the Bluetooth LE accessory identified by its mac address.
 
@@ -489,16 +484,11 @@ class Controller(object):
         if Controller.PairingStrategy.SwAuth == strategy:
             with_hw_auth = False
 
-        while True:
-            try:
-                finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter, with_hw_auth)
-                return finish_pairing(pin)
-            except PairingMethodError:
-                if Controller.PairingStrategy.Auto == strategy:
-                    if with_hw_auth:
-                        with_hw_auth = False
-                        continue
-                raise AuthenticationError('Pairing failed')
+        try:
+            finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter, with_hw_auth)
+            return finish_pairing(pin)
+        except PairingMethodError:
+            raise AuthenticationError('Pairing failed')
 
 
     def start_pairing_ble(self, alias, accessory_mac, adapter='hci0', with_hw_auth=True):

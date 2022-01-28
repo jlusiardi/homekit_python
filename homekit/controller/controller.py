@@ -22,6 +22,8 @@ import uuid
 import re
 import tlv8
 
+from enum import IntEnum
+
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError, TransportNotSupportedError, MalformedPinError
 from homekit.protocol import States, Methods, Errors, TlvTypes
@@ -59,6 +61,16 @@ class Controller(object):
         self.pairings = {}
         self.ble_adapter = ble_adapter
         self.logger = logging.getLogger('homekit.controller.Controller')
+
+
+    class PairingStrategy(IntEnum):
+        '''Types of pairing strategies
+        Auto: try pairing with hardware authentication , fall back to software authentication if necessary
+        HwAuth: only try hardware authentication
+        SwAuth: only try software authentication'''
+        Auto = 0
+        HwAuth = 1
+        SwAuth = 2
 
     @staticmethod
     def discover(max_seconds=10):
@@ -426,7 +438,7 @@ class Controller(object):
 
         return finish_pairing
 
-    def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0'):
+    def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0', strategy=PairingStrategy.Auto):
         """
         This performs a pairing attempt with the Bluetooth LE accessory identified by its mac address.
 
@@ -442,14 +454,27 @@ class Controller(object):
         :param accessory_mac: the accessory's mac address
         :param pin: function to return the accessory's pin
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
+        :param strategy: defines the used pairing strategy. Raises exceptions if the strategy is not working.
         :raises MalformedPinError: if the pin is malformed
         # TODO add raised exceptions
         """
-        Controller.check_pin_format(pin)
-        finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter)
-        return finish_pairing(pin)
+        with_hw_auth = True
+        if Controller.PairingStrategy.SwAuth == strategy:
+            with_hw_auth = False
 
-    def start_pairing_ble(self, alias, accessory_mac, adapter='hci0'):
+        while True:
+            try:
+                finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter, with_hw_auth)
+                return finish_pairing(pin)
+            except:
+                if with_hw_auth and (Controller.PairingStrategy.Auto == strategy):
+                    with_hw_auth = False
+                    continue
+
+                raise
+
+
+    def start_pairing_ble(self, alias, accessory_mac, adapter='hci0', with_hw_auth=True):
         """
         This starts a pairing attempt with the Bluetooth LE accessory identified by its mac address.
         It returns a callable (finish_pairing) which you must call with the pairing pin.
@@ -464,6 +489,7 @@ class Controller(object):
         :param alias: the alias for the accessory in the controllers data
         :param accessory_mac: the accessory's mac address
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
+        :param with_hw_auth: accessory supports Apple hardware authentication coprocessor
         # TODO add raised exceptions
         """
         if not BLE_TRANSPORT_SUPPORTED:
@@ -485,7 +511,10 @@ class Controller(object):
 
         write_fun = create_ble_pair_setup_write(pair_setup_char, pair_setup_char_id)
 
-        state_machine = perform_pair_setup_part1()
+        pair_method = Methods.PairSetupWithAuth if with_hw_auth else Methods.PairSetup
+        logging.debug('try pairing with method %s', pair_method)
+
+        state_machine = perform_pair_setup_part1(pair_method)
         request, expected = state_machine.send(None)
         while True:
             try:

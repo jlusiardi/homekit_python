@@ -337,7 +337,7 @@ class Controller(object):
         if not re.match(r'^\d\d\d-\d\d-\d\d\d$', pin):
             raise MalformedPinError('The pin must be of the following XXX-XX-XXX where X is a digit between 0 and 9.')
 
-    def perform_pairing(self, alias, accessory_id, pin):
+    def perform_pairing(self, alias, accessory_id, pin,strategy=PairingStrategy.Auto):
         """
         This performs a pairing attempt with the IP accessory identified by its id.
 
@@ -351,6 +351,7 @@ class Controller(object):
         :param alias: the alias for the accessory in the controllers data
         :param accessory_id: the accessory's id
         :param pin: function to return the accessory's pin
+        :param strategy: defines the used pairing strategy. Raises exceptions if the strategy is not working.
         :raises AccessoryNotFoundError: if no accessory with the given id can be found
         :raises AlreadyPairedError: if the alias was already used
         :raises UnavailableError: if the device is already paired
@@ -362,10 +363,24 @@ class Controller(object):
         :raises MalformedPinError: if the pin is malformed
         """
         Controller.check_pin_format(pin)
-        finish_pairing = self.start_pairing(alias, accessory_id)
-        return finish_pairing(pin)
 
-    def start_pairing(self, alias, accessory_id):
+        with_hw_auth = True
+        if Controller.PairingStrategy.SwAuth == strategy:
+            with_hw_auth = False
+
+        while True:
+            try:
+                finish_pairing = self.start_pairing(alias, accessory_id, with_hw_auth)
+                return finish_pairing(pin)
+            except PairingMethodError:
+                if Controller.PairingStrategy.Auto == strategy:
+                    if with_hw_auth:
+                        with_hw_auth = False
+                        continue
+                raise AuthenticationError('Pairing failed')
+
+
+    def start_pairing(self, alias, accessory_id, with_hw_auth=True):
         """
         This starts a pairing attempt with the IP accessory identified by its id.
         It returns a callable (finish_pairing) which you must call with the pairing pin.
@@ -381,6 +396,7 @@ class Controller(object):
         :param alias: the alias for the accessory in the controllers data
         :param accessory_id: the accessory's id
         :param pin: function to return the accessory's pin
+        :param with_hw_auth: accessory supports Apple hardware authentication coprocessor
         :raises AccessoryNotFoundError: if no accessory with the given id can be found
         :raises AlreadyPairedError: if the alias was already used
         :raises UnavailableError: if the device is already paired
@@ -389,6 +405,7 @@ class Controller(object):
         :raises AuthenticationError: if the verification of the device's SRP proof fails
         :raises MaxPeersError: if the device cannot accept an additional pairing
         :raises UnavailableError: on wrong pin
+        :raises PairingMethodError: raised on error while in M3
         """
         if not IP_TRANSPORT_SUPPORTED:
             raise TransportNotSupportedError('IP')
@@ -403,7 +420,10 @@ class Controller(object):
         try:
             write_fun = create_ip_pair_setup_write(conn)
 
-            state_machine = perform_pair_setup_part1()
+            pair_method = Methods.PairSetupWithAuth if with_hw_auth else Methods.PairSetup
+            logging.debug('try pairing with method %s', pair_method)
+
+            state_machine = perform_pair_setup_part1(pair_method)
             request, expected = state_machine.send(None)
             while True:
                 try:
@@ -412,6 +432,10 @@ class Controller(object):
                 except StopIteration as result:
                     salt, pub_key = result.value
                     break
+                except:
+                    if tlv8.EntryList(request).first_by_id(TlvTypes.State).data == States.M3:
+                        raise PairingMethodError('state: M3 failed')
+                    raise
 
         except Exception:
             conn.close()
@@ -459,6 +483,8 @@ class Controller(object):
         :raises MalformedPinError: if the pin is malformed
         # TODO add raised exceptions
         """
+        Controller.check_pin_format(pin)
+
         with_hw_auth = True
         if Controller.PairingStrategy.SwAuth == strategy:
             with_hw_auth = False

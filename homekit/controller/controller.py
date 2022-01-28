@@ -466,6 +466,20 @@ class Controller(object):
             try:
                 finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter, with_hw_auth)
                 return finish_pairing(pin)
+            except AccessoryNotFoundError:
+                raise
+            except AlreadyPairedError:
+                raise
+            except UnavailableError:
+                raise
+            except MaxTriesError:
+                raise
+            except BusyError:
+                raise
+            except MaxPeersError:
+                raise
+            except UnavailableError:
+                raise
             except:
                 if with_hw_auth and (Controller.PairingStrategy.Auto == strategy):
                     with_hw_auth = False

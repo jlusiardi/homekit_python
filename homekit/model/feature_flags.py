@@ -22,8 +22,9 @@ class _FeatureFlags(object):
 
     def __init__(self):
         self._data = {
-            0: 'No support for HAP Pairing',
-            1: 'Supports HAP Pairing'
+            0x00: 'No support for HAP Pairing',
+            0x01: 'Supports HAP Pairing with Apple authentication coprocessor',
+            0x02: 'Supports HAP Pairing with Software authentication',
         }
 
     def __getitem__(self, item):

@@ -32,6 +32,11 @@ def setup_args_parser():
     parser.add_argument('-p', action='store', required=False, dest='pin', help='HomeKit configuration code')
     parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
+    parser.add_argument('-s', action='store', required=False, dest='auth_method', choices=['auto', 'hw','sw'], default='auto',
+                                                                            help='''authentication method:
+                                                                                    auto - determine authentication method automatically (default)
+                                                                                    sw - software authentication
+                                                                                    hw - hardware authentication (requires Apple co-processor on accessory)''')
     parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
                         help='the bluetooth adapter to be used (defaults to hci0)')
     add_log_arguments(parser)
@@ -64,7 +69,7 @@ if __name__ == '__main__':
 
     try:
         logging.debug('start pairing')
-        finish_pairing = controller.start_pairing_ble(args.alias, args.mac, args.adapter)
+        finish_pairing = controller.start_pairing_ble(args.alias, args.mac, args.adapter, args.auth_method)
         finish_pairing(pin_function())
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()

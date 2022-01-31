@@ -64,8 +64,8 @@ class Controller(object):
         self.logger = logging.getLogger('homekit.controller.Controller')
 
 
-    class PairingStrategy(IntEnum):
-        '''Types of pairing strategies
+    class PairingAuth(IntEnum):
+        '''Types of pairing authentication strategies
         Auto: try pairing with hardware authentication , fall back to software authentication if necessary
         HwAuth: only try hardware authentication
         SwAuth: only try software authentication'''
@@ -337,7 +337,7 @@ class Controller(object):
         if not re.match(r'^\d\d\d-\d\d-\d\d\d$', pin):
             raise MalformedPinError('The pin must be of the following XXX-XX-XXX where X is a digit between 0 and 9.')
 
-    def perform_pairing(self, alias, accessory_id, pin,strategy=PairingStrategy.HwAuth):
+    def perform_pairing(self, alias, accessory_id, pin,auth_method=PairingAuth.HwAuth):
         """
         This performs a pairing attempt with the IP accessory identified by its id.
 
@@ -351,7 +351,7 @@ class Controller(object):
         :param alias: the alias for the accessory in the controllers data
         :param accessory_id: the accessory's id
         :param pin: function to return the accessory's pin
-        :param strategy: defines the used pairing strategy. Raises exceptions if the strategy is not working.
+        :param auth_method: defines the used pairing auth_method. Raises exceptions if the auth_method is not working.
         :raises AccessoryNotFoundError: if no accessory with the given id can be found
         :raises AlreadyPairedError: if the alias was already used
         :raises UnavailableError: if the device is already paired
@@ -365,7 +365,7 @@ class Controller(object):
         Controller.check_pin_format(pin)
 
         with_hw_auth = True
-        if Controller.PairingStrategy.SwAuth == strategy:
+        if Controller.PairingAuth.SwAuth == auth_method:
             with_hw_auth = False
 
         try:
@@ -458,7 +458,7 @@ class Controller(object):
 
         return finish_pairing
 
-    def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0', strategy=PairingStrategy.HwAuth):
+    def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0', auth_method=PairingAuth.HwAuth):
         """
         This performs a pairing attempt with the Bluetooth LE accessory identified by its mac address.
 
@@ -474,14 +474,14 @@ class Controller(object):
         :param accessory_mac: the accessory's mac address
         :param pin: function to return the accessory's pin
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
-        :param strategy: defines the used pairing strategy. Raises exceptions if the strategy is not working.
+        :param auth_method: defines the used pairing auth_method. Raises exceptions if the auth_method is not working.
         :raises MalformedPinError: if the pin is malformed
         # TODO add raised exceptions
         """
         Controller.check_pin_format(pin)
 
         with_hw_auth = True
-        if Controller.PairingStrategy.SwAuth == strategy:
+        if Controller.PairingAuth.SwAuth == auth_method:
             with_hw_auth = False
 
         try:

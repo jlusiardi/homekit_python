@@ -68,7 +68,7 @@ class AuthenticationError(ProtocolError):
     """
     pass
 
-class PairingMethodError(ProtocolError):
+class PairingAuthError(ProtocolError):
     """
     Raised in on pairing if the current pairing method is not supported.
     TODO: Current implementation centers around an error in M3, but it would be better to have FF or checks at the verification

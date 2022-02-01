@@ -18,7 +18,7 @@ __all__ = [
     'Controller', 'BluetoothAdapterError', 'AccessoryDisconnectedError', 'AccessoryNotFoundError',
     'AlreadyPairedError', 'AuthenticationError', 'BackoffError', 'BusyError', 'CharacteristicPermissionError',
     'ConfigLoadingError', 'ConfigSavingError', 'ConfigurationError', 'FormatError', 'HomeKitException',
-    'HttpException', 'IncorrectPairingIdError', 'PairingMethodError', 'InvalidAuthTagError', 'InvalidError', 'InvalidSignatureError',
+    'HttpException', 'IncorrectPairingIdError', 'PairingAuthError', 'InvalidAuthTagError', 'InvalidError', 'InvalidSignatureError',
     'MaxPeersError', 'MaxTriesError', 'ProtocolError', 'RequestRejected', 'UnavailableError', 'UnknownError',
     'UnpairedError'
 ]
@@ -27,7 +27,7 @@ from homekit.controller import Controller
 from homekit.exceptions import BluetoothAdapterError, AccessoryDisconnectedError, AccessoryNotFoundError, \
     AlreadyPairedError, AuthenticationError, BackoffError, BusyError, CharacteristicPermissionError, \
     ConfigLoadingError, ConfigSavingError, ConfigurationError, FormatError, HomeKitException, HttpException, \
-    IncorrectPairingIdError, PairingMethodError, InvalidAuthTagError, InvalidError, InvalidSignatureError, MaxPeersError, MaxTriesError, \
+    IncorrectPairingIdError, PairingAuthError, InvalidAuthTagError, InvalidError, InvalidSignatureError, MaxPeersError, MaxTriesError, \
     ProtocolError, RequestRejected, UnavailableError, UnknownError, UnpairedError
 
 from homekit.tools import IP_TRANSPORT_SUPPORTED

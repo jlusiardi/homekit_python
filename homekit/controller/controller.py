@@ -26,8 +26,8 @@ from enum import IntEnum
 
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError, TransportNotSupportedError, \
-    MalformedPinError, PairingMethodError
-from homekit.protocol import States, Methods, Errors, TlvTypes
+    MalformedPinError, PairingAuthError
+from homekit.protocol import States, Methods, Errors, TlvTypes, FeatureFlags
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.protocol import perform_pair_setup_part1, perform_pair_setup_part2, create_ip_pair_setup_write
@@ -69,7 +69,7 @@ class Controller(object):
         Auto: try pairing with hardware authentication , fall back to software authentication if necessary
         HwAuth: only try hardware authentication
         SwAuth: only try software authentication'''
-        # Auto = 0
+        Auto = 0
         HwAuth = 1
         SwAuth = 2
 
@@ -337,6 +337,33 @@ class Controller(object):
         if not re.match(r'^\d\d\d-\d\d-\d\d\d$', pin):
             raise MalformedPinError('The pin must be of the following XXX-XX-XXX where X is a digit between 0 and 9.')
 
+    def _get_pair_method(self, auth_method: PairingAuth, feature_flags: int):
+        """
+        Returns the used pairing method based on the supported features
+
+        A feature flag of 0 will be treated as pairing with software authentication support, to allow uncertified
+        accessories which are not MFi certified.
+
+        :param auth_method:   user specified authentication method
+        :param feature_flags: represents the supported features. 0 is treated as "software authentication allowed".
+        :returns:
+        :raises PairingAuthError: if pairing authentication method is not supported
+        """
+        pair_method   = Methods.PairSetup
+
+        if auth_method == Controller.PairingAuth.Auto:
+            if feature_flags & FeatureFlags.AppleMFiCoprocessor:
+                pair_method = Methods.PairSetupWithAuth
+        elif auth_method == Controller.PairingAuth.HwAuth:
+            pair_method = Methods.PairSetupWithAuth
+        elif auth_method == Controller.PairingAuth.SwAuth:
+            pass
+        else:
+            raise PairingAuthError(f'auth_method: invalid value "{str(auth_method)}"')
+
+        logging.debug('using pairing method %s', pair_method)
+        return pair_method
+
     def perform_pairing(self, alias, accessory_id, pin,auth_method=PairingAuth.HwAuth):
         """
         This performs a pairing attempt with the IP accessory identified by its id.
@@ -351,7 +378,7 @@ class Controller(object):
         :param alias: the alias for the accessory in the controllers data
         :param accessory_id: the accessory's id
         :param pin: function to return the accessory's pin
-        :param auth_method: defines the used pairing auth_method. Raises exceptions if the auth_method is not working.
+        :param auth_method: defines the used pairing auth_method
         :raises AccessoryNotFoundError: if no accessory with the given id can be found
         :raises AlreadyPairedError: if the alias was already used
         :raises UnavailableError: if the device is already paired
@@ -361,6 +388,7 @@ class Controller(object):
         :raises MaxPeersError: if the device cannot accept an additional pairing
         :raises UnavailableError: on wrong pin
         :raises MalformedPinError: if the pin is malformed
+        :raises PairingAuthError: if pairing authentication method is not supported
         """
         Controller.check_pin_format(pin)
 
@@ -458,7 +486,53 @@ class Controller(object):
 
         return finish_pairing
 
-    def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0', auth_method=PairingAuth.HwAuth):
+
+    def _read_feature_flags_ble(self, device) -> int:
+        """helper function to read out the feature flags of the accessory
+        :param device: device connected to the accessory used for the request. Should be connected.
+        :return: 1 byte integer representing the feature flags
+        """
+        pair_features_char, pair_features_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
+                                                                                        CharacteristicsTypes.PAIRING_FEATURES)
+        logging.debug('setup char: %s %s', str(pair_features_char.uuid), pair_features_char.service.device)
+
+        assert pair_features_char and pair_features_char_id, 'pairing feature characteristic not defined'
+
+        # prepare request
+        transaction_id = random.randrange(0, 255)
+        wdata           = bytearray([0x00, HapBleOpCodes.CHAR_READ, transaction_id])
+        wdata.extend(pair_features_char_id.to_bytes(length=2, byteorder='little'))
+        logging.debug('sent %s', bytes(wdata).hex())
+
+        logging.debug('reading pairing features')
+
+        pair_features_char.write_value(value=wdata)
+        rdata = []
+        import time
+        while len(rdata) == 0:
+            time.sleep(1)
+            rdata = pair_features_char.read_value()
+
+        resp_data       = [b for b in rdata]
+        expected_length = int.from_bytes(bytes(resp_data[3:5]), byteorder='little')
+
+        logging.debug(
+            'control field: {c:x}, tid: {t:x}, status: {s:x}, length: {length}'.format(c=resp_data[0], t=resp_data[1],
+                                                                                       s=resp_data[2],
+                                                                                       length=expected_length))
+        # 3 for uint8 TLV
+        assert expected_length == 3, 'invalid return length, expecting uint8'
+        assert transaction_id == resp_data[1], 'transaction id mismatch'
+        assert HapStatusCodes.SUCCESS == resp_data[2], f'hap status code: {HapStatusCodes[resp_data[2]]}'
+
+        resp_data = tlv8.decode(bytes([int(a) for a in resp_data[5:]]),
+                                expected={AdditionalParameterTypes.Value: tlv8.DataType.INTEGER})
+        assert 0 < len(resp_data), 'received data is not an integer'
+
+        return resp_data.first_by_id(AdditionalParameterTypes.Value).data
+
+
+    def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0', auth_method=PairingAuth.Auto):
         """
         This performs a pairing attempt with the Bluetooth LE accessory identified by its mac address.
 
@@ -474,24 +548,18 @@ class Controller(object):
         :param accessory_mac: the accessory's mac address
         :param pin: function to return the accessory's pin
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
-        :param auth_method: defines the used pairing auth_method. Raises exceptions if the auth_method is not working.
+        :param auth_method: defines the used pairing auth_method
         :raises MalformedPinError: if the pin is malformed
+        :raises PairingAuthError: if pairing authentication method is not supported
         # TODO add raised exceptions
         """
         Controller.check_pin_format(pin)
 
-        with_hw_auth = True
-        if Controller.PairingAuth.SwAuth == auth_method:
-            with_hw_auth = False
-
-        try:
-            finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter, with_hw_auth)
-            return finish_pairing(pin)
-        except PairingMethodError:
-            raise AuthenticationError('Pairing failed')
+        finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter, auth_method)
+        return finish_pairing(pin)
 
 
-    def start_pairing_ble(self, alias, accessory_mac, adapter='hci0', with_hw_auth=True):
+    def start_pairing_ble(self, alias, accessory_mac, adapter='hci0', auth_method=PairingAuth.Auto):
         """
         This starts a pairing attempt with the Bluetooth LE accessory identified by its mac address.
         It returns a callable (finish_pairing) which you must call with the pairing pin.
@@ -506,7 +574,8 @@ class Controller(object):
         :param alias: the alias for the accessory in the controllers data
         :param accessory_mac: the accessory's mac address
         :param adapter: the bluetooth adapter to be used (defaults to hci0)
-        :param with_hw_auth: accessory supports Apple hardware authentication coprocessor
+        :param auth_method: defines the used pairing auth_method
+        :raises PairingAuthError: if pairing authentication method is not supported
         # TODO add raised exceptions
         """
         if not BLE_TRANSPORT_SUPPORTED:
@@ -522,14 +591,16 @@ class Controller(object):
         device.connect()
         logging.debug('connected to device')
 
+        # --- read pairing features to determine if the authentication method is actually supported
+        feature_flags = self._read_feature_flags_ble(device)
+        pair_method   = self._get_pair_method(auth_method,feature_flags)
+
+        # --- perform pairing
         pair_setup_char, pair_setup_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
                                                                           CharacteristicsTypes.PAIR_SETUP)
-        logging.debug('setup char: %s %s', pair_setup_char, pair_setup_char.service.device)
+        logging.debug('setup char: %s %s', str(pair_setup_char.uuid), pair_setup_char.service.device)
 
         write_fun = create_ble_pair_setup_write(pair_setup_char, pair_setup_char_id)
-
-        pair_method = Methods.PairSetupWithAuth if with_hw_auth else Methods.PairSetup
-        logging.debug('try pairing with method %s', pair_method)
 
         state_machine = perform_pair_setup_part1(pair_method)
         request, expected = state_machine.send(None)
@@ -553,10 +624,6 @@ class Controller(object):
                 except StopIteration as result:
                     pairing = result.value
                     break
-                except:
-                    if tlv8.EntryList(request).first_by_id(TlvTypes.State).data == States.M3:
-                        raise PairingMethodError('state: M3 failed')
-                    raise
 
             pairing['AccessoryMAC'] = accessory_mac
             pairing['Connection'] = 'BLE'

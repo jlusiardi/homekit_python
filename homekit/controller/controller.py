@@ -44,7 +44,7 @@ if BLE_TRANSPORT_SUPPORTED:
     from .ble_impl.discovery import DiscoveryDeviceManager
 
 if IP_TRANSPORT_SUPPORTED:
-    from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
+    from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_port_props
     from homekit.controller.ip_implementation import IpPairing, IpSession
 
 
@@ -165,7 +165,7 @@ class Controller(object):
         """
         if not IP_TRANSPORT_SUPPORTED:
             raise TransportNotSupportedError('IP')
-        connection_data = find_device_ip_and_port(accessory_id)
+        connection_data = find_device_ip_port_props(accessory_id)
         if connection_data is None:
             raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
 
@@ -337,6 +337,7 @@ class Controller(object):
         if not re.match(r'^\d\d\d-\d\d-\d\d\d$', pin):
             raise MalformedPinError('The pin must be of the following XXX-XX-XXX where X is a digit between 0 and 9.')
 
+
     def _get_pair_method(self, auth_method: PairingAuth, feature_flags: int):
         """
         Returns the used pairing method based on the supported features
@@ -363,6 +364,7 @@ class Controller(object):
 
         logging.debug('using pairing method %s', pair_method)
         return pair_method
+
 
     def perform_pairing(self, alias, accessory_id, pin,auth_method=PairingAuth.HwAuth):
         """
@@ -392,18 +394,11 @@ class Controller(object):
         """
         Controller.check_pin_format(pin)
 
-        with_hw_auth = True
-        if Controller.PairingAuth.SwAuth == auth_method:
-            with_hw_auth = False
-
-        try:
-            finish_pairing = self.start_pairing(alias, accessory_id, with_hw_auth)
-            return finish_pairing(pin)
-        except PairingMethodError:
-            raise AuthenticationError('Pairing failed')
+        finish_pairing = self.start_pairing(alias, accessory_id, auth_method)
+        return finish_pairing(pin)
 
 
-    def start_pairing(self, alias, accessory_id, with_hw_auth=True):
+    def start_pairing(self, alias, accessory_id, auth_method=PairingAuth.Auto):
         """
         This starts a pairing attempt with the IP accessory identified by its id.
         It returns a callable (finish_pairing) which you must call with the pairing pin.
@@ -419,7 +414,7 @@ class Controller(object):
         :param alias: the alias for the accessory in the controllers data
         :param accessory_id: the accessory's id
         :param pin: function to return the accessory's pin
-        :param with_hw_auth: accessory supports Apple hardware authentication coprocessor
+        :param auth_method: defines the used pairing auth_method
         :raises AccessoryNotFoundError: if no accessory with the given id can be found
         :raises AlreadyPairedError: if the alias was already used
         :raises UnavailableError: if the device is already paired
@@ -428,23 +423,22 @@ class Controller(object):
         :raises AuthenticationError: if the verification of the device's SRP proof fails
         :raises MaxPeersError: if the device cannot accept an additional pairing
         :raises UnavailableError: on wrong pin
-        :raises PairingMethodError: raised on error while in M3
+        :raises PairingAuthError: if pairing authentication method is not supported
         """
         if not IP_TRANSPORT_SUPPORTED:
             raise TransportNotSupportedError('IP')
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
 
-        connection_data = find_device_ip_and_port(accessory_id)
+        connection_data = find_device_ip_port_props(accessory_id)
         if connection_data is None:
             raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
         conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
 
+        pair_method = self._get_pair_method(auth_method, connection_data['properties']['ff'])
+
         try:
             write_fun = create_ip_pair_setup_write(conn)
-
-            pair_method = Methods.PairSetupWithAuth if with_hw_auth else Methods.PairSetup
-            logging.debug('try pairing with method %s', pair_method)
 
             state_machine = perform_pair_setup_part1(pair_method)
             request, expected = state_machine.send(None)
@@ -455,10 +449,6 @@ class Controller(object):
                 except StopIteration as result:
                     salt, pub_key = result.value
                     break
-                except:
-                    if tlv8.EntryList(request).first_by_id(TlvTypes.State).data == States.M3:
-                        raise PairingMethodError('state: M3 failed')
-                    raise
 
         except Exception:
             conn.close()

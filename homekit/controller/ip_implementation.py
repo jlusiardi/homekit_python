@@ -30,7 +30,7 @@ from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, create_ip_pair_verify_write
 from homekit.protocol import States, Methods, Errors, TlvTypes
 from homekit.model.characteristics import CharacteristicsTypes
-from homekit.zeroconf_impl import find_device_ip_and_port
+from homekit.zeroconf_impl import find_device_ip_port_props
 from homekit.model.services import ServicesTypes
 
 
@@ -476,7 +476,7 @@ class IpSession(object):
         if not connected:
             # no connection yet, so ip / port might have changed and we need to fall back to slow zeroconf lookup
             device_id = pairing_data['AccessoryPairingID']
-            connection_data = find_device_ip_and_port(device_id)
+            connection_data = find_device_ip_port_props(device_id)
 
             # update pairing data with the IP/port we elaborated above, perhaps next time they are valid
             pairing_data['AccessoryIP'] = connection_data['ip']

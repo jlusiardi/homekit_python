@@ -61,7 +61,7 @@ class Descriptor:
             return val
         except dbus.exceptions.DBusException as e:
             error = _error_from_dbus_error(e)
-            self.service.device.descriptor_read_value_failed(self, error=error)
+            self.characteristic.service.device.descriptor_read_value_failed(self, error=error)
 
 
 class Characteristic(gatt.Characteristic):

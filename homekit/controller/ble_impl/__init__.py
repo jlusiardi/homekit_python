@@ -75,7 +75,6 @@ class BlePairing(AbstractPairing):
         #   on pairing. Note that e.g. BleSession expects proper defined pairing_data.
         self.list_accessories_and_characteristics()
 
-
     def close(self):
         pass
 

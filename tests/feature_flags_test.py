@@ -22,14 +22,17 @@ from homekit.model.feature_flags import FeatureFlags
 class TestFeatureFlags(unittest.TestCase):
 
     def test_no_support_hap_pairing(self):
-        self.assertEqual(FeatureFlags[0], 'No support for HAP Pairing')
+        self.assertEqual(FeatureFlags[0x00], 'No support for HAP Pairing')
 
-    def test_support_hap_pairing(self):
-        self.assertEqual(FeatureFlags[1], 'Supports HAP Pairing')
+    def test_support_hap_pairing_hw(self):
+        self.assertEqual(FeatureFlags[0x01], 'Supports HAP Pairing with Apple authentication coprocessor')
 
-    def test_bug_143(self):
-        # 0b10 -> 2 means no hap pairing support?
-        self.assertEqual(FeatureFlags[2], 'No support for HAP Pairing')
+    def test_support_hap_pairing_sw(self):
+        self.assertEqual(FeatureFlags[0x02], 'Supports HAP Pairing with Software authentication')
+
+    # def test_bug_143(self):
+    #     # 0b10 -> 2 means no hap pairing support?
+    #     self.assertEqual(FeatureFlags[2], 'No support for HAP Pairing')
 
 #    def test_unknown_code(self):
 #        self.assertRaises(KeyError, FeatureFlags.__getitem__, 99)

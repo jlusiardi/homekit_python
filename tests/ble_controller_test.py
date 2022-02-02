@@ -27,7 +27,8 @@ from homekit.model import Accessory
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.services import ServicesTypes, AbstractService, LightBulbService
 from homekit.model.characteristics import AbstractCharacteristic
-from homekit.protocol import States, Methods, TlvTypes
+from homekit.protocol import States, Methods, TlvTypes, FeatureFlags
+from homekit.protocol.statuscodes import HapStatusCodes
 from homekit import accessoryserver
 from homekit.model import mixin as model_mixin
 from homekit import exceptions
@@ -197,6 +198,7 @@ class PairingServiceHandler(Service):
         self.characteristics.append(PairingSetupCharacteristicHandler(self))
         self.characteristics.append(PairingVerifyCharacteristicHandler(self))
         self.characteristics.append(PairingPairingsCharacteristicHandler(self))
+        self.characteristics.append(PairingFeaturesCharacteristicHandler(self))
 
 
 class Characteristic:
@@ -530,6 +532,44 @@ class PairingPairingsCharacteristicHandler(Characteristic):
         self.queue_read_response(self.encrypt_value(bytes(response)))
 
 
+class PairingFeaturesCharacteristicHandler(Characteristic):
+    """
+    This is a fake gatt.Characteristic
+
+    It is intended to handle the special case of reading out the feature flags of a fake accessory.
+    """
+
+    def __init__(self, service):
+        characteristic = CharacteristicEntry(
+            model_mixin.get_id(),
+            'public.hap.characteristic.pairing.features',
+            'data',
+        )
+
+        super().__init__(service, characteristic)
+
+        self.rh = AccessoryRequestHandler(self)
+        self.values = []
+
+    def write_value(self, value):
+        assert value[0] == 0
+        opcode = value[1]
+
+        if opcode == HapBleOpCodes.CHAR_READ:
+            try:
+                ff_tlv = tlv8.Entry(AdditionalParameterTypes.Value, int(FeatureFlags.AppleMFiCoprocessor | FeatureFlags.SoftwareMFiAuth))
+                byte_val = b'\x00' + value[2].to_bytes(length=1, byteorder='little') + \
+                    int(HapStatusCodes.SUCCESS).to_bytes(length=1, byteorder='little') + \
+                    int(3).to_bytes(length=2,byteorder='little') + \
+                    tlv8.encode(tlv8.EntryList([ff_tlv]))
+
+                self.values.append(byte_val)
+            except Exception as e:
+                print(repr(e))
+        else:
+            super().write_value(value)
+
+
 class Descriptor:
     """
     A fake gatt.Descriptor
@@ -841,7 +881,18 @@ class TestBLEController(unittest.TestCase):
                                 "range": None,
                                 "step": None,
                                 "type": "00000050-0000-1000-8000-0026BB765291",
-                                "unit": "unknown"}
+                                "unit": "unknown"
+                            },
+                            {
+                                "iid": 15,
+                                "type": "0000004F-0000-1000-8000-0026BB765291",
+                                "perms": [],
+                                "description": "",
+                                "format": "data",
+                                "unit": "unknown",
+                                "range": None,
+                                "step": None
+                            },
                         ],
                         "iid": 11,
                         "type": "00000055-0000-1000-8000-0026BB765291"

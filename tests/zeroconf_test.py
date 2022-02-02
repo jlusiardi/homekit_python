@@ -18,7 +18,7 @@ import unittest
 from zeroconf import Zeroconf, ServiceInfo
 import socket
 
-from homekit.zeroconf_impl import find_device_ip_and_port, discover_homekit_devices, get_from_properties
+from homekit.zeroconf_impl import find_device_ip_port_props, discover_homekit_devices, get_from_properties
 
 
 class TestZeroconf(unittest.TestCase):
@@ -39,7 +39,7 @@ class TestZeroconf(unittest.TestCase):
         return test_device
 
     def test_find_without_device(self):
-        result = find_device_ip_and_port('00:00:00:00:00:00', 1)
+        result = find_device_ip_port_props('00:00:00:00:00:00', 1)
         self.assertIsNone(result)
 
     def test_find_with_device(self):
@@ -50,7 +50,7 @@ class TestZeroconf(unittest.TestCase):
         zeroconf.unregister_all_services()
         zeroconf.register_service(info, allow_name_change=True)
 
-        result = find_device_ip_and_port('00:00:02:00:00:02', 10)
+        result = find_device_ip_port_props('00:00:02:00:00:02', 10)
 
         zeroconf.unregister_all_services()
 

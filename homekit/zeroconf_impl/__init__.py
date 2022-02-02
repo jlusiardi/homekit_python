@@ -49,6 +49,18 @@ class CollectingListener(object):
         """
         return self.data
 
+    def update_service(self, zeroconf, service_type, name, state_change):
+        # prevent FutureWarning: XXX has no update_service method. Provide one
+        # (it can be empty if you don't care about the updates), it'll become
+        # mandatory.
+        logging.debug(
+            'update_service zeroconf=%s service_type=%s name=%s state_change=%s',
+            zeroconf,
+            service_type,
+            name,
+            state_change,
+        )
+
 
 def get_from_properties(props, key, default=None, case_sensitive=True):
     """

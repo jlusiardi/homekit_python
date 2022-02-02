@@ -17,4 +17,4 @@ from enum import IntEnum
 
 class FeatureFlags(IntEnum):
     AppleMFiCoprocessor = 0x01
-    SoftwareMFiAuth     = 0x02
+    SoftwareMFiAuth = 0x02

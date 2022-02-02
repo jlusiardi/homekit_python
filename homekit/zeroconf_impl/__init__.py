@@ -206,7 +206,7 @@ def find_device_ip_port_props(device_id: str, max_seconds=10):
             if info.properties[b'id'].decode() == device_id:
                 result = {'ip': inet_ntoa(info.addresses[0]),
                           'port': info.port,
-                          'properties': parse_discovery_properties( decode_discovery_properties(info.properties) ),
+                          'properties': parse_discovery_properties(decode_discovery_properties(info.properties)),
                           }
                 break
         counter += 1

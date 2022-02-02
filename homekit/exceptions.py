@@ -14,10 +14,6 @@
 # limitations under the License.
 #
 
-
-from typing import Protocol
-
-
 class HomeKitException(Exception):
     """Generic HomeKit exception.
     Attributes:
@@ -68,10 +64,11 @@ class AuthenticationError(ProtocolError):
     """
     pass
 
+
 class PairingAuthError(ProtocolError):
     """
     Raised in on pairing if the current pairing method is not supported.
-    TODO: Current implementation centers around an error in M3, but it would be better to have FF or checks at the verification
+    This can happen if an accessory does not support a specific authentication method.
     """
     pass
 
@@ -142,6 +139,7 @@ class IncorrectPairingIdError(ProtocolError):
     Raised in Pair Verify Step 3.5 (Page 49) if the accessory responds with an unexpected pairing id.
     """
     pass
+
 
 class InvalidSignatureError(ProtocolError):
     """

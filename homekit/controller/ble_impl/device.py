@@ -120,6 +120,7 @@ class Device(gatt.Device):
     def descriptor_read_value_failed(self, descriptor, error):
         logger.debug('read descriptor failed: %s %s', str(descriptor.uuid), error)
 
+
 class DeviceManager(gatt.DeviceManager):
 
     discover_callback = None

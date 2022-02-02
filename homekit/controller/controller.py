@@ -63,12 +63,13 @@ class Controller(object):
         self.ble_adapter = ble_adapter
         self.logger = logging.getLogger('homekit.controller.Controller')
 
-
     class PairingAuth(IntEnum):
-        '''Types of pairing authentication strategies
-        Auto: try pairing with hardware authentication , fall back to software authentication if necessary
-        HwAuth: only try hardware authentication
-        SwAuth: only try software authentication'''
+        """
+        Types of pairing authentication strategies
+            Auto: try pairing with hardware authentication , fall back to software authentication if necessary
+            HwAuth: only try hardware authentication
+            SwAuth: only try software authentication
+        """
         Auto = 0
         HwAuth = 1
         SwAuth = 2
@@ -337,7 +338,6 @@ class Controller(object):
         if not re.match(r'^\d\d\d-\d\d-\d\d\d$', pin):
             raise MalformedPinError('The pin must be of the following XXX-XX-XXX where X is a digit between 0 and 9.')
 
-
     def _get_pair_method(self, auth_method: PairingAuth, feature_flags: int):
         """
         Returns the used pairing method based on the supported features
@@ -350,7 +350,7 @@ class Controller(object):
         :returns:
         :raises PairingAuthError: if pairing authentication method is not supported
         """
-        pair_method   = Methods.PairSetup
+        pair_method = Methods.PairSetup
 
         if auth_method == Controller.PairingAuth.Auto:
             if feature_flags & FeatureFlags.AppleMFiCoprocessor:
@@ -365,8 +365,7 @@ class Controller(object):
         logging.debug('using pairing method %s', pair_method)
         return pair_method
 
-
-    def perform_pairing(self, alias, accessory_id, pin,auth_method=PairingAuth.HwAuth):
+    def perform_pairing(self, alias, accessory_id, pin, auth_method=PairingAuth.HwAuth):
         """
         This performs a pairing attempt with the IP accessory identified by its id.
 
@@ -396,7 +395,6 @@ class Controller(object):
 
         finish_pairing = self.start_pairing(alias, accessory_id, auth_method)
         return finish_pairing(pin)
-
 
     def start_pairing(self, alias, accessory_id, auth_method=PairingAuth.Auto):
         """
@@ -476,21 +474,21 @@ class Controller(object):
 
         return finish_pairing
 
-
     def _read_feature_flags_ble(self, device) -> int:
         """helper function to read out the feature flags of the accessory
         :param device: device connected to the accessory used for the request. Should be connected.
         :return: 1 byte integer representing the feature flags
         """
-        pair_features_char, pair_features_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
-                                                                                        CharacteristicsTypes.PAIRING_FEATURES)
+        pair_features_char, pair_features_char_id = find_characteristic_by_uuid(device,
+                                                                                ServicesTypes.PAIRING_SERVICE,
+                                                                                CharacteristicsTypes.PAIRING_FEATURES)
         logging.debug('setup char: %s %s', str(pair_features_char.uuid), pair_features_char.service.device)
 
         assert pair_features_char and pair_features_char_id, 'pairing feature characteristic not defined'
 
         # prepare request
         transaction_id = random.randrange(0, 255)
-        wdata           = bytearray([0x00, HapBleOpCodes.CHAR_READ, transaction_id])
+        wdata = bytearray([0x00, HapBleOpCodes.CHAR_READ, transaction_id])
         wdata.extend(pair_features_char_id.to_bytes(length=2, byteorder='little'))
         logging.debug('sent %s', bytes(wdata).hex())
 
@@ -503,7 +501,7 @@ class Controller(object):
             time.sleep(1)
             rdata = pair_features_char.read_value()
 
-        resp_data       = [b for b in rdata]
+        resp_data = [b for b in rdata]
         expected_length = int.from_bytes(bytes(resp_data[3:5]), byteorder='little')
 
         logging.debug(
@@ -520,7 +518,6 @@ class Controller(object):
         assert 0 < len(resp_data), 'received data is not an integer'
 
         return resp_data.first_by_id(AdditionalParameterTypes.Value).data
-
 
     def perform_pairing_ble(self, alias, accessory_mac, pin, adapter='hci0', auth_method=PairingAuth.Auto):
         """
@@ -547,7 +544,6 @@ class Controller(object):
 
         finish_pairing = self.start_pairing_ble(alias, accessory_mac, adapter, auth_method)
         return finish_pairing(pin)
-
 
     def start_pairing_ble(self, alias, accessory_mac, adapter='hci0', auth_method=PairingAuth.Auto):
         """
@@ -583,7 +579,7 @@ class Controller(object):
 
         # --- read pairing features to determine if the authentication method is actually supported
         feature_flags = self._read_feature_flags_ble(device)
-        pair_method   = self._get_pair_method(auth_method,feature_flags)
+        pair_method = self._get_pair_method(auth_method, feature_flags)
 
         # --- perform pairing
         pair_setup_char, pair_setup_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,

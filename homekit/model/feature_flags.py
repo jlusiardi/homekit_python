@@ -24,7 +24,7 @@ class _FeatureFlags(object):
 
     def __init__(self):
         self._data = {
-            0x00: 'No support for HAP Pairing', # this might also be uncertified
+            0x00: 'No support for HAP Pairing',  # this might also be uncertified
             self.APPLE_MFI_COPROCESSOR: 'Apple authentication coprocessor',
             self.SOFTWARE_MFI_AUTH: 'Software authentication',
         }

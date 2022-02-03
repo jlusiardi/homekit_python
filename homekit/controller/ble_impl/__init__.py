@@ -599,7 +599,7 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
         except KeyError:
             srv_desc = ''
 
-        logging.error(f'searched service %snot found.', srv_desc)
+        logging.error('searched service %snot found.', srv_desc)
         return None, None
 
     logger.debug('searched service: %s', service_found.uuid)

@@ -21,6 +21,8 @@ import uuid
 import logging
 import tlv8
 
+from typing import Optional
+
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit import Controller
 from homekit.model import Accessory
@@ -76,7 +78,7 @@ class Device:
 
     connected = False
 
-    def __init__(self, accessory: Accessory, feature_flags: FeatureFlags = FeatureFlags.APPLE_MFI_COPROCESSOR | FeatureFlags.SOFTWARE_MFI_AUTH):
+    def __init__(self, accessory: Accessory, feature_flags: Optional[int] = None):
         self.accessory = accessory
         self.name = 'Test'  # FIXME get from accessory
         self.mac_address = '00:00:00:00:00'
@@ -154,12 +156,12 @@ class Device:
     def is_connected(self):
         return self.connected
 
-    def set_feature_flags(self, feature_flags):
+    def set_feature_flags(self, feature_flags: Optional[int]):
         pairing_srv = None
         for srv in self.services:
             if isinstance(srv, PairingServiceHandler):
-               pairing_srv = srv
-               break
+                pairing_srv = srv
+                break
 
         for char in pairing_srv.characteristics:
             if isinstance(char, PairingFeaturesCharacteristicHandler):
@@ -170,6 +172,7 @@ class Device:
                 else:
                     char.feature_flags = feature_flags
                 break
+
 
 class Service:
     """
@@ -584,7 +587,7 @@ class PairingFeaturesCharacteristicHandler(Characteristic):
                 ff_tlv = tlv8.Entry(AdditionalParameterTypes.Value, self.feature_flags)
                 byte_val = b'\x00' + value[2].to_bytes(length=1, byteorder='little') + \
                     int(HapStatusCodes.SUCCESS).to_bytes(length=1, byteorder='little') + \
-                    int(3).to_bytes(length=2,byteorder='little') + \
+                    int(3).to_bytes(length=2, byteorder='little') + \
                     tlv8.encode(tlv8.EntryList([ff_tlv]))
 
                 self.values.append(byte_val)
@@ -768,7 +771,6 @@ class TestBLEController(unittest.TestCase):
     def test_pair_supported_auth(self):
         model_mixin.id_counter = 0
 
-
         a = Accessory(
             'test-dev-123',
             'TestCo',
@@ -791,14 +793,16 @@ class TestBLEController(unittest.TestCase):
             m.return_value = manager
 
             c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111', auth_method=Controller.PairingAuth.HwAuth)
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.HwAuth)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             manager._devices['00:00:00:00:00'] = Device(a)
             m.return_value = manager
 
             c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111', auth_method=Controller.PairingAuth.SwAuth)
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.SwAuth)
 
         # --- hw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
@@ -813,7 +817,8 @@ class TestBLEController(unittest.TestCase):
             m.return_value = manager
 
             c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111', auth_method=Controller.PairingAuth.HwAuth)
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.HwAuth)
 
         # --- sw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
@@ -828,7 +833,8 @@ class TestBLEController(unittest.TestCase):
             m.return_value = manager
 
             c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111', auth_method=Controller.PairingAuth.SwAuth)
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.SwAuth)
 
         # --- not certified
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
@@ -843,11 +849,11 @@ class TestBLEController(unittest.TestCase):
             m.return_value = manager
 
             c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111', auth_method=Controller.PairingAuth.SwAuth)
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.SwAuth)
 
     def test_pair_unsupported_auth(self):
         model_mixin.id_counter = 0
-
 
         a = Accessory(
             'test-dev-123',
@@ -865,7 +871,8 @@ class TestBLEController(unittest.TestCase):
             m.return_value = manager
 
             c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111', auth_method=Controller.PairingAuth.SwAuth)
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.SwAuth)
 
             self.assertRaises(exceptions.PairingAuthError)
         # --- sw auth only
@@ -874,7 +881,8 @@ class TestBLEController(unittest.TestCase):
             m.return_value = manager
 
             c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111', auth_method=Controller.PairingAuth.HwAuth)
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.HwAuth)
             self.assertRaises(exceptions.PairingAuthError)
 
         # --- not certified
@@ -883,7 +891,8 @@ class TestBLEController(unittest.TestCase):
             m.return_value = manager
 
             c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111', auth_method=Controller.PairingAuth.HwAuth)
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.HwAuth)
 
             self.assertRaises(exceptions.PairingAuthError)
 

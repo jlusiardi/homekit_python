@@ -30,9 +30,5 @@ class TestFeatureFlags(unittest.TestCase):
     def test_support_hap_pairing_sw(self):
         self.assertEqual(FeatureFlags[0x02], 'Supports HAP Pairing with Software authentication')
 
-    # def test_bug_143(self):
-    #     # 0b10 -> 2 means no hap pairing support?
-    #     self.assertEqual(FeatureFlags[2], 'No support for HAP Pairing')
-
 #    def test_unknown_code(self):
 #        self.assertRaises(KeyError, FeatureFlags.__getitem__, 99)

@@ -21,3 +21,18 @@ jobs:
 
       - name: install debian requirements
         run: sudo apt-get install -y build-essential python3-dev libdbus-1-dev libdbus-glib-1-dev libgirepository1.0-dev
+      
+      - name: install pip requirements
+        run:  pip install -r requirements.txt; pip install coveralls
+
+      - name: run tests
+        run: coverage run -m unittest; coverage lcov
+      
+      - name: run flake8
+        run: flake8 homekit
+        
+      - name: Publish to coveralls.io
+        uses: coverallsapp/github-action@v1.1.2
+        with:
+          github-token: ${{ github.token }}
+          path-to-lcov: coverage.lcov      

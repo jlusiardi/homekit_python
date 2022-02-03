@@ -28,7 +28,6 @@ from homekit.protocol.states import States
 from homekit.protocol.methods import Methods
 from homekit.protocol.errors import Errors
 from homekit.protocol.tlv_types import TlvTypes
-from homekit.protocol.feature_flags import FeatureFlags
 from homekit.exceptions import IncorrectPairingIdError, InvalidAuthTagError, InvalidSignatureError, UnavailableError, \
     AuthenticationError, InvalidError, BusyError, MaxTriesError, MaxPeersError, BackoffError
 

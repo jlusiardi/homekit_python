@@ -25,10 +25,17 @@ class TestFeatureFlags(unittest.TestCase):
         self.assertEqual(FeatureFlags[0x00], 'No support for HAP Pairing')
 
     def test_support_hap_pairing_hw(self):
+        self.assertEqual(0x01, FeatureFlags.APPLE_MFI_COPROCESSOR)
         self.assertEqual(FeatureFlags[0x01], 'Supports HAP Pairing with Apple authentication coprocessor')
 
     def test_support_hap_pairing_sw(self):
+        self.assertEqual(0x02, FeatureFlags.SOFTWARE_MFI_AUTH)
         self.assertEqual(FeatureFlags[0x02], 'Supports HAP Pairing with Software authentication')
 
-#    def test_unknown_code(self):
-#        self.assertRaises(KeyError, FeatureFlags.__getitem__, 99)
+    def test_support_hap_pairing_hw_sw(self):
+        self.assertEqual(FeatureFlags[FeatureFlags.APPLE_MFI_COPROCESSOR | FeatureFlags.SOFTWARE_MFI_AUTH],
+                         'Supports HAP Pairing with Apple authentication coprocessor and Software authentication')
+
+    def test_support_hap_pairing_unknown(self):
+        with self.assertRaises(KeyError):
+            FeatureFlags[0x80]

@@ -27,12 +27,13 @@ from enum import IntEnum
 from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, \
     AuthenticationError, ConfigSavingError, AlreadyPairedError, TransportNotSupportedError, \
     MalformedPinError, PairingAuthError
-from homekit.protocol import States, Methods, Errors, TlvTypes, FeatureFlags
+from homekit.protocol import States, Methods, Errors, TlvTypes
 from homekit.http_impl import HomeKitHTTPConnection
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit.protocol import perform_pair_setup_part1, perform_pair_setup_part2, create_ip_pair_setup_write
 from homekit.model.services.service_types import ServicesTypes
 from homekit.model.characteristics.characteristic_types import CharacteristicsTypes
+from homekit.model.feature_flags import FeatureFlags
 from homekit.protocol.opcodes import HapBleOpCodes
 from homekit.tools import IP_TRANSPORT_SUPPORTED, BLE_TRANSPORT_SUPPORTED
 from homekit.controller.tools import NotSupportedPairing
@@ -353,7 +354,7 @@ class Controller(object):
         pair_method = Methods.PairSetup
 
         if auth_method == Controller.PairingAuth.Auto:
-            if feature_flags & FeatureFlags.AppleMFiCoprocessor:
+            if feature_flags & FeatureFlags.APPLE_MFI_COPROCESSOR:
                 pair_method = Methods.PairSetupWithAuth
         elif auth_method == Controller.PairingAuth.HwAuth:
             pair_method = Methods.PairSetupWithAuth

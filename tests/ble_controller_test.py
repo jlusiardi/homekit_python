@@ -27,7 +27,8 @@ from homekit.model import Accessory
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.services import ServicesTypes, AbstractService, LightBulbService
 from homekit.model.characteristics import AbstractCharacteristic
-from homekit.protocol import States, Methods, TlvTypes, FeatureFlags
+from homekit.model.feature_flags import FeatureFlags
+from homekit.protocol import States, Methods, TlvTypes
 from homekit.protocol.statuscodes import HapStatusCodes
 from homekit import accessoryserver
 from homekit.model import mixin as model_mixin
@@ -75,7 +76,7 @@ class Device:
 
     connected = False
 
-    def __init__(self, accessory: Accessory, feature_flags: FeatureFlags = FeatureFlags.AppleMFiCoprocessor | FeatureFlags.SoftwareMFiAuth):
+    def __init__(self, accessory: Accessory, feature_flags: FeatureFlags = FeatureFlags.APPLE_MFI_COPROCESSOR | FeatureFlags.SOFTWARE_MFI_AUTH):
         self.accessory = accessory
         self.name = 'Test'  # FIXME get from accessory
         self.mac_address = '00:00:00:00:00'
@@ -164,7 +165,7 @@ class Device:
             if isinstance(char, PairingFeaturesCharacteristicHandler):
                 if feature_flags is None:
                     char.reset_feature_flags()
-                elif feature_flags > (FeatureFlags.AppleMFiCoprocessor | FeatureFlags.SoftwareMFiAuth):
+                elif feature_flags > (FeatureFlags.APPLE_MFI_COPROCESSOR | FeatureFlags.SOFTWARE_MFI_AUTH):
                     raise ValueError('"feature_flags": invalid value')
                 else:
                     char.feature_flags = feature_flags
@@ -572,7 +573,7 @@ class PairingFeaturesCharacteristicHandler(Characteristic):
         self.values = []
 
     def reset_feature_flags(self):
-        self.feature_flags = FeatureFlags.AppleMFiCoprocessor | FeatureFlags.SoftwareMFiAuth
+        self.feature_flags = FeatureFlags.APPLE_MFI_COPROCESSOR | FeatureFlags.SOFTWARE_MFI_AUTH
 
     def write_value(self, value):
         assert value[0] == 0
@@ -801,14 +802,14 @@ class TestBLEController(unittest.TestCase):
 
         # --- hw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.AppleMFiCoprocessor)
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
             m.return_value = manager
 
             c = Controller()
             c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.AppleMFiCoprocessor)
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
             m.return_value = manager
 
             c = Controller()
@@ -816,14 +817,14 @@ class TestBLEController(unittest.TestCase):
 
         # --- sw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SoftwareMFiAuth)
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
             m.return_value = manager
 
             c = Controller()
             c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SoftwareMFiAuth)
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
             m.return_value = manager
 
             c = Controller()
@@ -860,7 +861,7 @@ class TestBLEController(unittest.TestCase):
 
         # --- hw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.AppleMFiCoprocessor)
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
             m.return_value = manager
 
             c = Controller()
@@ -869,7 +870,7 @@ class TestBLEController(unittest.TestCase):
             self.assertRaises(exceptions.PairingAuthError)
         # --- sw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SoftwareMFiAuth)
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
             m.return_value = manager
 
             c = Controller()

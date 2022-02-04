@@ -14,22 +14,33 @@
 # limitations under the License.
 #
 
-
 class _FeatureFlags(object):
     """
-    Data taken form table 5-8 Bonjour TXT Record Feature Flags on page 69.
+    Data taken from table 5-8 Bonjour TXT Record Feature Flags on page 69.
     """
+
+    APPLE_MFI_COPROCESSOR = 0x01
+    SOFTWARE_MFI_AUTH = 0x02
 
     def __init__(self):
         self._data = {
-            0: 'No support for HAP Pairing',
-            1: 'Supports HAP Pairing'
+            0x00: 'No support for HAP Pairing',  # this might also be uncertified
+            self.APPLE_MFI_COPROCESSOR: 'Apple authentication coprocessor',
+            self.SOFTWARE_MFI_AUTH: 'Software authentication',
         }
 
-    def __getitem__(self, item):
-        bit_value = item & 0x01
-        if bit_value in self._data:
-            return self._data[bit_value]
+    def __getitem__(self, item: int) -> str:
+        data = []
+        if 0 != (item & self.APPLE_MFI_COPROCESSOR):
+            data.append(self._data[self.APPLE_MFI_COPROCESSOR])
+        if 0 != (item & self.SOFTWARE_MFI_AUTH):
+            data.append(self._data[self.SOFTWARE_MFI_AUTH])
+
+        if data:
+            return 'Supports HAP Pairing with ' + ' and '.join(data)
+        elif 0 == item:
+            # Note: this may change if feature flags will have more flags!
+            return self._data[0]
 
         raise KeyError('Item {item} not found'.format(item=item))
 

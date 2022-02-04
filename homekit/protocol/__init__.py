@@ -91,10 +91,11 @@ def create_ip_pair_verify_write(connection):
     return write_http
 
 
-def perform_pair_setup_part1():
+def perform_pair_setup_part1(pair_method):
     """
     Performs a pair setup operation as described in chapter 4.7 page 39 ff.
 
+    :param  pair_method: method used for pairing
     :return: a tuple of salt and server's public key
     :raises UnavailableError: if the device is already paired
     :raises MaxTriesError: if the device received more than 100 unsuccessful pairing attempts
@@ -110,7 +111,7 @@ def perform_pair_setup_part1():
     logging.debug('#1 ios -> accessory: send SRP start request')
     request_tlv = [
         tlv8.Entry(TlvTypes.State, States.M1),
-        tlv8.Entry(TlvTypes.Method, Methods.PairSetup)
+        tlv8.Entry(TlvTypes.Method, pair_method)
     ]
 
     step2_expectations = {

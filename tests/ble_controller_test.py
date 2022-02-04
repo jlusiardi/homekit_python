@@ -21,13 +21,17 @@ import uuid
 import logging
 import tlv8
 
+from typing import Optional
+
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit import Controller
 from homekit.model import Accessory
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.services import ServicesTypes, AbstractService, LightBulbService
 from homekit.model.characteristics import AbstractCharacteristic
+from homekit.model.feature_flags import FeatureFlags
 from homekit.protocol import States, Methods, TlvTypes
+from homekit.protocol.statuscodes import HapStatusCodes
 from homekit import accessoryserver
 from homekit.model import mixin as model_mixin
 from homekit import exceptions
@@ -74,7 +78,7 @@ class Device:
 
     connected = False
 
-    def __init__(self, accessory: Accessory):
+    def __init__(self, accessory: Accessory, feature_flags: Optional[int] = None):
         self.accessory = accessory
         self.name = 'Test'  # FIXME get from accessory
         self.mac_address = '00:00:00:00:00'
@@ -97,6 +101,8 @@ class Device:
             self.services.append(Service(self, service))
 
         self.services.append(PairingServiceHandler(self))
+
+        self.set_feature_flags(feature_flags)
 
     def set_accessory_keys(self, ltpk, ltsk):
         self.accessory_ltpk = ltpk
@@ -150,6 +156,23 @@ class Device:
     def is_connected(self):
         return self.connected
 
+    def set_feature_flags(self, feature_flags: Optional[int]):
+        pairing_srv = None
+        for srv in self.services:
+            if isinstance(srv, PairingServiceHandler):
+                pairing_srv = srv
+                break
+
+        for char in pairing_srv.characteristics:
+            if isinstance(char, PairingFeaturesCharacteristicHandler):
+                if feature_flags is None:
+                    char.reset_feature_flags()
+                elif feature_flags > (FeatureFlags.APPLE_MFI_COPROCESSOR | FeatureFlags.SOFTWARE_MFI_AUTH):
+                    raise ValueError('"feature_flags": invalid value')
+                else:
+                    char.feature_flags = feature_flags
+                break
+
 
 class Service:
     """
@@ -197,6 +220,7 @@ class PairingServiceHandler(Service):
         self.characteristics.append(PairingSetupCharacteristicHandler(self))
         self.characteristics.append(PairingVerifyCharacteristicHandler(self))
         self.characteristics.append(PairingPairingsCharacteristicHandler(self))
+        self.characteristics.append(PairingFeaturesCharacteristicHandler(self))
 
 
 class Characteristic:
@@ -530,6 +554,49 @@ class PairingPairingsCharacteristicHandler(Characteristic):
         self.queue_read_response(self.encrypt_value(bytes(response)))
 
 
+class PairingFeaturesCharacteristicHandler(Characteristic):
+    """
+    This is a fake gatt.Characteristic
+
+    It is intended to handle the special case of reading out the feature flags of a fake accessory.
+    """
+
+    def __init__(self, service):
+        characteristic = CharacteristicEntry(
+            model_mixin.get_id(),
+            'public.hap.characteristic.pairing.features',
+            'data',
+        )
+
+        super().__init__(service, characteristic)
+
+        self.reset_feature_flags()
+
+        self.rh = AccessoryRequestHandler(self)
+        self.values = []
+
+    def reset_feature_flags(self):
+        self.feature_flags = FeatureFlags.APPLE_MFI_COPROCESSOR | FeatureFlags.SOFTWARE_MFI_AUTH
+
+    def write_value(self, value):
+        assert value[0] == 0
+        opcode = value[1]
+
+        if opcode == HapBleOpCodes.CHAR_READ:
+            try:
+                ff_tlv = tlv8.Entry(AdditionalParameterTypes.Value, self.feature_flags)
+                byte_val = b'\x00' + value[2].to_bytes(length=1, byteorder='little') + \
+                    int(HapStatusCodes.SUCCESS).to_bytes(length=1, byteorder='little') + \
+                    int(3).to_bytes(length=2, byteorder='little') + \
+                    tlv8.encode(tlv8.EntryList([ff_tlv]))
+
+                self.values.append(byte_val)
+            except Exception as e:
+                print(repr(e))
+        else:
+            super().write_value(value)
+
+
 class Descriptor:
     """
     A fake gatt.Descriptor
@@ -701,6 +768,134 @@ class TestBLEController(unittest.TestCase):
                 self.assertEqual(len(device.peers), 0)
                 self.assertNotIn('test-pairing', c.pairings)
 
+    def test_pair_supported_auth(self):
+        model_mixin.id_counter = 0
+
+        a = Accessory(
+            'test-dev-123',
+            'TestCo',
+            'Test Dev Pro',
+            '00000',
+            1
+        )
+
+        manager = DeviceManager()
+        # --- hw auth and software auth
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.HwAuth)
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.SwAuth)
+
+        # --- hw auth only
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.HwAuth)
+
+        # --- sw auth only
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.SwAuth)
+
+        # --- not certified
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a, 0)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a, 0)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.SwAuth)
+
+    def test_pair_unsupported_auth(self):
+        model_mixin.id_counter = 0
+
+        a = Accessory(
+            'test-dev-123',
+            'TestCo',
+            'Test Dev Pro',
+            '00000',
+            1
+        )
+
+        manager = DeviceManager()
+
+        # --- hw auth only
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.SwAuth)
+
+            self.assertRaises(exceptions.PairingAuthError)
+        # --- sw auth only
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.HwAuth)
+            self.assertRaises(exceptions.PairingAuthError)
+
+        # --- not certified
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            manager._devices['00:00:00:00:00'] = Device(a, 0)
+            m.return_value = manager
+
+            c = Controller()
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                  auth_method=Controller.PairingAuth.HwAuth)
+
+            self.assertRaises(exceptions.PairingAuthError)
+
     def test_list_accessories_and_characteristics(self):
         model_mixin.id_counter = 0
 
@@ -841,7 +1036,18 @@ class TestBLEController(unittest.TestCase):
                                 "range": None,
                                 "step": None,
                                 "type": "00000050-0000-1000-8000-0026BB765291",
-                                "unit": "unknown"}
+                                "unit": "unknown"
+                            },
+                            {
+                                "iid": 15,
+                                "type": "0000004F-0000-1000-8000-0026BB765291",
+                                "perms": [],
+                                "description": "",
+                                "format": "data",
+                                "unit": "unknown",
+                                "range": None,
+                                "step": None
+                            },
                         ],
                         "iid": 11,
                         "type": "00000055-0000-1000-8000-0026BB765291"

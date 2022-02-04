@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-
 class HomeKitException(Exception):
     """Generic HomeKit exception.
     Attributes:
@@ -62,6 +61,14 @@ class AuthenticationError(ProtocolError):
      * during add pair (M2 / page 52): if the controller is not admin
      * during remove pairing (M2 / page 54): if the controller is not admin
      * during list pairing (M2 / page 56): if the controller is not admin
+    """
+    pass
+
+
+class PairingAuthError(ProtocolError):
+    """
+    Raised in on pairing if the current pairing method is not supported.
+    This can happen if an accessory does not support a specific authentication method.
     """
     pass
 

@@ -195,7 +195,7 @@ def parse_discovery_properties(props):
     return data
 
 
-def find_device_ip_and_port(device_id: str, max_seconds=10):
+def find_device_ip_port_props(device_id: str, max_seconds=10):
     """
     Try to find a HomeKit Accessory via Bonjour. The process is time boxed by the second parameter which sets an upper
     limit of `max_seconds` before it times out. The runtime of the function may be longer because of the Bonjour
@@ -203,7 +203,7 @@ def find_device_ip_and_port(device_id: str, max_seconds=10):
 
     :param device_id: the Accessory's pairing id
     :param max_seconds: the number of seconds to wait for the accessory to be found
-    :return: a dict with ip and port if the accessory was found or None
+    :return: a dict with ip, port and properties if the accessory was found or None
     """
     result = None
     zeroconf = Zeroconf()
@@ -216,7 +216,10 @@ def find_device_ip_and_port(device_id: str, max_seconds=10):
         data = listener.get_data()
         for info in data:
             if info.properties[b'id'].decode() == device_id:
-                result = {'ip': inet_ntoa(info.addresses[0]), 'port': info.port}
+                result = {'ip': inet_ntoa(info.addresses[0]),
+                          'port': info.port,
+                          'properties': parse_discovery_properties(decode_discovery_properties(info.properties)),
+                          }
                 break
         counter += 1
 

@@ -32,6 +32,11 @@ def setup_args_parser():
     parser.add_argument('-p', action='store', required=False, dest='pin', help='HomeKit configuration code')
     parser.add_argument('-f', action='store', required=True, dest='file', help='HomeKit pairing data file')
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
+    parser.add_argument('-s', action='store', required=False, dest='auth_method', choices=['auto', 'hw', 'sw'],
+                        default='auto', help='''authentication method:
+                                                    auto - determine authentication method automatically (default)
+                                                    sw - software authentication
+                                                    hw - hardware authentication (requires Apple MFI coprocessor)''')
     add_log_arguments(parser)
     return parser.parse_args()
 
@@ -74,7 +79,7 @@ if __name__ == '__main__':
         pin_function = pin_from_keyboard()
 
     try:
-        finish_pairing = controller.start_pairing(args.alias, args.device)
+        finish_pairing = controller.start_pairing(args.alias, args.device, args.auth_method)
         finish_pairing(pin_function())
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()

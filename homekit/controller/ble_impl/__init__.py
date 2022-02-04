@@ -592,11 +592,17 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
         if ServicesTypes.get_short(service_uuid.upper()) == ServicesTypes.get_short(possible_service.uuid.upper()):
             service_found = possible_service
             break
-    logger.debug('searched service: %s', service_found)
 
     if not service_found:
-        logging.error('searched service not found.')
+        try:
+            srv_desc = f'{ServicesTypes[service_uuid]} '
+        except KeyError:
+            srv_desc = ''
+
+        logging.error('searched service %snot found.', srv_desc)
         return None, None
+
+    logger.debug('searched service: %s', service_found.uuid)
 
     result_char = None
     result_char_id = None
@@ -612,7 +618,12 @@ def find_characteristic_by_uuid(device, service_uuid, char_uuid):
                     result_char_id = cid
 
     if not result_char:
-        logging.error('searched char not found.')
+        try:
+            char_desc = f'{CharacteristicsTypes[char_uuid]} '
+        except KeyError:
+            char_desc = ''
+
+        logging.error('searched char %snot found.', char_desc)
         return None, None
 
     logger.debug('searched char: %s %s', result_char, result_char_id)

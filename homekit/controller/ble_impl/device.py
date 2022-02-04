@@ -105,14 +105,20 @@ class Device(gatt.Device):
         except dbus.exceptions.DBusException:
             raise AccessoryNotFoundError('Unable to resolve device services + characteristics')
 
+    def characteristic_read_value_succeeded(self, characteristic):
+        logger.debug('read success: %s %s', str(characteristic.uuid))
+
     def characteristic_read_value_failed(self, characteristic, error):
-        logger.debug('read failed: %s %s', characteristic, error)
+        logger.debug('read failed: %s %s', str(characteristic.uuid), error)
 
     def characteristic_write_value_succeeded(self, characteristic):
-        logger.debug('write success: %s', characteristic)
+        logger.debug('write success: %s', str(characteristic.uuid))
 
     def characteristic_write_value_failed(self, characteristic, error):
-        logger.debug('write failed: %s %s', characteristic, error)
+        logger.debug('write failed: %s %s', str(characteristic.uuid), error)
+
+    def descriptor_read_value_failed(self, descriptor, error):
+        logger.debug('read descriptor failed: %s %s', str(descriptor.uuid), error)
 
 
 class DeviceManager(gatt.DeviceManager):

@@ -373,15 +373,29 @@ class BlePairing(AbstractPairing):
                 }
                 continue
 
-            value = tlv8.encode([
+            value = [
                 tlv8.Entry(AdditionalParameterTypes.Value, self._convert_from_python(aid, cid, value))
-            ])
-            body = len(value).to_bytes(length=2, byteorder='little') + value
+            ]
+
+            pdu_ty = HapBleOpCodes.CHAR_WRITE
+            fc, fc_info = self.session.find_characteristic_by_iid(cid)
+            if fc_info and ('tw' in fc_info['perms']):
+                # add the TTL-field, see 7.3.4.8
+                pdu_ty = HapBleOpCodes.CHAR_TIMED_WRITE
+                value.insert(0, tlv8.Entry(AdditionalParameterTypes.TTL, 11))  # TTL for 1.1 s
+
+            tlv_value = tlv8.encode(value)
+            body = len(tlv_value).to_bytes(length=2, byteorder='little') + tlv_value
 
             try:
-                fc, fc_info = self.session.find_characteristic_by_iid(cid)
-                response = self.session.request(fc, cid, HapBleOpCodes.CHAR_WRITE, body)
+                response = self.session.request(fc, cid, pdu_ty, body)
                 logger.debug('response %s', tlv8.format_string(response))
+
+                if HapBleOpCodes.CHAR_TIMED_WRITE == pdu_ty:
+                    # execute necessary, see 7.3.5.4
+                    response = self.session.request(fc, cid, HapBleOpCodes.CHAR_EXEC_WRITE)
+                    logger.debug('response %s', tlv8.format_string(response))
+
                 # TODO does the response contain useful information here?
             except RequestRejected as e:
                 results[(aid, cid)] = {

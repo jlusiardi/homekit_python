@@ -301,6 +301,7 @@ class Characteristic:
             self.queue_read_response(self.encrypt_value(bytes(response)))
 
         elif opcode == HapBleOpCodes.CHAR_SIG_READ:
+            # see 7.3.4.2
             response = bytearray([0x02, tid, 0x00])
 
             service_type = list(uuid.UUID(self.service.service.type).bytes)
@@ -315,6 +316,28 @@ class Characteristic:
             unit = b'\x00\x00'
             gatt_fmt = fmt + unit
 
+            # add permissions. Taken from ble_impl/__init__.py::parse_sig_read_response
+            perms_type = 0x0000
+
+            if 'r' in self.char.perms:
+                perms_type |= 0x0001
+            if 'w' in self.char.perms:
+                perms_type |= 0x0002
+            if 'aad' in self.char.perms:
+                perms_type |= 0x0004
+            if 'tw' in self.char.perms:
+                perms_type |= 0x0008
+            if 'pr' in self.char.perms:
+                perms_type |= 0x0010
+            if 'pw' in self.char.perms:
+                perms_type |= 0x0020
+            if 'hd' in self.char.perms:
+                perms_type |= 0x0040
+            if 'evc' in self.char.perms:
+                perms_type |= 0x0080
+            if 'evd' in self.char.perms:
+                perms_type |= 0x0100
+
             data = [
                 tlv8.Entry(AdditionalParameterTypes.HAPCharacteristicPropertiesDescriptor, b'\x00'),
                 tlv8.Entry(AdditionalParameterTypes.GATTPresentationFormatDescriptor, gatt_fmt),
@@ -322,6 +345,7 @@ class Characteristic:
                 tlv8.Entry(AdditionalParameterTypes.ServiceInstanceId,
                            self.service.service.iid.to_bytes(length=8, byteorder='little')),
                 tlv8.Entry(AdditionalParameterTypes.ServiceType, service_type),
+                tlv8.Entry(AdditionalParameterTypes.HAPCharacteristicPropertiesDescriptor, perms_type)
             ]
 
             tlv = tlv8.encode(data)

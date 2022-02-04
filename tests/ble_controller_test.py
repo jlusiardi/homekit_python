@@ -27,7 +27,7 @@ from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead
 from homekit import Controller
 from homekit.model import Accessory
 from homekit.model.characteristics import CharacteristicsTypes
-from homekit.model.services import ServicesTypes, AbstractService, LightBulbService
+from homekit.model.services import ServicesTypes, AbstractService, LightBulbService, LockMechanismService
 from homekit.model.characteristics import AbstractCharacteristic
 from homekit.model.feature_flags import FeatureFlags
 from homekit.protocol import States, Methods, TlvTypes
@@ -237,6 +237,7 @@ class Characteristic:
     def __init__(self, service, char):
         self.service = service
         self.char = char
+        self.perms = char.perms
 
         self.descriptors = []
 
@@ -276,7 +277,8 @@ class Characteristic:
         return value
 
     def do_char_write(self, tid, value):
-        self.char.set_value_from_ble(value)
+        if value:
+            self.char.set_value_from_ble(value)
 
         response = bytearray([0x02, tid, 0x00])
         self.queue_read_response(self.encrypt_value(bytes(response)))
@@ -287,7 +289,8 @@ class Characteristic:
         tid = value[2]
         payload = value[7:]
 
-        if opcode == HapBleOpCodes.CHAR_WRITE:
+        if  (opcode == HapBleOpCodes.CHAR_WRITE) or \
+            (opcode == HapBleOpCodes.CHAR_TIMED_WRITE):
             new_value = {entry.type_id: entry.data for entry in tlv8.decode(payload)}
             self.do_char_write(tid, new_value[1])
 
@@ -299,6 +302,9 @@ class Characteristic:
             tlv = len(value).to_bytes(2, byteorder='little') + value
             response.extend(tlv)
             self.queue_read_response(self.encrypt_value(bytes(response)))
+
+        elif  opcode == HapBleOpCodes.CHAR_EXEC_WRITE:
+            self.do_char_write(tid, None)
 
         elif opcode == HapBleOpCodes.CHAR_SIG_READ:
             # see 7.3.4.2
@@ -1244,6 +1250,50 @@ class TestBLEController(unittest.TestCase):
                 ])
                 self.assertEqual(result, {})
                 self.assertFalse(a.services[1].characteristics[0].get_value())
+
+    def test_put_characteristic_timed_write(self):
+        model_mixin.id_counter = 0
+        c = Controller()
+
+        a = Accessory(
+            'test-dev-123',
+            'TestCo',
+            'Test Dev Pro',
+            '00000',
+            1
+        )
+        a.add_service(LockMechanismService())
+
+        manager = DeviceManager()
+        manager._devices['00:00:00:00:00'] = Device(a)
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m1:
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                m1.return_value = manager
+                m2.return_value = manager
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                pairing = c.pairings['test-pairing']
+                pairing.list_accessories_and_characteristics()
+
+                pairing.list_pairings()  # ensures that session is initialized
+
+                with mock.patch.object(pairing.session, 'request', wraps=pairing.session.request) as fake_request:
+                    result = pairing.put_characteristics([
+                        (1, 11, 1),
+                    ])
+                    self.assertEqual(2, fake_request.call_count)
+
+                self.assertEqual(result, {})
+                self.assertEqual(a.services[1].characteristics[1].get_value(), 1)
+
+                with mock.patch.object(pairing.session, 'request', wraps=pairing.session.request) as fake_request:
+                    result = pairing.put_characteristics([
+                        (1, 11, 0),
+                    ])
+                    self.assertEqual(2, fake_request.call_count)
+
+                self.assertEqual(result, {})
+                self.assertEqual(a.services[1].characteristics[1].get_value(), 0)
 
     def test_identify(self):
         model_mixin.id_counter = 0

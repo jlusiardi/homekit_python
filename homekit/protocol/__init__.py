@@ -25,7 +25,6 @@ from cryptography.hazmat.primitives.asymmetric import x25519
 from cryptography.hazmat.primitives import serialization
 
 from homekit.protocol.states import States
-from homekit.protocol.methods import Methods
 from homekit.protocol.errors import Errors
 from homekit.protocol.tlv_types import TlvTypes
 from homekit.exceptions import IncorrectPairingIdError, InvalidAuthTagError, InvalidSignatureError, UnavailableError, \

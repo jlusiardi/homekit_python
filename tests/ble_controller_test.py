@@ -968,6 +968,7 @@ class TestBLEController(unittest.TestCase):
             1
         )
         a.add_service(LightBulbService())
+        a.add_service(LockMechanismService())
 
         manager = DeviceManager()
         manager._devices['00:00:00:00:00'] = Device(a)
@@ -988,17 +989,17 @@ class TestBLEController(unittest.TestCase):
                             {
                                 "iid": 3,
                                 "type": "00000014-0000-1000-8000-0026BB765291",
-                                "perms": [],
+                                "perms": ["pw"],
                                 "description": "",
                                 "format": "bool",
                                 "unit": "unknown",
                                 "range": None,
-                                "step": None
+                                "step": None,
                             },
                             {
                                 "iid": 4,
                                 "type": "00000020-0000-1000-8000-0026BB765291",
-                                "perms": [],
+                                "perms": ["pr"],
                                 "description": "",
                                 "format": "string",
                                 "unit": "unknown",
@@ -1008,7 +1009,7 @@ class TestBLEController(unittest.TestCase):
                             {
                                 "iid": 5,
                                 "type": "00000021-0000-1000-8000-0026BB765291",
-                                "perms": [],
+                                "perms": ["pr"],
                                 "description": "",
                                 "format": "string",
                                 "unit": "unknown",
@@ -1018,7 +1019,7 @@ class TestBLEController(unittest.TestCase):
                             {
                                 "iid": 6,
                                 "type": "00000023-0000-1000-8000-0026BB765291",
-                                "perms": [],
+                                "perms": ["pr"],
                                 "description": "",
                                 "format": "string",
                                 "unit": "unknown",
@@ -1028,7 +1029,7 @@ class TestBLEController(unittest.TestCase):
                             {
                                 "iid": 7,
                                 "type": "00000030-0000-1000-8000-0026BB765291",
-                                "perms": [],
+                                "perms": ["pr"],
                                 "description": "",
                                 "format": "string",
                                 "unit": "unknown",
@@ -1038,7 +1039,7 @@ class TestBLEController(unittest.TestCase):
                             {
                                 "iid": 8,
                                 "type": "00000052-0000-1000-8000-0026BB765291",
-                                "perms": [],
+                                "perms": ["pr"],
                                 "description": "",
                                 "format": "string",
                                 "unit": "unknown",
@@ -1054,7 +1055,7 @@ class TestBLEController(unittest.TestCase):
                             {
                                 "iid": 10,
                                 "type": "00000025-0000-1000-8000-0026BB765291",
-                                "perms": [],
+                                "perms": ["pr", "pw"],
                                 "description": "",
                                 "format": "bool",
                                 "unit": "unknown",
@@ -1069,18 +1070,44 @@ class TestBLEController(unittest.TestCase):
                         "characteristics": [
                             {
                                 "iid": 12,
-                                "type": "0000004C-0000-1000-8000-0026BB765291",
-                                "perms": [],
+                                "type": "0000001D-0000-1000-8000-0026BB765291",
+                                "perms": ["pr"],
                                 "description": "",
-                                "format": "data",
+                                "format": "uint8",
                                 "unit": "unknown",
                                 "range": None,
                                 "step": None
                             },
                             {
                                 "iid": 13,
+                                "type": "0000001E-0000-1000-8000-0026BB765291",
+                                "perms": ["tw", "pr", "pw"],
+                                "description": "",
+                                "format": "uint8",
+                                "unit": "unknown",
+                                "range": None,
+                                "step": None
+                            }
+                        ],
+                        "iid": 11,
+                        "type": "00000045-0000-1000-8000-0026BB765291"
+                    },
+                    {
+                        "characteristics": [
+                            {
+                                "iid": 15,
+                                "type": "0000004C-0000-1000-8000-0026BB765291",
+                                "perms": ["pr"],
+                                "description": "",
+                                "format": "data",
+                                "unit": "unknown",
+                                "range": None,
+                                "step": None
+                            },
+                            {
+                                "iid": 16,
                                 "type": "0000004E-0000-1000-8000-0026BB765291",
-                                "perms": [],
+                                "perms": ["pr"],
                                 "description": "",
                                 "format": "data",
                                 "unit": "unknown",
@@ -1090,17 +1117,17 @@ class TestBLEController(unittest.TestCase):
                             {
                                 "description": "",
                                 "format": "data",
-                                "iid": 14,
-                                "perms": [],
+                                "iid": 17,
+                                "perms": ["pr"],
                                 "range": None,
                                 "step": None,
                                 "type": "00000050-0000-1000-8000-0026BB765291",
                                 "unit": "unknown"
                             },
                             {
-                                "iid": 15,
+                                "iid": 18,
                                 "type": "0000004F-0000-1000-8000-0026BB765291",
-                                "perms": [],
+                                "perms": ["pr"],
                                 "description": "",
                                 "format": "data",
                                 "unit": "unknown",
@@ -1108,9 +1135,9 @@ class TestBLEController(unittest.TestCase):
                                 "step": None
                             },
                         ],
-                        "iid": 11,
+                        "iid": 14,
                         "type": "00000055-0000-1000-8000-0026BB765291"
-                    }
+                    },
                 ]
             }
         ])

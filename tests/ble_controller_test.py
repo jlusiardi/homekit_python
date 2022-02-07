@@ -1264,17 +1264,27 @@ class TestBLEController(unittest.TestCase):
                 m1.return_value = manager
                 m2.return_value = manager
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
-                c.pairings['test-pairing'].list_accessories_and_characteristics()
+                pairing = c.pairings['test-pairing']
+                pairing.list_accessories_and_characteristics()
+                pairing.list_pairings()  # ensures that session is initialized
 
-                result = c.pairings['test-pairing'].put_characteristics([
-                    (1, 10, True),
-                ])
+                with mock.patch.object(pairing.session, 'request', wraps=pairing.session.request) as fake_request:
+                    result = pairing.put_characteristics([
+                        (1, 10, True),
+                    ])
+                    self.assertEqual(1, fake_request.call_count)
+                    self.assertEqual(HapBleOpCodes.CHAR_WRITE, fake_request.call_args_list[0].args[2])
+
                 self.assertEqual(result, {})
                 self.assertTrue(a.services[1].characteristics[0].get_value())
 
-                result = c.pairings['test-pairing'].put_characteristics([
-                    (1, 10, False),
-                ])
+                with mock.patch.object(pairing.session, 'request', wraps=pairing.session.request) as fake_request:
+                    result = pairing.put_characteristics([
+                        (1, 10, False),
+                    ])
+                    self.assertEqual(1, fake_request.call_count)
+                    self.assertEqual(HapBleOpCodes.CHAR_WRITE, fake_request.call_args_list[0].args[2])
+
                 self.assertEqual(result, {})
                 self.assertFalse(a.services[1].characteristics[0].get_value())
 
@@ -1309,6 +1319,12 @@ class TestBLEController(unittest.TestCase):
                         (1, 11, 1),
                     ])
                     self.assertEqual(2, fake_request.call_count)
+                    self.assertEqual(HapBleOpCodes.CHAR_TIMED_WRITE, fake_request.call_args_list[0].args[2])
+                    self.assertEqual(HapBleOpCodes.CHAR_EXEC_WRITE, fake_request.call_args_list[1].args[2])
+
+                    tlv_body = tlv8.decode(fake_request.call_args_list[0].args[3])
+                    self.assertEqual(AdditionalParameterTypes.TTL, tlv_body[1].type_id)
+                    self.assertEqual(11, int.from_bytes(tlv_body[1].data,byteorder='little'))
 
                 self.assertEqual(result, {})
                 self.assertEqual(a.services[1].characteristics[1].get_value(), 1)
@@ -1318,6 +1334,12 @@ class TestBLEController(unittest.TestCase):
                         (1, 11, 0),
                     ])
                     self.assertEqual(2, fake_request.call_count)
+                    self.assertEqual(HapBleOpCodes.CHAR_TIMED_WRITE, fake_request.call_args_list[0].args[2])
+                    self.assertEqual(HapBleOpCodes.CHAR_EXEC_WRITE, fake_request.call_args_list[1].args[2])
+
+                    tlv_body = tlv8.decode(fake_request.call_args_list[0].args[3])
+                    self.assertEqual(AdditionalParameterTypes.TTL, tlv_body[1].type_id)
+                    self.assertEqual(11, int.from_bytes(tlv_body[1].data,byteorder='little'))
 
                 self.assertEqual(result, {})
                 self.assertEqual(a.services[1].characteristics[1].get_value(), 0)

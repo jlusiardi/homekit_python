@@ -760,7 +760,6 @@ class TestBLEController(unittest.TestCase):
                 m1.return_value = manager
                 m2.return_value = manager
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
-                c.pairings['test-pairing'].list_accessories_and_characteristics()
                 self.assertEqual(len(device.peers), 1)
 
                 c.remove_pairing('test-pairing')

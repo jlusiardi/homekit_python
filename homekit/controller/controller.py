@@ -624,8 +624,11 @@ class Controller(object):
         Remove a pairing between the controller and the accessory. The pairing data is delete on both ends, on the
         accessory and the controller.
 
-        Important: no automatic saving of the pairing data is performed. If you don't do this, the accessory seems still
-            to be paired on the next start of the application.
+        Important:
+            - no automatic saving of the pairing data is performed. If you don't do this, the accessory seems still
+                to be paired on the next start of the application.
+            - due to the deletion of the pairing on both sides, calling this function will change the dictionary.
+                This may lead to errors in for-loops. If necessary, cache all keys before calling this function.
 
         :param alias: the controller's alias for the accessory
         :param pairingId: the pairing id to be removed

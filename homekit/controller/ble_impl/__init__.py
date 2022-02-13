@@ -69,6 +69,12 @@ class BlePairing(AbstractPairing):
         self.pairing_data = pairing_data
         self.session = None
 
+        # if necessary, add the accessory list and characteristics to the object
+        #   see https://github.com/jlusiardi/homekit_python/issues/223
+        #   This behaviour is similar to Apples Home app, which caches all services and characteristics
+        #   on pairing. Note that e.g. BleSession expects proper defined pairing_data.
+        self.list_accessories_and_characteristics()
+
     def close(self):
         pass
 
@@ -432,6 +438,7 @@ class BleSession(object):
         self.c2a_key = None
         self.a2c_key = None
         self.device = None
+
         mac_address = self.pairing_data['AccessoryMAC']
 
         manager = DeviceManager(self.adapter)

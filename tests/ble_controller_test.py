@@ -690,10 +690,12 @@ class TestBLEController(unittest.TestCase):
         manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            m.return_value = manager
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
-            self.assertIsNone(a.services[0].characteristics[0].value)
-            self.assertRaises(exceptions.AlreadyPairedError, c.identify_ble, '00:00:00:00:00')
+            with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m2:
+                m.return_value = manager
+                m2.return_value = manager
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                self.assertIsNone(a.services[0].characteristics[0].value)
+                self.assertRaises(exceptions.AlreadyPairedError, c.identify_ble, '00:00:00:00:00')
 
     def test_pair_success(self):
         model_mixin.id_counter = 0
@@ -712,8 +714,10 @@ class TestBLEController(unittest.TestCase):
         manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            m.return_value = manager
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                m.return_value = manager
+                m2.return_value = manager
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
 
         self.assertEqual(c.pairings['test-pairing'].pairing_data['Connection'], 'BLE')
 
@@ -734,10 +738,12 @@ class TestBLEController(unittest.TestCase):
         manager._devices['00:00:00:00:00'] = Device(a)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            m.return_value = manager
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
-            self.assertRaises(exceptions.MalformedPinError, c.perform_pairing_ble, 'alias2',
-                              '12:34:56:00:01:0B', '01022021')
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                m.return_value = manager
+                m2.return_value = manager
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                self.assertRaises(exceptions.MalformedPinError, c.perform_pairing_ble, 'alias2',
+                                  '12:34:56:00:01:0B', '01022021')
 
     def test_pair_unpair(self):
         model_mixin.id_counter = 0
@@ -781,75 +787,93 @@ class TestBLEController(unittest.TestCase):
         manager = DeviceManager()
         # --- hw auth and software auth
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
-
-        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a)
-            m.return_value = manager
-
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                  auth_method=Controller.PairingAuth.HwAuth)
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                  auth_method=Controller.PairingAuth.SwAuth)
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                    auth_method=Controller.PairingAuth.HwAuth)
+
+        with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a)
+                m.return_value = manager
+                m2.return_value = manager
+
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                    auth_method=Controller.PairingAuth.SwAuth)
 
         # --- hw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                  auth_method=Controller.PairingAuth.HwAuth)
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                    auth_method=Controller.PairingAuth.HwAuth)
 
         # --- sw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                  auth_method=Controller.PairingAuth.SwAuth)
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                    auth_method=Controller.PairingAuth.SwAuth)
 
         # --- not certified
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, 0)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a, 0)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, 0)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a, 0)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                  auth_method=Controller.PairingAuth.SwAuth)
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                    auth_method=Controller.PairingAuth.SwAuth)
 
     def test_pair_unsupported_auth(self):
         model_mixin.id_counter = 0
@@ -866,34 +890,40 @@ class TestBLEController(unittest.TestCase):
 
         # --- hw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.APPLE_MFI_COPROCESSOR)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                  auth_method=Controller.PairingAuth.SwAuth)
-
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                    auth_method=Controller.PairingAuth.SwAuth)
             self.assertRaises(exceptions.PairingAuthError)
+
         # --- sw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a, FeatureFlags.SOFTWARE_MFI_AUTH)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                  auth_method=Controller.PairingAuth.HwAuth)
-            self.assertRaises(exceptions.PairingAuthError)
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                    auth_method=Controller.PairingAuth.HwAuth)
+                self.assertRaises(exceptions.PairingAuthError)
 
         # --- not certified
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
-            manager._devices['00:00:00:00:00'] = Device(a, 0)
-            m.return_value = manager
+            with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
+                manager._devices['00:00:00:00:00'] = Device(a, 0)
+                m.return_value = manager
+                m2.return_value = manager
 
-            c = Controller()
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                  auth_method=Controller.PairingAuth.HwAuth)
+                c = Controller()
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
+                                    auth_method=Controller.PairingAuth.HwAuth)
 
-            self.assertRaises(exceptions.PairingAuthError)
+                self.assertRaises(exceptions.PairingAuthError)
 
     def test_list_accessories_and_characteristics(self):
         model_mixin.id_counter = 0

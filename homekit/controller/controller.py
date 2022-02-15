@@ -680,9 +680,10 @@ class Controller(object):
                 device.connect()
 
                 logging.debug('resolved %d services', len(device.services))
-                pair_remove_char, pair_remove_char_id = find_characteristic_by_uuid(device,
-                                                                                    ServicesTypes.PAIRING_SERVICE,
-                                                                                    CharacteristicsTypes.PAIRING_PAIRINGS)
+                pair_remove_char, pair_remove_char_id = \
+                    find_characteristic_by_uuid(device,
+                                                ServicesTypes.PAIRING_SERVICE,
+                                                CharacteristicsTypes.PAIRING_PAIRINGS)
                 logging.debug('setup char: %s %s', pair_remove_char, pair_remove_char.service.device)
 
                 session = BleSession(pairing_data, self.ble_adapter)

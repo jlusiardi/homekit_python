@@ -73,7 +73,10 @@ class BlePairing(AbstractPairing):
         #   see https://github.com/jlusiardi/homekit_python/issues/223
         #   This behaviour is similar to Apples Home app, which caches all services and characteristics
         #   on pairing. Note that e.g. BleSession expects proper defined pairing_data.
-        self.list_accessories_and_characteristics()
+        try:
+            self.list_accessories_and_characteristics()
+        except Exception as e:
+            logger.debug("failed to list_accessories_and_characteristics from device:\n%s", repr(e))
 
     def close(self):
         pass

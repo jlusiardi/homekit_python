@@ -31,6 +31,8 @@ def setup_args_parser():
                         help='this pairing ID identifies the controller who should be removed from accessory')
     parser.add_argument('--adapter', action='store', dest='adapter', default='hci0',
                         help='the bluetooth adapter to be used (defaults to hci0)')
+    parser.add_argument('--force', action='store_true', dest='force',
+                        help='force removing of pairing in pairing data even if accessory is not reachable')
     add_log_arguments(parser)
     return parser.parse_args()
 
@@ -46,6 +48,6 @@ if __name__ == '__main__':
         print('"{a}" is no known alias'.format(a=args.alias))
         exit(-1)
 
-    controller.remove_pairing(args.alias, args.controllerPairingId)
+    controller.remove_pairing(args.alias, args.controllerPairingId, args.force)
     controller.save_data(args.file)
     print('Pairing for "{a}" was removed.'.format(a=args.alias))

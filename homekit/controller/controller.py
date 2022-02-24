@@ -619,7 +619,7 @@ class Controller(object):
 
         return finish_pairing
 
-    def remove_pairing(self, alias, pairingId=None):
+    def remove_pairing(self, alias, pairingId=None, force=False):
         """
         Remove a pairing between the controller and the accessory. The pairing data is delete on both ends, on the
         accessory and the controller.
@@ -632,6 +632,7 @@ class Controller(object):
 
         :param alias: the controller's alias for the accessory
         :param pairingId: the pairing id to be removed
+        :param force: remove the pairing even if the accessory cannot be reached
         :raises AuthenticationError: if the controller isn't authenticated to the accessory.
         :raises AccessoryNotFoundError: if the device can not be found via zeroconf
         :raises UnknownError: on unknown errors
@@ -697,6 +698,9 @@ class Controller(object):
         except NotImplementedError:
             raise
         except Exception:
+            if not force:
+                raise
+
             logging.debug('error sending unpair request, remove without accessory notification')
             data = tlv8.EntryList([
                 tlv8.Entry(TlvTypes.State, States.M2),

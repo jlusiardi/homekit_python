@@ -662,7 +662,7 @@ def create_ble_pair_setup_write(characteristic, characteristic_id):
 
         # reading hap characteristic write response following chapter 7.3.4.5 page 95 spec R2
         data = []
-        while len(data) == 0:
+        while not data:
             time.sleep(1)
             logger.debug('reading characteristic')
             data = characteristic.read_value()

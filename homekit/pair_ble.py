@@ -20,7 +20,7 @@ import argparse
 import sys
 import logging
 
-from homekit.controller import Controller
+from homekit.controller import Controller, PairingAuthMap
 from homekit.log_support import setup_logging, add_log_arguments
 from homekit.pair import pin_from_parameter, pin_from_keyboard
 
@@ -68,8 +68,7 @@ if __name__ == '__main__':
         pin_function = pin_from_keyboard()
 
     try:
-        logging.debug('start pairing')
-        finish_pairing = controller.start_pairing_ble(args.alias, args.mac, args.adapter, args.auth_method)
+        finish_pairing = controller.start_pairing_ble(args.alias, args.mac, args.adapter, PairingAuthMap[args.auth_method])
         finish_pairing(pin_function())
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()

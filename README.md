@@ -257,7 +257,7 @@ This tool will perform a pairing to a new Bluetooth LE accessory.
 
 Usage:
 ```bash
-python3 -m homekit.pair -m ${MACADDRESS} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -a ${ALIAS} [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
+python3 -m homekit.pair_ble -m ${MACADDRESS} -p ${SETUPCODE} -f ${PAIRINGDATAFILE} -a ${ALIAS} [-s {auto,hw,sw}] [--adapter ${ADAPTER}] [--log ${LOGLEVEL}]
 ```
 
 The option `-m` specifies the device id of the accessory to pair. Can be obtained via discovery.
@@ -267,6 +267,11 @@ The option `-p` specifies the HomeKit Setup Code. Can be obtained from the acces
 The option `-f` specifies the file that contains the pairing data.
 
 The option `-a` specifies the alias for the device.
+
+The option `-s` specifies the method used for pairing:
+ * `auto` decide the authentication method via discovery data
+ * `hw` use hardware authentication method
+ * `sw` use software authentication method
 
 The option `--adapter` specifies which Bluetooth device to use. This is optional and `hci0` is the default and is only 
 used if the paired device is using Bluetooth LE.

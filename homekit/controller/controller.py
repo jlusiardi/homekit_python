@@ -49,6 +49,23 @@ if IP_TRANSPORT_SUPPORTED:
     from homekit.controller.ip_implementation import IpPairing, IpSession
 
 
+class PairingAuth(IntEnum):
+    """
+    Types of pairing authentication strategies
+        Auto: try pairing with hardware authentication , fall back to software authentication if necessary
+        HwAuth: only try hardware authentication
+        SwAuth: only try software authentication
+    """
+    Auto = 0
+    HwAuth = 1
+    SwAuth = 2
+
+PairingAuthMap = {
+    'auto': PairingAuth.Auto,
+    'hw': PairingAuth.HwAuth,
+    'sw': PairingAuth.SwAuth,
+}
+
 class Controller(object):
     """
     This class represents a HomeKit controller (normally your iPhone or iPad).
@@ -64,16 +81,6 @@ class Controller(object):
         self.ble_adapter = ble_adapter
         self.logger = logging.getLogger('homekit.controller.Controller')
 
-    class PairingAuth(IntEnum):
-        """
-        Types of pairing authentication strategies
-            Auto: try pairing with hardware authentication , fall back to software authentication if necessary
-            HwAuth: only try hardware authentication
-            SwAuth: only try software authentication
-        """
-        Auto = 0
-        HwAuth = 1
-        SwAuth = 2
 
     @staticmethod
     def discover(max_seconds=10):
@@ -353,12 +360,12 @@ class Controller(object):
         """
         pair_method = Methods.PairSetup
 
-        if auth_method == Controller.PairingAuth.Auto:
+        if auth_method == PairingAuth.Auto:
             if feature_flags & FeatureFlags.APPLE_MFI_COPROCESSOR:
                 pair_method = Methods.PairSetupWithAuth
-        elif auth_method == Controller.PairingAuth.HwAuth:
+        elif auth_method == PairingAuth.HwAuth:
             pair_method = Methods.PairSetupWithAuth
-        elif auth_method == Controller.PairingAuth.SwAuth:
+        elif auth_method == PairingAuth.SwAuth:
             pass
         else:
             raise PairingAuthError(f'auth_method: invalid value "{str(auth_method)}"')

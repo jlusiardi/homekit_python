@@ -15,7 +15,7 @@
 #
 
 __all__ = [
-    'Controller'
+    'Controller', 'PairingAuth', 'PairingAuthMap'
 ]
 
-from homekit.controller.controller import Controller
+from homekit.controller.controller import Controller, PairingAuth, PairingAuthMap

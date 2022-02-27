@@ -24,7 +24,7 @@ import tlv8
 from typing import Optional
 
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
-from homekit import Controller
+from homekit.controller import Controller, PairingAuth
 from homekit.model import Accessory
 from homekit.model.characteristics import CharacteristicsTypes
 from homekit.model.services import ServicesTypes, AbstractService, LightBulbService
@@ -803,7 +803,7 @@ class TestBLEController(unittest.TestCase):
 
                 c = Controller()
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                    auth_method=Controller.PairingAuth.HwAuth)
+                                    auth_method=PairingAuth.HwAuth)
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
@@ -813,7 +813,7 @@ class TestBLEController(unittest.TestCase):
 
                 c = Controller()
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                    auth_method=Controller.PairingAuth.SwAuth)
+                                    auth_method=PairingAuth.SwAuth)
 
         # --- hw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
@@ -833,7 +833,7 @@ class TestBLEController(unittest.TestCase):
 
                 c = Controller()
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                    auth_method=Controller.PairingAuth.HwAuth)
+                                    auth_method=PairingAuth.HwAuth)
 
         # --- sw auth only
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
@@ -853,7 +853,7 @@ class TestBLEController(unittest.TestCase):
 
                 c = Controller()
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                    auth_method=Controller.PairingAuth.SwAuth)
+                                    auth_method=PairingAuth.SwAuth)
 
         # --- not certified
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
@@ -873,7 +873,7 @@ class TestBLEController(unittest.TestCase):
 
                 c = Controller()
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                    auth_method=Controller.PairingAuth.SwAuth)
+                                    auth_method=PairingAuth.SwAuth)
 
     def test_pair_unsupported_auth(self):
         model_mixin.id_counter = 0
@@ -897,7 +897,7 @@ class TestBLEController(unittest.TestCase):
 
                 c = Controller()
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                    auth_method=Controller.PairingAuth.SwAuth)
+                                    auth_method=PairingAuth.SwAuth)
             self.assertRaises(exceptions.PairingAuthError)
 
         # --- sw auth only
@@ -909,7 +909,7 @@ class TestBLEController(unittest.TestCase):
 
                 c = Controller()
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                    auth_method=Controller.PairingAuth.HwAuth)
+                                    auth_method=PairingAuth.HwAuth)
                 self.assertRaises(exceptions.PairingAuthError)
 
         # --- not certified
@@ -921,7 +921,7 @@ class TestBLEController(unittest.TestCase):
 
                 c = Controller()
                 c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111',
-                                    auth_method=Controller.PairingAuth.HwAuth)
+                                    auth_method=PairingAuth.HwAuth)
 
                 self.assertRaises(exceptions.PairingAuthError)
 

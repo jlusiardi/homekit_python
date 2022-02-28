@@ -60,11 +60,13 @@ class PairingAuth(IntEnum):
     HwAuth = 1
     SwAuth = 2
 
+
 PairingAuthMap = {
     'auto': PairingAuth.Auto,
     'hw': PairingAuth.HwAuth,
     'sw': PairingAuth.SwAuth,
 }
+
 
 class Controller(object):
     """
@@ -80,7 +82,6 @@ class Controller(object):
         self.pairings = {}
         self.ble_adapter = ble_adapter
         self.logger = logging.getLogger('homekit.controller.Controller')
-
 
     @staticmethod
     def discover(max_seconds=10):

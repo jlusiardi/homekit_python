@@ -68,7 +68,9 @@ if __name__ == '__main__':
         pin_function = pin_from_keyboard()
 
     try:
-        finish_pairing = controller.start_pairing_ble(args.alias, args.mac, args.adapter, PairingAuthMap[args.auth_method])
+        finish_pairing = controller.start_pairing_ble(
+            args.alias, args.mac, args.adapter, PairingAuthMap[args.auth_method]
+        )
         finish_pairing(pin_function())
         pairing = controller.get_pairings()[args.alias]
         pairing.list_accessories_and_characteristics()

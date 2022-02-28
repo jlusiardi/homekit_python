@@ -197,7 +197,7 @@ class BlePairing(AbstractPairing):
                 self.session = None
                 raise e
 
-            if response.first_by_id(AdditionalParameterTypes.Value):
+            if response and response.first_by_id(AdditionalParameterTypes.Value):
                 value = self._convert_to_python(aid, cid, response.first_by_id(AdditionalParameterTypes.Value).data)
             else:
                 value = None
@@ -557,7 +557,8 @@ class BleSession(object):
         logger.debug('decrypted: %s', bytearray(data).hex())
 
         if not data:
-            return {}
+            logger.debug('decryption failed')
+            return tlv8.EntryList()
 
         # parse header and check stuff
         logger.debug('parse sig read response %s', bytes([int(a) for a in data]).hex())

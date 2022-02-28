@@ -79,7 +79,12 @@ class BlePairing(AbstractPairing):
             logger.debug("failed to list_accessories_and_characteristics from device:\n%s", repr(e))
 
     def close(self):
-        pass
+        """Closes an active BLE session
+           If a session is necessary for the next action, it will be instantiated
+        """
+        if self.session:
+            self.session.close()
+            self.session = None
 
     def list_accessories_and_characteristics(self):
         if 'accessories' in self.pairing_data:

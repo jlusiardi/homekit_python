@@ -251,8 +251,8 @@ class RequestRejected(HomeKitException):
     Raised when a request fails with a HAP error code
     """
 
-    def __init__(self, message, error_code):
-        self.error_code = error_code
+    def __init__(self, message, status):
+        self.status = status
         self.message = message
         Exception.__init__(self, message)
 

@@ -627,7 +627,7 @@ class Controller(object):
 
         return finish_pairing
 
-    def remove_pairing(self, alias, pairingId=None):
+    def remove_pairing(self, alias, pairingId=None, force=False):
         """
         Remove a pairing between the controller and the accessory. The pairing data is delete on both ends, on the
         accessory and the controller.
@@ -640,6 +640,7 @@ class Controller(object):
 
         :param alias: the controller's alias for the accessory
         :param pairingId: the pairing id to be removed
+        :param force: remove the pairing even if the accessory cannot be reached
         :raises AuthenticationError: if the controller isn't authenticated to the accessory.
         :raises AccessoryNotFoundError: if the device can not be found via zeroconf
         :raises UnknownError: on unknown errors
@@ -659,47 +660,60 @@ class Controller(object):
             tlv8.Entry(TlvTypes.Identifier, pairingIdToDelete.encode())
         ])
 
-        if connection_type == 'IP':
-            if not IP_TRANSPORT_SUPPORTED:
-                raise TransportNotSupportedError('IP')
-            session = IpSession(pairing_data)
-            response = session.post('/pairings', request_tlv, content_type='application/pairing+tlv8')
-            session.close()
-            data = response.read()
-            data = tlv8.decode(data, {
-                TlvTypes.State: tlv8.DataType.INTEGER,
-                TlvTypes.Error: tlv8.DataType.INTEGER
+        try:
+            if connection_type == 'IP':
+                if not IP_TRANSPORT_SUPPORTED:
+                    raise TransportNotSupportedError('IP')
+                session = IpSession(pairing_data)
+                response = session.post('/pairings', request_tlv, content_type='application/pairing+tlv8')
+                session.close()
+                data = response.read()
+                data = tlv8.decode(data, {
+                    TlvTypes.State: tlv8.DataType.INTEGER,
+                    TlvTypes.Error: tlv8.DataType.INTEGER
 
-            })
-        elif connection_type == 'BLE':
-            if not BLE_TRANSPORT_SUPPORTED:
-                raise TransportNotSupportedError('BLE')
-            inner = tlv8.encode([
-                tlv8.Entry(AdditionalParameterTypes.ParamReturnResponse, bytearray(b'\x01')),
-                tlv8.Entry(AdditionalParameterTypes.Value, request_tlv)
-            ])
+                })
+            elif connection_type == 'BLE':
+                if not BLE_TRANSPORT_SUPPORTED:
+                    raise TransportNotSupportedError('BLE')
+                inner = tlv8.encode([
+                    tlv8.Entry(AdditionalParameterTypes.ParamReturnResponse, bytearray(b'\x01')),
+                    tlv8.Entry(AdditionalParameterTypes.Value, request_tlv)
+                ])
 
-            body = len(inner).to_bytes(length=2, byteorder='little') + inner
+                body = len(inner).to_bytes(length=2, byteorder='little') + inner
 
-            from .ble_impl.device import DeviceManager
-            manager = DeviceManager(self.ble_adapter)
-            device = manager.make_device(pairing_data['AccessoryMAC'])
-            device.connect()
+                from .ble_impl.device import DeviceManager
+                manager = DeviceManager(self.ble_adapter)
+                device = manager.make_device(pairing_data['AccessoryMAC'])
+                device.connect()
 
-            logging.debug('resolved %d services', len(device.services))
-            pair_remove_char, pair_remove_char_id = find_characteristic_by_uuid(device, ServicesTypes.PAIRING_SERVICE,
-                                                                                CharacteristicsTypes.PAIRING_PAIRINGS)
-            logging.debug('setup char: %s %s', pair_remove_char, pair_remove_char.service.device)
+                logging.debug('resolved %d services', len(device.services))
+                pair_remove_char, pair_remove_char_id = \
+                    find_characteristic_by_uuid(device,
+                                                ServicesTypes.PAIRING_SERVICE,
+                                                CharacteristicsTypes.PAIRING_PAIRINGS)
+                logging.debug('setup char: %s %s', pair_remove_char, pair_remove_char.service.device)
 
-            session = BleSession(pairing_data, self.ble_adapter)
-            response = session.request(pair_remove_char, pair_remove_char_id, HapBleOpCodes.CHAR_WRITE, body)
-            data = tlv8.decode(response.first_by_id(AdditionalParameterTypes.Value).data, {
-                TlvTypes.State: tlv8.DataType.INTEGER,
-                TlvTypes.Error: tlv8.DataType.INTEGER
+                session = BleSession(pairing_data, self.ble_adapter)
+                response = session.request(pair_remove_char, pair_remove_char_id, HapBleOpCodes.CHAR_WRITE, body)
+                data = tlv8.decode(response.first_by_id(AdditionalParameterTypes.Value).data, {
+                    TlvTypes.State: tlv8.DataType.INTEGER,
+                    TlvTypes.Error: tlv8.DataType.INTEGER
+                })
+            else:
+                raise NotImplementedError('not implemented (neither IP nor BLE)')
+        except NotImplementedError:
+            raise
+        except Exception:
+            if not force:
+                raise
 
-            })
-        else:
-            raise Exception('not implemented (neither IP nor BLE)')
+            logging.debug('error sending unpair request, remove without accessory notification')
+            data = tlv8.EntryList([
+                tlv8.Entry(TlvTypes.State, States.M2),
+                tlv8.Entry(TlvTypes.Error, 0)
+                ])
 
         # act upon the response (the same is returned for IP and BLE accessories)
         # handle the result, spec says, if it has only one entry with state == M2 we unpaired, else its an error.

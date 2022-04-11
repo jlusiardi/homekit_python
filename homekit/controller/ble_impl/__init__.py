@@ -247,7 +247,7 @@ class BlePairing(AbstractPairing):
             return value.encode('UTF-8')
 
         if char_format == CharacteristicFormats.data or char_format == CharacteristicFormats.tlv8:
-            return value.hex().encode()
+            return value
 
         # from here only integer values of different sizes
         if char_format == CharacteristicFormats.int:

@@ -40,7 +40,10 @@ class CollectingListener(object):
         info = zeroconf.get_service_info(zeroconf_type, name)
         if info is not None:
             self.data.append(info)
-
+    
+    def update_service(self, zc: "zeroconf.Zeroconf", type_: str, name: str) -> None:
+        """Callback for state updates, which we ignore for now."""
+                    
     def get_data(self):
         """
         Use this method to get the data of the collected announcements.

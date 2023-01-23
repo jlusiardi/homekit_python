@@ -40,7 +40,10 @@ class CollectingListener(object):
         info = zeroconf.get_service_info(zeroconf_type, name)
         if info is not None:
             self.data.append(info)
-
+    
+    def update_service(self, zc: "zeroconf.Zeroconf", type_: str, name: str) -> None:
+        """Callback for state updates, which we ignore for now."""
+                    
     def get_data(self):
         """
         Use this method to get the data of the collected announcements.
@@ -48,19 +51,6 @@ class CollectingListener(object):
         :return: a List of zeroconf.ServiceInfo instances
         """
         return self.data
-
-    def update_service(self, zeroconf, service_type, name, state_change):
-        # prevent FutureWarning: XXX has no update_service method. Provide one
-        # (it can be empty if you don't care about the updates), it'll become
-        # mandatory.
-        logging.debug(
-            'update_service zeroconf=%s service_type=%s name=%s state_change=%s',
-            zeroconf,
-            service_type,
-            name,
-            state_change,
-        )
-
 
 def get_from_properties(props, key, default=None, case_sensitive=True):
     """

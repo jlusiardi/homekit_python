@@ -26,7 +26,9 @@ __all__ = [
     'SaturationCharacteristicMixin', 'SerialNumberCharacteristic', 'TargetHeatingCoolingStateCharacteristic',
     'TargetHeatingCoolingStateCharacteristicMixin', 'TargetTemperatureCharacteristic',
     'TargetTemperatureCharacteristicMixin', 'TemperatureDisplayUnitCharacteristic', 'TemperatureDisplayUnitsMixin',
-    'VolumeCharacteristic', 'VolumeCharacteristicMixin', 'CharacteristicsDecoderLoader'
+    'VolumeCharacteristic', 'VolumeCharacteristicMixin', 'CharacteristicsDecoderLoader',
+    'LockMechanismCurrentStateCharacteristic', 'LockMechanismCurrentStateCharacteristicMixin',
+    'LockMechanismTargetStateCharacteristic', 'LockMechanismTargetStateCharacteristicMixin'
 ]
 
 import importlib
@@ -49,6 +51,10 @@ from homekit.model.characteristics.firmware_revision import FirmwareRevisionChar
 from homekit.model.characteristics.hardware_revision import HardwareRevisionCharacteristic
 from homekit.model.characteristics.hue import HueCharacteristicMixin, HueCharacteristic
 from homekit.model.characteristics.identify import IdentifyCharacteristic
+from homekit.model.characteristics.lockmechanism_current_state import LockMechanismCurrentStateCharacteristic, \
+    LockMechanismCurrentStateCharacteristicMixin
+from homekit.model.characteristics.lockmechanism_target_state import LockMechanismTargetStateCharacteristic, \
+    LockMechanismTargetStateCharacteristicMixin
 from homekit.model.characteristics.manufacturer import ManufacturerCharacteristic
 from homekit.model.characteristics.model import ModelCharacteristic
 from homekit.model.characteristics.name import NameCharacteristic

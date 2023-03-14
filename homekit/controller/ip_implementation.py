@@ -20,6 +20,7 @@ from json.decoder import JSONDecodeError
 import time
 import logging
 import tlv8
+import random
 
 from homekit.controller.tools import AbstractPairing, check_convert_value
 from homekit.protocol.statuscodes import HapStatusCodes
@@ -273,6 +274,7 @@ class IpPairing(AbstractPairing):
             self.list_accessories_and_characteristics()
         data = []
         characteristics_set = set()
+        request_timed_write = False
         for characteristic in characteristics:
             aid = characteristic[0]
             iid = characteristic[1]
@@ -286,13 +288,27 @@ class IpPairing(AbstractPairing):
                             for c in s['characteristics']:
                                 if 'iid' in c and c['iid'] == iid:
                                     c_format = c['format']
+                                request_timed_write |= 'perms' in c and 'tw' in c['perms']
 
                 value = check_convert_value(value, c_format)
             characteristics_set.add('{a}.{i}'.format(a=aid, i=iid))
             data.append({'aid': aid, 'iid': iid, 'value': value})
-        data = _dump_json({'characteristics': data})
+
+        data_map = {'characteristics': data}
+        if request_timed_write:
+            # add random pid as specified in 6.7.2.4
+            data_map['pid'] = random.randrange(0, 999999999)
+
+        data = _dump_json(data_map)
 
         try:
+            if request_timed_write:
+                # perform write request as specified in 6.7.2.4
+                data_tw = _dump_json({'ttl': 2500, 'pid': data_map['pid']})
+                response = self.session.put('/prepare', data_tw)
+                if response.code != 200:
+                    return {}
+
             response = self.session.put('/characteristics', data)
         except (AccessoryDisconnectedError, EncryptionError):
             self.session.close()
